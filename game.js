@@ -60,7 +60,6 @@ document.querySelectorAll('.ttl').forEach(c=>{c.width=50;c.height=10;const x=c.g
 `;document.head.appendChild(st)})();
 (function(){const h=document.createElement('div');h.id='hpbar';h.className='hide';h.innerHTML='<div class="fill"></div><div class="txt">10/10</div>';document.body.appendChild(h)})();
 
-// ═══════════════ JELLOGER DIALOG UI ═══════════════
 let currentDlgTarget=null;
 let dlgBtnEl=null;
 (function injectDialog(){
@@ -433,9 +432,9 @@ function beehive(x,z){
 // ═══════════════ STRUKTUR TAMBAHAN ═══════════════
 function flowerArch(x,z,rot){
   rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
-  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
   const P=[];
-  const p1=T(-3,0),p2=T(3,0);
+  const p1=[x+c*(-3)-s*0, z+s*(-3)+c*0];
+  const p2=[x+c*(3)-s*0, z+s*(3)+c*0];
   P.push({geo:BOX(.8,7,.8),x:p1[0],y:3.5,z:p1[1],color:0xe8e0d0});
   P.push({geo:BOX(.8,7,.8),x:p2[0],y:3.5,z:p2[1],color:0xe8e0d0});
   P.push({geo:new THREE.TorusGeometry(3.2,.5,8,20,Math.PI),x,y:7,z,color:0x3aa84a,ry:rot});
@@ -462,7 +461,7 @@ function wishingWell(x,z){
   addCol(x,0,z,4.5,2.5,4.5);
 }
 function garden(x,z,r){
-  r=r||8;
+  r=r||7;
   addMerged([
     {geo:new THREE.CylinderGeometry(r,r,.3,20),x,y:.15,z,color:0xc8b088}
   ]);
@@ -547,13 +546,13 @@ function spawnAnimal(type,x,z,r,spd){
 // ═══════════════ JELLOGER SPAWN & UPDATE ═══════════════
 function spawnJelloger(def){
   const sh=Math.floor(Math.random()*7);
-  const p=mkP({n:def.n,c1:def.c1,c2:def.c2,sh,nc:def.nc||'#fff',nf:def.nf||'monospace'});
+  const p=mkP({n:def.n,c1:def.c1,c2:def.c2,sh,nc:def.nc||'#fff',nf:def.nf||'monospace',noName:true});
   sc.remove(p.root); world.add(p.root);
   p.x=def.x; p.z=def.z; p.y=0;
   p.tx=def.x; p.tz=def.z;
   p.tr=Math.random()*6.28; p.r=p.tr;
   p.spawnX=def.x; p.spawnZ=def.z;
-  p.wanderR=def.r||8;
+  p.wanderR=def.r||5;
   p.moveSpd=(def.spd!==undefined?def.spd:0.4);
   p.spd=p.moveSpd;
   p.wanderCd=Math.random()*3;
@@ -578,12 +577,12 @@ function wanderJellogers(dt){
       const d=Math.random()*j.wanderR*0.8;
       j.wanderTX=j.spawnX+Math.cos(ang)*d;
       j.wanderTZ=j.spawnZ+Math.sin(ang)*d;
-      j.wanderCd=2.5+Math.random()*4;
+      j.wanderCd=3+Math.random()*4;
     }
     if(distT>0.05){
       const nx=dxT/distT, nz=dzT/distT;
-      j.x+=nx*j.moveSpd*dt*2.4;
-      j.z+=nz*j.moveSpd*dt*2.4;
+      j.x+=nx*j.moveSpd*dt*2.2;
+      j.z+=nz*j.moveSpd*dt*2.2;
       j.tx=j.x; j.tz=j.z;
       j.tr=Math.atan2(nx,nz);
     } else { j.tx=j.x; j.tz=j.z; }
@@ -604,29 +603,36 @@ const PARKOUR=[
   [6,27,186,6,6,0],[0,27,192,4,4,3],[0,27,200,12,12,0]
 ];
 
-// ═══════════════ ORGANIZED SAFE STRUCTS ═══════════════
+// ═══════════════ SAFE STRUCTS (off-road, only decorative) ═══════════════
 const SAFE_STRUCTS=[
+  // Farm zone E
   ['windmill',120,50],['barn',85,45],['haystack',100,30],['haystack',105,38],
   ['scarecrow',70,50],['beehive',75,42],['beehive',95,55],
   ['fence',60,25,60,65],['fence',60,25,110,25],['fence',110,25,110,65],
   ['crates',68,68],['crates',90,68],
   ['stumplog',115,70],['logpile',125,30],
+  // Market SE
   ['marketstall',95,-15,.5],['marketstall',105,-25,-.3],['marketstall',110,-40,.8],
   ['barrels',115,-15],['barrels',85,-35],
   ['crates',90,-50],['potshelf',100,-55],
   ['lanternpost',90,-25],['lanternpost',108,-30],
+  // Ancient SW
   ['stonecircle',-110,-90],['ruinpillar',-95,-70],['ruinpillar',-125,-75],
   ['ruinpillar',-100,-105],['obelisk',-105,-5,0xa89868],
   ['statuegarden',-100,-55],['totem',-100,100],
+  // Water S
   ['boat',30,-180,Math.PI/6],['boat',-20,-185,-Math.PI/4],
   ['beachhut',50,-160,Math.PI/3],['beachhut',-40,-160,-Math.PI/3],
   ['beachumbrella',20,-165],['beachumbrella',-25,-170],['beachumbrella',60,-140],
+  // East decorative
   ['waterwheel',135,60],['woodenbridge',140,75,Math.PI/2],
   ['belltower',145,25],['stonewall',130,20,130,55],
   ['picnictable',115,-90],['picnictable',100,-95],
+  // West decorative
   ['windmill',-120,-50],['watertower',-140,25],
   ['stonewall',-130,-30,-130,-70],['belltower',-145,60],
   ['picnictable',-115,90],['picnictable',-125,80],
+  // Scattered
   ['flagpole',120,-60],['flagpole',-120,-60],
   ['pond',55,120,6],['pond',-55,120,6],['pond',130,-100,5],
   ['rockformation',55,-120],['rockformation',-55,-120],
@@ -640,12 +646,12 @@ const SAFE_STRUCTS=[
   ['giantmushroom',-90,60,.8],['giantmushroom',-85,65,.6],['giantmushroom',-95,65,.7],
   ['logpile',150,110],['logpile',-150,110],
   ['stumplog',-80,-30],['stumplog',155,-30],
-  // ── tambahan baru ──
-  ['flowerarch',128,-45,0],['flowerarch',-128,-45,0],
-  ['wishingwell',40,-60],['wishingwell',-40,-60],
-  ['garden',60,60,7],['garden',-60,60,7],['garden',60,-60,7],['garden',-60,-60,7],
-  ['statuejello',-40,40],['statuejello',40,-40],
-  ['torch',25,0],['torch',-25,0],['torch',0,25],['torch',0,-25]
+  // ── tambahan baru (offset aman dari jalan) ──
+  ['flowerarch',132,-50,0],['flowerarch',-132,-50,0],
+  ['wishingwell',36,-62],['wishingwell',-36,-62],
+  ['garden',72,38,6],['garden',-72,38,6],['garden',72,-42,6],['garden',-72,-42,6],
+  ['statuejello',58,-28],['statuejello',-58,-28],['statuejello',58,28],['statuejello',-58,28],
+  ['torch',35,15],['torch',-35,15],['torch',35,-15],['torch',-35,-15]
 ];
 
 const LAYOUTS={
@@ -744,119 +750,153 @@ const LAYOUTS={
   }
 };
 
-// ═══════════════ JELLOGER DEFINITIONS ═══════════════
+// ═══════════════ JELLOGER DEFS — posisi terkurasi sesuai peran ═══════════════
 const JELLOGER_DEFS={
   island:[
-    {n:'Petani Jelloger',      c1:'#8b5a2b', c2:'#d4a848', x:120,z:50,   r:10,spd:.35,lines:['Hewan ni bikin kesal, soalnya dia tak mau makan, padahal udah di belikan makan 200 kilo']},
-    {n:'Peternak Jelloger',    c1:'#c8a878', c2:'#8b5a2b', x:95, z:40,   r:8, spd:.4, lines:['Ayam-ayamku bertelur 30 butir hari ini!']},
-    {n:'Pedagang Jelloger',    c1:'#ff8c1a', c2:'#d05000', x:100,z:-20,  r:8, spd:.35,lines:['Beli barang murah-murah! Beli banyak lebih murah!']},
-    {n:'Nelayan Jelloger',     c1:'#3a8dff', c2:'#1a4a9a', x:30, z:-170, r:12,spd:.3, lines:['Ikan hari ini banyak sekali, tapi badai akan datang']},
-    {n:'Petualang Jelloger',   c1:'#3fbf5f', c2:'#1a6a2a', x:-100,z:-80, r:15,spd:.55,lines:['Kudengar ada harta karun di puncak gunung!']},
-    {n:'Pendeta Jelloger',     c1:'#ffffff', c2:'#c0c0c0', x:-95,z:75,   r:6, spd:.2, lines:['Semoga harimu menyenangkan, anakku']},
-    {n:'Prajurit Jelloger',    c1:'#8a8a82', c2:'#3a3a32', x:75, z:75,   r:10,spd:.4, lines:['Aku berjaga di sini dari pagi sampai pagi lagi']},
-    {n:'Koki Jelloger',        c1:'#ff5d5d', c2:'#8b1a1a', x:-60,z:30,   r:8, spd:.3, lines:['Makanan di sini paling enak seantero pulau!']},
-    {n:'Penjaga Api Jelloger', c1:'#ff5d1a', c2:'#8b1a00', x:50, z:-50,  r:6, spd:.25,lines:['Jangan biarkan api unggun ini padam ya']},
-    {n:'Seniman Jelloger',     c1:'#b05dff', c2:'#5a1a8b', x:-50,z:50,   r:8, spd:.35,lines:['Aku sedang melukis matahari terbit, indah sekali']},
-    {n:'Pengembara Jelloger',  c1:'#ffb84a', c2:'#8b6010', x:150,z:150,  r:20,spd:.6, lines:['Aku sudah keliling dunia, tapi pulau ini yang terindah']},
-    {n:'Penjaga Hutan J.',     c1:'#2f6b3a', c2:'#1a3a20', x:-100,z:120,r:15,spd:.3, lines:['Pohon-pohon ini umurnya lebih tua dari kakekku']},
-    {n:'Pemusik Jelloger',     c1:'#ffd23f', c2:'#8b6a10', x:20, z:20,   r:6, spd:.25,lines:['Dengarkan lagu baruku, judulnya "Jello Bahagia"']},
-    {n:'Penari Jelloger',      c1:'#ff90b8', c2:'#8b3060', x:-20,z:20,   r:6, spd:.55,lines:['Ayo menari bersama! Goyangkan badanmu!']},
-    {n:'Pelaut Jelloger',      c1:'#4a6a8a', c2:'#1a2a4a', x:-30,z:-170,r:12,spd:.4, lines:['Kapalku siap berlayar ke pulau seberang']},
-    {n:'Pemandu Jelloger',     c1:'#7fd0ff', c2:'#3a80b0', x:0,  z:100,  r:10,spd:.4, lines:['Ikuti aku, aku tunjukkan tempat terbaik di pulau ini']},
-    {n:'Pedagang Buah',        c1:'#ffe27a', c2:'#b08b20', x:110,z:-40,  r:7, spd:.3, lines:['Buah-buahan segar! Baru dipetik pagi ini!']},
-    {n:'Penjaga Mercusuar',    c1:'#f4f4f4', c2:'#8a8a8a', x:0,  z:165,  r:8, spd:.2, lines:['Aku menjaga cahaya ini agar kapal tidak tersesat']},
-    {n:'Guru Jelloger',        c1:'#3aa8d0', c2:'#1a6080', x:-20,z:60,   r:8, spd:.3, lines:['Belajar itu penting, tapi bermain juga perlu']},
-    {n:'Dokter Jelloger',      c1:'#ffffff', c2:'#ff5d5d', x:20, z:60,   r:8, spd:.3, lines:['Kalau kamu sakit, minum ramuan dari aku']},
-    {n:'Tukang Kayu J.',       c1:'#8b5a2b', c2:'#5a3a1b', x:-130,z:20,  r:8, spd:.3, lines:['Kayu dari pohon ini kuat sekali, tahan air']},
-    {n:'Penambang Jelloger',   c1:'#5a5a52', c2:'#2a2a22', x:130,z:20,   r:8, spd:.3, lines:['Aku mencari emas di dalam tanah, belum ketemu']},
-    {n:'@@) JEl00G335',        c1:'#00ff00', c2:'#003300', x:180,z:180,  r:3, spd:0, secret:true, lines:['QUFYWDIwMTE=']},
-    {n:'DANIS Jelloger',       c1:'#ff00ff', c2:'#660066', x:-180,z:-180,r:3, spd:0, secret:true, lines:['Halo saya danis, ini game buatanku']},
-    {n:'Cepu Jelloger',        c1:'#ffff00', c2:'#666600', x:180,z:-180, r:3, spd:0, secret:true, lines:['ada 3 jelloger rahasia di sini selain saya']},
-    {n:'Weird Jelloger',       c1:'#ff0000', c2:'#330000', x:-180,z:180, r:3, spd:0, secret:true, lines:['jangan']}
+    // ── Sekitar farm (barn 85,45 / haystack 100,30 / windmill 120,50) ──
+    {n:'Petani Jelloger',   c1:'#8b5a2b', c2:'#d4a848', x:92, z:52, r:5, spd:.35, lines:['Hewan ni bikin kesal, soalnya dia tak mau makan, padahal udah di belikan makan 200 kilo']},
+    {n:'Peternak Jelloger', c1:'#c8a878', c2:'#8b5a2b', x:108,z:28, r:5, spd:.4,  lines:['Ayam-ayamku bertelur 30 butir hari ini!']},
+    {n:'Penggembala',       c1:'#a0d0a0', c2:'#4a7a4a', x:82, z:32, r:6, spd:.4,  lines:['Kambing-kambingku lepas lagi, dasar nakal']},
+    {n:'Tukang Kayu',       c1:'#8b5a2b', c2:'#5a3a1b', x:112,z:62, r:5, spd:.3,  lines:['Kayu dari pohon ini kuat sekali, tahan air']},
+    {n:'Penambang',         c1:'#5a5a52', c2:'#2a2a22', x:150,z:22, r:6, spd:.3,  lines:['Aku mencari emas di dalam tanah, belum ketemu']},
+    // ── Pasar (marketstall 95,-15 / 105,-25 / 110,-40) ──
+    {n:'Pedagang Jelloger', c1:'#ff8c1a', c2:'#d05000', x:95, z:-8, r:4, spd:.35, lines:['Beli barang murah-murah! Beli banyak lebih murah!']},
+    {n:'Pedagang Buah',     c1:'#ffe27a', c2:'#b08b20', x:112,z:-38,r:4, spd:.3,  lines:['Buah-buahan segar! Baru dipetik pagi ini!']},
+    {n:'Penjual Roti',      c1:'#d4a848', c2:'#8b6010', x:100,z:-30,r:4, spd:.3,  lines:['Roti hangat! Roti hangat!']},
+    // ── Plaza (fountain 0,0 / statue 20,40) ──
+    {n:'Guru Jelloger',     c1:'#3aa8d0', c2:'#1a6080', x:14, z:14, r:4, spd:.3,  lines:['Belajar itu penting, tapi bermain juga perlu']},
+    {n:'Dokter Jelloger',   c1:'#ffffff', c2:'#ff5d5d', x:-14,z:14, r:4, spd:.3,  lines:['Kalau kamu sakit, minum ramuan dari aku']},
+    {n:'Pemusik Jelloger',  c1:'#ffd23f', c2:'#8b6a10', x:22, z:22, r:4, spd:.25, lines:['Dengarkan lagu baruku, judulnya "Jello Bahagia"']},
+    {n:'Penari Jelloger',   c1:'#ff90b8', c2:'#8b3060', x:-22,z:22, r:4, spd:.5,  lines:['Ayo menari bersama! Goyangkan badanmu!']},
+    {n:'Seniman Jelloger',  c1:'#b05dff', c2:'#5a1a8b', x:24, z:36, r:4, spd:.35, lines:['Aku sedang melukis matahari terbit, indah sekali']},
+    // ── Gazebo (60,35) & (-60,35) ──
+    {n:'Pendeta Jelloger',  c1:'#ffffff', c2:'#c0c0c0', x:-66,z:40, r:4, spd:.2,  lines:['Semoga harimu menyenangkan, anakku']},
+    // ── Watchtower 75,80 / shrine -75,80 ──
+    {n:'Prajurit Jelloger', c1:'#8a8a82', c2:'#3a3a32', x:80, z:82, r:5, spd:.4,  lines:['Aku berjaga di sini dari pagi sampai pagi lagi']},
+    {n:'Petualang Jelloger',c1:'#3fbf5f', c2:'#1a6a2a', x:110,z:140,r:8, spd:.55, lines:['Kudengar ada harta karun di puncak gunung!']},
+    // ── Campfire area (50,50)/(-50,-50)/(50,-50)/(-50,50) ──
+    {n:'Koki Jelloger',     c1:'#ff5d5d', c2:'#8b1a1a', x:54, z:45, r:3, spd:.3,  lines:['Makanan di sini paling enak seantero pulau!']},
+    {n:'Penjaga Api',       c1:'#ff5d1a', c2:'#8b1a00', x:45, z:55, r:3, spd:.25, lines:['Jangan biarkan api unggun ini padam ya']},
+    // ── Dermaga & pantai (dock 0,-180 / boat 30,-180 / -20,-185) ──
+    {n:'Nelayan Jelloger',  c1:'#3a8dff', c2:'#1a4a9a', x:12, z:-175,r:5, spd:.3,  lines:['Ikan hari ini banyak sekali, tapi badai akan datang']},
+    {n:'Pelaut Jelloger',   c1:'#4a6a8a', c2:'#1a2a4a', x:-25,z:-178,r:5, spd:.4,  lines:['Kapalku siap berlayar ke pulau seberang']},
+    // ── Mercusuar 0,165 ──
+    {n:'Penjaga Mercusuar', c1:'#f4f4f4', c2:'#8a8a8a', x:8,  z:160, r:4, spd:.2,  lines:['Aku menjaga cahaya ini agar kapal tidak tersesat']},
+    // ── Hutan (cherry -85,-35 / oak -100,-140) ──
+    {n:'Penjaga Hutan',     c1:'#2f6b3a', c2:'#1a3a20', x:-80,z:-30, r:6, spd:.3,  lines:['Pohon-pohon ini umurnya lebih tua dari kakekku']},
+    {n:'Pemandu Jelloger',  c1:'#7fd0ff', c2:'#3a80b0', x:-10,z:95,  r:5, spd:.35, lines:['Ikuti aku, aku tunjukkan tempat terbaik di pulau ini']},
+    // ── Secret (pojok-pojok pulau, tapi masih di darat) ──
+    {n:'@@) JEl00G335',     c1:'#00ff00', c2:'#003300', x:130,z:130, r:2, spd:0, secret:true, lines:['QUFYWDIwMTE=']},
+    {n:'DANIS Jelloger',    c1:'#ff00ff', c2:'#660066', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Halo saya danis, ini game buatanku']},
+    {n:'Cepu Jelloger',     c1:'#ffff00', c2:'#666600', x:130,z:-130, r:2, spd:0, secret:true, lines:['ada 3 jelloger rahasia di sini selain saya']},
+    {n:'Weird Jelloger',    c1:'#ff0000', c2:'#330000', x:-130,z:130, r:2, spd:0, secret:true, lines:['jangan']}
   ],
   desert:[
-    {n:'Pedagang Permadani',   c1:'#c0501a', c2:'#7a2a00', x:100,z:20,   r:8, spd:.35,lines:['Permadani ini ditenun oleh nenekku, kualitasnya terbaik!']},
-    {n:'Penunggang Unta',      c1:'#d4a848', c2:'#8b6010', x:-80,z:40,   r:12,spd:.55,lines:['Untaku bernama Jelly, dia suka meludah ke orang asing']},
-    {n:'Penjaga Oasis',        c1:'#3aa0d0', c2:'#1a6080', x:105,z:0,    r:8, spd:.3, lines:['Oasis ini adalah sumber kehidupan kami']},
-    {n:'Penggali Sumur',       c1:'#8b5a2b', c2:'#5a3a1b', x:40, z:20,   r:5, spd:.25,lines:['Aku menggali 30 meter, belum ketemu air juga']},
-    {n:'Pemburu Harta',        c1:'#ffd23f', c2:'#8b6a10', x:-100,z:-60, r:14,spd:.6, lines:['Aku dengar ada emas di piramida tua itu']},
-    {n:'Penjaga Piramida',     c1:'#c8a878', c2:'#7a5a30', x:0,  z:105,  r:6, spd:.2, lines:['Jangan masuk! Kutukan akan menimpamu']},
-    {n:'Penjual Air',          c1:'#7fd0ff', c2:'#3a80b0', x:70, z:-30,  r:8, spd:.4, lines:['Air! Air segar! Hanya 5 koin!']},
-    {n:'Penenun Jelloger',     c1:'#b05dff', c2:'#5a1a8b', x:-100,z:20,  r:6, spd:.25,lines:['Kain ini dibuat dari bulu unta asli']},
-    {n:'Pembuat Tembikar',     c1:'#a07040', c2:'#5a3a1b', x:80, z:-50,  r:6, spd:.25,lines:['Hati-hati, tembikar ini mudah pecah']},
-    {n:'Ahli Bintang',         c1:'#3a3a8a', c2:'#101040', x:-20,z:60,   r:5, spd:.2, lines:['Bintang-bintang di gurun lebih terang dari di kota']},
-    {n:'Pengembara Pasir',     c1:'#d4a848', c2:'#8b6010', x:140,z:60,   r:18,spd:.55,lines:['Aku sudah 3 hari berjalan tanpa air, tolong...']},
-    {n:'Penjaga Kuil',         c1:'#c8a878', c2:'#7a5a30', x:-90,z:80,   r:6, spd:.2, lines:['Kuil ini berumur 5000 tahun']},
-    {n:'Kurir Jelloger',       c1:'#ff5d5d', c2:'#8b1a1a', x:20, z:-60,  r:10,spd:.8, lines:['Permisi! Aku sedang buru-buru!']},
-    {n:'Prajurit Firaun',      c1:'#ffd23f', c2:'#8b6010', x:-70,z:80,   r:6, spd:.3, lines:['Firaun memerintahkan aku berjaga di sini']},
-    {n:'Penari Perut',         c1:'#ff90b8', c2:'#8b3060', x:60, z:35,   r:6, spd:.55,lines:['Ayo lihat tarianku! Hanya 10 koin!']},
-    {n:'Pembuat Roti',         c1:'#d4a848', c2:'#8b6010', x:-40,z:-20,  r:5, spd:.25,lines:['Roti baru keluar dari oven!']},
-    {n:'Penggembala Kambing',  c1:'#c8a878', c2:'#7a5a30', x:120,z:50,   r:12,spd:.4, lines:['Kambing-kambingku suka kabur kalau tidak dijaga']},
-    {n:'Penambang Emas',       c1:'#ffd23f', c2:'#8b6010', x:-140,z:0,   r:8, spd:.3, lines:['Aku cari emas di tambang itu, sumpah!']},
-    {n:'Penjaga Gerbang',      c1:'#8a8a82', c2:'#3a3a32', x:0,  z:20,   r:4, spd:.2, lines:['Selamat datang di kota gurun!']},
-    {n:'Penyanyi Jelloger',    c1:'#ff8c1a', c2:'#d05000', x:-60,z:50,   r:6, spd:.3, lines:['Dengarkan suaraku! Aku penyanyi terbaik!']},
-    {n:'Pelukis Pasir',        c1:'#ffb84a', c2:'#8b6010', x:90, z:70,   r:6, spd:.3, lines:['Aku melukis dengan pasir, seni unik bukan?']},
-    {n:'Penjaga Harta',        c1:'#ffd23f', c2:'#8b6010', x:-150,z:-50, r:6, spd:.25,lines:['Harta ini tidak boleh disentuh siapapun!']},
-    {n:'Firaun Jelloger',      c1:'#ffd700', c2:'#8b6010', x:180,z:180,  r:3, spd:0, secret:true, lines:['Piramida itu bukan milikku, tapi aku yang membuatnya']},
-    {n:'Pedagang Unta J.',     c1:'#c0501a', c2:'#5a1a00', x:-180,z:-180,r:3, spd:0, secret:true, lines:['Untaku bernama Jelly, dia suka meludah ke orang']},
-    {n:'Mumi Jelloger',        c1:'#e0d8b0', c2:'#8a8050', x:180,z:-180, r:3, spd:0, secret:true, lines:['Aku sudah tidur 3000 tahun, jangan bangunkan aku']},
-    {n:'Fatamorgana J.',       c1:'#ffffff', c2:'#ffd23f', x:-180,z:180, r:3, spd:0, secret:true, lines:['Aku tidak ada di sini, kamu hanya berhalusinasi']}
+    // ── Pasar / bazaar ──
+    {n:'Pedagang Permadani',c1:'#c0501a', c2:'#7a2a00', x:112,z:-38, r:5, spd:.35,lines:['Permadani ini ditenun oleh nenekku, kualitasnya terbaik!']},
+    {n:'Penenun Jelloger',  c1:'#b05dff', c2:'#5a1a8b', x:100,z:-30, r:4, spd:.25,lines:['Kain ini dibuat dari bulu unta asli']},
+    {n:'Pembuat Tembikar',  c1:'#a07040', c2:'#5a3a1b', x:95, z:-8,  r:4, spd:.25,lines:['Hati-hati, tembikar ini mudah pecah']},
+    // ── Oasis (105,0,r=28) ──
+    {n:'Penjaga Oasis',     c1:'#3aa0d0', c2:'#1a6080', x:118,z:0,   r:5, spd:.3, lines:['Oasis ini adalah sumber kehidupan kami']},
+    {n:'Penjual Air',       c1:'#7fd0ff', c2:'#3a80b0', x:118,z:18,  r:4, spd:.4, lines:['Air! Air segar! Hanya 5 koin!']},
+    {n:'Penunggang Unta',   c1:'#d4a848', c2:'#8b6010', x:125,z:-20, r:6, spd:.55,lines:['Untaku bernama Jelly, dia suka meludah ke orang asing']},
+    // ── Sumur (37,15) ──
+    {n:'Penggali Sumur',    c1:'#8b5a2b', c2:'#5a3a1b', x:42, z:18,  r:3, spd:.25,lines:['Aku menggali 30 meter, belum ketemu air juga']},
+    // ── Obelisk / kuil ──
+    {n:'Penjaga Piramida',  c1:'#c8a878', c2:'#7a5a30', x:5,  z:108, r:3, spd:.2, lines:['Jangan masuk! Kutukan akan menimpamu']},
+    {n:'Prajurit Firaun',   c1:'#ffd23f', c2:'#8b6010', x:-100,z:-10,r:4, spd:.3, lines:['Firaun memerintahkan aku berjaga di sini']},
+    {n:'Penjaga Kuil',      c1:'#c8a878', c2:'#7a5a30', x:-18,z:-105,r:4, spd:.2, lines:['Kuil ini berumur 5000 tahun']},
+    {n:'Pemburu Harta',     c1:'#ffd23f', c2:'#8b6a10', x:75, z:-78, r:5, spd:.6, lines:['Aku dengar ada emas di piramida tua itu']},
+    {n:'Penambang Emas',    c1:'#ffd23f', c2:'#8b6010', x:-115,z:-10,r:5, spd:.3, lines:['Aku cari emas di tambang itu, sumpah!']},
+    // ── Gazebo (60,35) ──
+    {n:'Penari Perut',      c1:'#ff90b8', c2:'#8b3060', x:65, z:40,  r:4, spd:.55,lines:['Ayo lihat tarianku! Hanya 10 koin!']},
+    {n:'Penyanyi Jelloger', c1:'#ff8c1a', c2:'#d05000', x:-65,z:40,  r:4, spd:.3, lines:['Dengarkan suaraku! Aku penyanyi terbaik!']},
+    // ── Camp (80,80 / -80,-80) ──
+    {n:'Pembuat Roti',      c1:'#d4a848', c2:'#8b6010', x:45, z:-40, r:3, spd:.25,lines:['Roti baru keluar dari oven!']},
+    // ── Bebas ──
+    {n:'Ahli Bintang',      c1:'#3a3a8a', c2:'#101040', x:-25,z:55,  r:4, spd:.2, lines:['Bintang-bintang di gurun lebih terang dari di kota']},
+    {n:'Pengembara Pasir',  c1:'#d4a848', c2:'#8b6010', x:140,z:60,  r:8, spd:.55,lines:['Aku sudah 3 hari berjalan tanpa air, tolong...']},
+    {n:'Kurir Jelloger',    c1:'#ff5d5d', c2:'#8b1a1a', x:25, z:-65, r:5, spd:.8, lines:['Permisi! Aku sedang buru-buru!']},
+    {n:'Penggembala Kambing',c1:'#c8a878',c2:'#7a5a30', x:128,z:52,  r:6, spd:.4, lines:['Kambing-kambingku suka kabur kalau tidak dijaga']},
+    {n:'Pelukis Pasir',     c1:'#ffb84a', c2:'#8b6010', x:88, z:72,  r:4, spd:.3, lines:['Aku melukis dengan pasir, seni unik bukan?']},
+    {n:'Penjaga Gerbang',   c1:'#8a8a82', c2:'#3a3a32', x:-10,z:10,  r:3, spd:.2, lines:['Selamat datang di kota gurun!']},
+    {n:'Penjaga Harta',     c1:'#ffd23f', c2:'#8b6010', x:-148,z:-45,r:5, spd:.25,lines:['Harta ini tidak boleh disentuh siapapun!']},
+    // ── Secret ──
+    {n:'Firaun Jelloger',   c1:'#ffd700', c2:'#8b6010', x:130,z:130, r:2, spd:0, secret:true, lines:['Piramida itu bukan milikku, tapi aku yang membuatnya']},
+    {n:'Pedagang Unta J.',  c1:'#c0501a', c2:'#5a1a00', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Untaku bernama Jelly, dia suka meludah ke orang']},
+    {n:'Mumi Jelloger',     c1:'#e0d8b0', c2:'#8a8050', x:130,z:-130, r:2, spd:0, secret:true, lines:['Aku sudah tidur 3000 tahun, jangan bangunkan aku']},
+    {n:'Fatamorgana J.',    c1:'#ffffff', c2:'#ffd23f', x:-130,z:130, r:2, spd:0, secret:true, lines:['Aku tidak ada di sini, kamu hanya berhalusinasi']}
   ],
   jungle:[
-    {n:'Penjaga Hutan',        c1:'#1a5a2a', c2:'#0a2a10', x:60, z:60,   r:12,spd:.35,lines:['Hutan ini adalah rumah bagi ribuan makhluk']},
-    {n:'Pemburu Jelloger',     c1:'#5a3a1b', c2:'#2a1a00', x:-60,z:60,   r:10,spd:.5, lines:['Aku melihat jejak jaguar tadi malam']},
-    {n:'Penebang Kayu',        c1:'#8b5a2b', c2:'#5a3a1b', x:100,z:50,   r:8, spd:.4, lines:['Kayu jati dari hutan ini paling kuat']},
-    {n:'Pengumpul Buah',       c1:'#ffe27a', c2:'#b08b20', x:-90,z:-30,  r:10,spd:.4, lines:['Buah durian di pohon itu sudah matang!']},
-    {n:'Pawang Ular',          c1:'#3fbf5f', c2:'#1a6a2a', x:70, z:-50,  r:8, spd:.35,lines:['Ular-ular di sini jinak, tenang saja']},
-    {n:'Penjaga Candi',        c1:'#8a8a82', c2:'#3a3a32', x:0,  z:105,  r:5, spd:.2, lines:['Candi ini dibangun oleh jello kuno 10000 tahun lalu']},
-    {n:'Penari Hutan',         c1:'#ff90b8', c2:'#8b3060', x:-30,z:30,   r:6, spd:.55,lines:['Aku menari untuk roh hutan']},
-    {n:'Dukun Jelloger',       c1:'#b05dff', c2:'#5a1a8b', x:-50,z:80,   r:6, spd:.25,lines:['Ramuan ini bisa menyembuhkan segala penyakit']},
-    {n:'Penjaga Sungai',       c1:'#3aa0d0', c2:'#1a6080', x:40, z:-80,  r:8, spd:.3, lines:['Jangan buang sampah ke sungai!']},
-    {n:'Pengrajin Anyaman',    c1:'#d4a848', c2:'#8b6010', x:-100,z:0,   r:6, spd:.3, lines:['Anyaman bambu ini tahan air loh']},
-    {n:'Pemanjat Pohon',       c1:'#5a3a1b', c2:'#2a1a00', x:80, z:80,   r:5, spd:.4, lines:['Aku bisa memanjat pohon tertinggi dalam 10 detik']},
-    {n:'Penjaga Mata Air',     c1:'#7fd0ff', c2:'#3a80b0', x:20, z:60,   r:6, spd:.3, lines:['Mata air ini suci, jangan dikotori']},
-    {n:'Pengembara Rimba',     c1:'#3fbf5f', c2:'#1a6a2a', x:130,z:80,   r:20,spd:.6, lines:['Aku tersesat 3 hari di hutan ini']},
-    {n:'Ahli Herbal',          c1:'#4fa040', c2:'#1a3a10', x:-80,z:40,   r:6, spd:.3, lines:['Daun ini bisa jadi obat, daun itu racun']},
-    {n:'Penjaga Satwa',        c1:'#ff8c1a', c2:'#d05000', x:60, z:-80,  r:10,spd:.4, lines:['Jangan ganggu hewan-hewan di sini!']},
-    {n:'Pembuat Perahu',       c1:'#8b5a2b', c2:'#5a3a1b', x:-110,z:-70, r:8, spd:.3, lines:['Perahu ini akan kupakai menyusuri sungai']},
-    {n:'Penjaga Api Unggun',   c1:'#ff5d1a', c2:'#8b1a00', x:0,  z:-60,  r:6, spd:.25,lines:['Api ini tidak boleh padam, ini penjaga malam']},
-    {n:'Pemusik Tradisional',  c1:'#ffd23f', c2:'#8b6a10', x:-20,z:60,   r:6, spd:.3, lines:['Aku mainkan alat musik dari bambu']},
-    {n:'Penjaga Goa',          c1:'#5a5a52', c2:'#2a2a22', x:140,z:-60,  r:6, spd:.25,lines:['Di dalam goa itu ada kelelawar raksasa']},
-    {n:'Pemandu Air Terjun',   c1:'#3aa0d0', c2:'#1a6080', x:-150,z:-40, r:8, spd:.35,lines:['Air terjun di utara sangat indah!']},
-    {n:'Pengrajin Bambu',      c1:'#4fa040', c2:'#1a3a10', x:90, z:-40,  r:6, spd:.3, lines:['Bambu ini bisa jadi apa saja!']},
-    {n:'Petani Karet',         c1:'#c8a878', c2:'#7a5a30', x:-100,z:-70, r:8, spd:.35,lines:['Getah karet ini bisa jadi ban mobil']},
-    {n:'Dewa Rimba',           c1:'#3fbf5f', c2:'#0a2a10', x:180,z:180,  r:3, spd:0, secret:true, lines:['Hutan ini menyimpan rahasia yang tidak boleh kau ketahui']},
-    {n:'Orang Utan J.',        c1:'#c0501a', c2:'#5a1a00', x:-180,z:-180,r:3, spd:0, secret:true, lines:['Ugh ugh ugh, aku bukan monyet, aku jello']},
-    {n:'Penjaga Candi Kuno',   c1:'#c8a878', c2:'#7a5a30', x:180,z:-180, r:3, spd:0, secret:true, lines:['Candi ini menyimpan kekuatan jello purba']},
-    {n:'Ratu Lebah',           c1:'#ffd23f', c2:'#8b6a10', x:-180,z:180, r:3, spd:0, secret:true, lines:['Lebah-lebahku membuat madu terbaik di dunia']}
+    // ── Shrine 0,105 / -90,60 ──
+    {n:'Penjaga Candi',     c1:'#8a8a82', c2:'#3a3a32', x:8,  z:108, r:3, spd:.2, lines:['Candi ini dibangun oleh jello kuno 10000 tahun lalu']},
+    {n:'Dukun Jelloger',    c1:'#b05dff', c2:'#5a1a8b', x:-95,z:60,  r:5, spd:.25,lines:['Ramuan ini bisa menyembuhkan segala penyakit']},
+    // ── Watchtower 60,80 / hut -70,75 ──
+    {n:'Pemanjat Pohon',    c1:'#5a3a1b', c2:'#2a1a00', x:65, z:80,  r:4, spd:.4, lines:['Aku bisa memanjat pohon tertinggi dalam 10 detik']},
+    {n:'Pengumpul Buah',    c1:'#ffe27a', c2:'#b08b20', x:-95,z:-30, r:6, spd:.4, lines:['Buah durian di pohon itu sudah matang!']},
+    {n:'Penebang Kayu',     c1:'#8b5a2b', c2:'#5a3a1b', x:95, z:50,  r:5, spd:.4, lines:['Kayu jati dari hutan ini paling kuat']},
+    // ── Gazebo 55,32 ──
+    {n:'Penari Hutan',      c1:'#ff90b8', c2:'#8b3060', x:-30,z:30,  r:4, spd:.55,lines:['Aku menari untuk roh hutan']},
+    {n:'Pemusik Tradisional',c1:'#ffd23f',c2:'#8b6a10', x:-25,z:60,  r:4, spd:.3, lines:['Aku mainkan alat musik dari bambu']},
+    // ── Camp (95,45 / -30,-100 / -95,-45) ──
+    {n:'Penjaga Api Unggun',c1:'#ff5d1a', c2:'#8b1a00', x:50, z:-45, r:3, spd:.25,lines:['Api ini tidak boleh padam, ini penjaga malam']},
+    // ── Sungai / air terjun ──
+    {n:'Penjaga Sungai',    c1:'#3aa0d0', c2:'#1a6080', x:45, z:-85, r:5, spd:.3, lines:['Jangan buang sampah ke sungai!']},
+    {n:'Pemandu Air Terjun',c1:'#3aa0d0', c2:'#1a6080', x:-150,z:-40,r:5, spd:.35,lines:['Air terjun di utara sangat indah!']},
+    {n:'Penjaga Mata Air',  c1:'#7fd0ff', c2:'#3a80b0', x:25, z:60,  r:4, spd:.3, lines:['Mata air ini suci, jangan dikotori']},
+    // ── Goa / hutan dalam ──
+    {n:'Penjaga Goa',       c1:'#5a5a52', c2:'#2a2a22', x:135,z:-58, r:4, spd:.25,lines:['Di dalam goa itu ada kelelawar raksasa']},
+    {n:'Penjaga Hutan',     c1:'#1a5a2a', c2:'#0a2a10', x:65, z:65,  r:5, spd:.35,lines:['Hutan ini adalah rumah bagi ribuan makhluk']},
+    {n:'Pemburu Jelloger',  c1:'#5a3a1b', c2:'#2a1a00', x:-65,z:65,  r:6, spd:.5, lines:['Aku melihat jejak jaguar tadi malam']},
+    {n:'Pawang Ular',       c1:'#3fbf5f', c2:'#1a6a2a', x:75, z:-52, r:4, spd:.35,lines:['Ular-ular di sini jinak, tenang saja']},
+    {n:'Ahli Herbal',       c1:'#4fa040', c2:'#1a3a10', x:-85,z:35,  r:4, spd:.3, lines:['Daun ini bisa jadi obat, daun itu racun']},
+    {n:'Penjaga Satwa',     c1:'#ff8c1a', c2:'#d05000', x:60, z:-85, r:5, spd:.4, lines:['Jangan ganggu hewan-hewan di sini!']},
+    {n:'Pembuat Perahu',    c1:'#8b5a2b', c2:'#5a3a1b', x:-115,z:-75,r:5, spd:.3, lines:['Perahu ini akan kupakai menyusuri sungai']},
+    {n:'Pengrajin Bambu',   c1:'#4fa040', c2:'#1a3a10', x:95, z:-38, r:4, spd:.3, lines:['Bambu ini bisa jadi apa saja!']},
+    {n:'Pengrajin Anyaman', c1:'#d4a848', c2:'#8b6010', x:-105,z:-5, r:4, spd:.3, lines:['Anyaman bambu ini tahan air loh']},
+    {n:'Petani Karet',      c1:'#c8a878', c2:'#7a5a30', x:-105,z:-75,r:5, spd:.35,lines:['Getah karet ini bisa jadi ban mobil']},
+    {n:'Pengembara Rimba',  c1:'#3fbf5f', c2:'#1a6a2a', x:130,z:80,  r:8, spd:.6, lines:['Aku tersesat 3 hari di hutan ini']},
+    // ── Secret ──
+    {n:'Dewa Rimba',        c1:'#3fbf5f', c2:'#0a2a10', x:130,z:130, r:2, spd:0, secret:true, lines:['Hutan ini menyimpan rahasia yang tidak boleh kau ketahui']},
+    {n:'Orang Utan J.',     c1:'#c0501a', c2:'#5a1a00', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Ugh ugh ugh, aku bukan monyet, aku jello']},
+    {n:'Penjaga Candi Kuno',c1:'#c8a878', c2:'#7a5a30', x:130,z:-130, r:2, spd:0, secret:true, lines:['Candi ini menyimpan kekuatan jello purba']},
+    {n:'Ratu Lebah',        c1:'#ffd23f', c2:'#8b6a10', x:-130,z:130, r:2, spd:0, secret:true, lines:['Lebah-lebahku membuat madu terbaik di dunia']}
   ],
   snow:[
-    {n:'Penjaga Igloo',        c1:'#f0f8ff', c2:'#a8b8c8', x:50, z:55,   r:8, spd:.3, lines:['Igloo ini hangat di dalam, percaya deh']},
-    {n:'Nelayan Es',           c1:'#7fd0ff', c2:'#3a80b0', x:0,  z:-115, r:10,spd:.35,lines:['Aku memancing di bawah es, dingin sekali']},
-    {n:'Pemburu Anjing Laut',  c1:'#5a5a52', c2:'#2a2a22', x:-60,z:-60,  r:10,spd:.5, lines:['Anjing laut di sini sangat lincah']},
-    {n:'Pembuat Salju',        c1:'#ffffff', c2:'#c0c0c0', x:-50,z:50,   r:6, spd:.25,lines:['Aku membuat boneka salju setiap hari']},
-    {n:'Penjaga Api',          c1:'#ff5d1a', c2:'#8b1a00', x:50, z:-50,  r:6, spd:.3, lines:['Api ini tidak boleh padam, ini nyawa kami']},
-    {n:'Penggembala Rusa',     c1:'#8b5a2b', c2:'#5a3a1b', x:130,z:-20,  r:14,spd:.4, lines:['Rusa-rusa ini suka makan wortel']},
-    {n:'Pemanjat Gunung',      c1:'#3a3a8a', c2:'#101040', x:-100,z:0,   r:12,spd:.55,lines:['Aku sudah mendaki 3 gunung tertinggi!']},
-    {n:'Pembuat Pakaian',      c1:'#b05dff', c2:'#5a1a8b', x:100,z:0,    r:6, spd:.3, lines:['Mantel bulu ini hangat sekali']},
-    {n:'Penjaga Mercusuar Es', c1:'#f4f4f4', c2:'#8a8a8a', x:0,  z:140,  r:6, spd:.2, lines:['Cahaya ini menuntun kapal di badai salju']},
-    {n:'Pengukir Es',          c1:'#aee0ff', c2:'#5a90b0', x:75, z:80,   r:6, spd:.25,lines:['Ukiran es ini akan bertahan sampai musim panas']},
-    {n:'Penjaga Danau',        c1:'#aee0ff', c2:'#5a90b0', x:-20,z:-115, r:6, spd:.25,lines:['Danau ini membeku sepanjang tahun']},
-    {n:'Pemancing Es',         c1:'#7fd0ff', c2:'#3a80b0', x:20, z:-100, r:6, spd:.3, lines:['Ikan di bawah es sangat besar']},
-    {n:'Pengembara Salju',     c1:'#dcecff', c2:'#8aa8c8', x:-150,z:80,  r:20,spd:.6, lines:['Aku berjalan 100 km untuk sampai sini']},
-    {n:'Ahli Cuaca',           c1:'#3aa0d0', c2:'#1a6080', x:-20,z:60,   r:5, spd:.2, lines:['Besok akan turun salju lebih lebat']},
-    {n:'Penjaga Hutan Pinus',  c1:'#2f6b3a', c2:'#1a3a20', x:60, z:60,   r:10,spd:.35,lines:['Pohon pinus ini berumur 200 tahun']},
-    {n:'Pembuat Sepatu Salju', c1:'#8b5a2b', c2:'#5a3a1b', x:-130,z:20,  r:6, spd:.3, lines:['Sepatu ini bisa dipakai di salju tebal']},
-    {n:'Penjaga Goa Es',       c1:'#aee0ff', c2:'#5a90b0', x:140,z:60,   r:6, spd:.25,lines:['Di dalam goa itu suhunya -40 derajat']},
-    {n:'Pemusik Es',           c1:'#7fd0ff', c2:'#3a80b0', x:-30,z:30,   r:6, spd:.3, lines:['Aku main seruling dari tulang']},
-    {n:'Penjual Coklat',       c1:'#8b5a2b', c2:'#5a3a1b', x:30, z:30,   r:5, spd:.25,lines:['Coklat panas! Coklat panas!']},
-    {n:'Kurir Salju',          c1:'#ff5d5d', c2:'#8b1a1a', x:20, z:-60,  r:12,spd:.8, lines:['Permisi! Aku antar paket!']},
-    {n:'Penjaga Ski',          c1:'#3a8dff', c2:'#1a4a9a', x:100,z:-90,  r:10,spd:.5, lines:['Jalur ski di sini paling menantang']},
-    {n:'Penjaga Perbatasan',   c1:'#8a8a82', c2:'#3a3a32', x:0,  z:100,  r:5, spd:.2, lines:['Berhenti! Siapa kau?']},
-    {n:'Yeti Jelloger',        c1:'#f0f8ff', c2:'#7fa0c0', x:180,z:180,  r:3, spd:0, secret:true, lines:['Aku bukan monster, aku hanya kesepian']},
-    {n:'Santa Jelloger',       c1:'#ff0000', c2:'#8b0000', x:-180,z:-180,r:3, spd:0, secret:true, lines:['Ho ho ho, apa kamu sudah jadi anak baik tahun ini?']},
-    {n:'Penguin Jelloger',     c1:'#1a1a2a', c2:'#ffffff', x:180,z:-180, r:3, spd:0, secret:true, lines:['Aku bisa berenang lebih cepat dari kamu']},
-    {n:'Ratu Es Jelloger',     c1:'#aee0ff', c2:'#5a90b0', x:-180,z:180, r:3, spd:0, secret:true, lines:['Sentuh aku dan kau akan membeku']}
+    // ── Igloo (50,55 / 65,68 / 80,50 / -50,55 / -65,68 / -80,50) ──
+    {n:'Penjaga Igloo',     c1:'#f0f8ff', c2:'#a8b8c8', x:65, z:80,  r:4, spd:.3, lines:['Igloo ini hangat di dalam, percaya deh']},
+    {n:'Pembuat Salju',     c1:'#ffffff', c2:'#c0c0c0', x:-55,z:60,  r:4, spd:.25,lines:['Aku membuat boneka salju setiap hari']},
+    // ── Danau beku (0,-115,r=38) ──
+    {n:'Nelayan Es',        c1:'#7fd0ff', c2:'#3a80b0', x:15, z:-115,r:5, spd:.35,lines:['Aku memancing di bawah es, dingin sekali']},
+    {n:'Penjaga Danau',     c1:'#aee0ff', c2:'#5a90b0', x:-20,z:-118,r:4, spd:.25,lines:['Danau ini membeku sepanjang tahun']},
+    {n:'Pemancing Es',      c1:'#7fd0ff', c2:'#3a80b0', x:18, z:-100,r:4, spd:.3, lines:['Ikan di bawah es sangat besar']},
+    // ── Camp (75,-80 / -75,-80) ──
+    {n:'Penjaga Api',       c1:'#ff5d1a', c2:'#8b1a00', x:55, z:-55, r:3, spd:.3, lines:['Api ini tidak boleh padam, ini nyawa kami']},
+    // ── Hut (100,0 / -100,0) ──
+    {n:'Pembuat Pakaian',   c1:'#b05dff', c2:'#5a1a8b', x:105,z:-5,  r:4, spd:.3, lines:['Mantel bulu ini hangat sekali']},
+    {n:'Pengukir Es',       c1:'#aee0ff', c2:'#5a90b0', x:80, z:80,  r:4, spd:.25,lines:['Ukiran es ini akan bertahan sampai musim panas']},
+    // ── Mercusuar 0,140 ──
+    {n:'Penjaga Mercusuar Es',c1:'#f4f4f4',c2:'#8a8a8a', x:8,  z:140, r:4, spd:.2, lines:['Cahaya ini menuntun kapal di badai salju']},
+    // ── Watchtower 75,80 / shrine -75,80 ──
+    {n:'Penjaga Hutan Pinus',c1:'#2f6b3a',c2:'#1a3a20', x:65, z:65,  r:5, spd:.35,lines:['Pohon pinus ini berumur 200 tahun']},
+    // ── Pemburu / pengembara ──
+    {n:'Pemburu Anjing Laut',c1:'#5a5a52',c2:'#2a2a22', x:-65,z:-65, r:5, spd:.5, lines:['Anjing laut di sini sangat lincah']},
+    {n:'Penggembala Rusa',  c1:'#8b5a2b', c2:'#5a3a1b', x:125,z:-22, r:6, spd:.4, lines:['Rusa-rusa ini suka makan wortel']},
+    {n:'Pemanjat Gunung',   c1:'#3a3a8a', c2:'#101040', x:-105,z:5,  r:6, spd:.55,lines:['Aku sudah mendaki 3 gunung tertinggi!']},
+    {n:'Pengembara Salju',  c1:'#dcecff', c2:'#8aa8c8', x:-150,z:80, r:8, spd:.6, lines:['Aku berjalan 100 km untuk sampai sini']},
+    {n:'Ahli Cuaca',        c1:'#3aa0d0', c2:'#1a6080', x:-25,z:55,  r:4, spd:.2, lines:['Besok akan turun salju lebih lebat']},
+    {n:'Pembuat Sepatu Salju',c1:'#8b5a2b',c2:'#5a3a1b', x:-130,z:25,r:4, spd:.3, lines:['Sepatu ini bisa dipakai di salju tebal']},
+    {n:'Penjaga Goa Es',    c1:'#aee0ff', c2:'#5a90b0', x:135,z:62,  r:4, spd:.25,lines:['Di dalam goa itu suhunya -40 derajat']},
+    {n:'Pemusik Es',        c1:'#7fd0ff', c2:'#3a80b0', x:-35,z:35,  r:4, spd:.3, lines:['Aku main seruling dari tulang']},
+    {n:'Penjual Coklat',    c1:'#8b5a2b', c2:'#5a3a1b', x:25, z:25,  r:4, spd:.25,lines:['Coklat panas! Coklat panas!']},
+    {n:'Kurir Salju',       c1:'#ff5d5d', c2:'#8b1a1a', x:25, z:-60, r:5, spd:.8, lines:['Permisi! Aku antar paket!']},
+    {n:'Penjaga Ski',       c1:'#3a8dff', c2:'#1a4a9a', x:95, z:-95, r:5, spd:.5, lines:['Jalur ski di sini paling menantang']},
+    {n:'Penjaga Perbatasan',c1:'#8a8a82', c2:'#3a3a32', x:-8, z:95,  r:4, spd:.2, lines:['Berhenti! Siapa kau?']},
+    // ── Secret ──
+    {n:'Yeti Jelloger',     c1:'#f0f8ff', c2:'#7fa0c0', x:130,z:130, r:2, spd:0, secret:true, lines:['Aku bukan monster, aku hanya kesepian']},
+    {n:'Santa Jelloger',    c1:'#ff0000', c2:'#8b0000', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Ho ho ho, apa kamu sudah jadi anak baik tahun ini?']},
+    {n:'Penguin Jelloger',  c1:'#1a1a2a', c2:'#ffffff', x:130,z:-130, r:2, spd:0, secret:true, lines:['Aku bisa berenang lebih cepat dari kamu']},
+    {n:'Ratu Es Jelloger',  c1:'#aee0ff', c2:'#5a90b0', x:-130,z:130, r:2, spd:0, secret:true, lines:['Sentuh aku dan kau akan membeku']}
   ]
 };
 
@@ -955,20 +995,21 @@ function build(n){
   if(L.swings)for(const[x,z]of L.swings)buildingZones.push({x,z,r:6});
   if(L.structures)for(const st of L.structures){
     const t=st[0];
-    if(t=='windmill'||t=='watertower'||t=='flagpole'||t=='pond'||t=='rockformation'||t=='flowerbed'||t=='crates'||t=='barn'||t=='haystack'||t=='cart'||t=='barrels'||t=='signpost'||t=='totem'||t=='marketstall'||t=='archway'||t=='belltower'||t=='picnictable'||t=='stonecircle'||t=='statuegarden'||t=='waterwheel'||t=='giantmushroom'||t=='stumplog'||t=='scarecrow'||t=='beehive'||t=='logpile'||t=='ruinpillar'||t=='beachhut'||t=='boat'||t=='beachumbrella'||t=='potshelf'||t=='lanternpost'||t=='flowerarch'||t=='wishingwell'||t=='garden'||t=='statuejello'||t=='torch')buildingZones.push({x:st[1],z:st[2],r:t=='watertower'||t=='windmill'||t=='barn'||t=='belltower'?12:t=='stonecircle'?14:t=='pond'?st[3]+3:t=='garden'?(st[3]||7)+2:7});
+    if(t=='windmill'||t=='watertower'||t=='flagpole'||t=='pond'||t=='rockformation'||t=='flowerbed'||t=='crates'||t=='barn'||t=='haystack'||t=='cart'||t=='barrels'||t=='signpost'||t=='totem'||t=='marketstall'||t=='archway'||t=='belltower'||t=='picnictable'||t=='stonecircle'||t=='statuegarden'||t=='waterwheel'||t=='giantmushroom'||t=='stumplog'||t=='scarecrow'||t=='beehive'||t=='logpile'||t=='ruinpillar'||t=='beachhut'||t=='boat'||t=='beachumbrella'||t=='potshelf'||t=='lanternpost'||t=='flowerarch'||t=='wishingwell'||t=='garden'||t=='statuejello'||t=='torch')buildingZones.push({x:st[1],z:st[2],r:t=='watertower'||t=='windmill'||t=='barn'||t=='belltower'?12:t=='stonecircle'?14:t=='pond'?st[3]+3:t=='garden'?(st[3]||6)+2:7});
     if(t=='fence')buildingZones.push({x:(st[1]+st[3])/2,z:(st[2]+st[4])/2,r:Math.hypot(st[3]-st[1],st[4]-st[2])/2+2});
     if(t=='stonewall')buildingZones.push({x:(st[1]+st[3])/2,z:(st[2]+st[4])/2,r:Math.hypot(st[3]-st[1],st[4]-st[2])/2+2});
     if(t=='woodenbridge')buildingZones.push({x:st[1],z:st[2],r:8});
   }
   if(L.extras)for(const ex of L.extras)buildingZones.push({x:ex[1],z:ex[2],r:8});
   if(L.animals)for(const a of L.animals)buildingZones.push({x:a[1],z:a[2],r:a[3]+2});
+  // zone tambahan untuk jelloger agar vegetasi tidak mengganggu
+  if(JELLOGER_DEFS[n])for(const jd of JELLOGER_DEFS[n])buildingZones.push({x:jd.x,z:jd.z,r:5});
 
   const hillData=L.hills||[];
   const hitsHill=(x,z,margin=0)=>{for(const h of hillData){if(Math.hypot(x-h.x,z-h.z)<h.r+margin)return true}return false};
 
   if(L.hills)for(const h of L.hills)hill(h.x,h.z,h.r,h.h,L.edge,gr);
 
-  // ═══ Gfx multiplier untuk efek melimpah ═══
   const GFX_MULT = cfg.gfx==='highest'?3.0 : cfg.gfx==='high'?1.8 : 1.0;
   const AMB_MULT_GFX = cfg.gfx==='highest'?2.5 : cfg.gfx==='high'?1.6 : 1.0;
 
@@ -1076,7 +1117,7 @@ function build(n){
     else if(t=='beehive')beehive(st[1],st[2]);
     else if(t=='flowerarch')flowerArch(st[1],st[2],st[3]||0);
     else if(t=='wishingwell')wishingWell(st[1],st[2]);
-    else if(t=='garden')garden(st[1],st[2],st[3]||7);
+    else if(t=='garden')garden(st[1],st[2],st[3]||6);
     else if(t=='statuejello')statueJello(st[1],st[2]);
     else if(t=='torch')torch(st[1],st[2]);
   }
@@ -1106,8 +1147,6 @@ function build(n){
   }
 
   spawnJBs();
-
-  // spawn jellogers untuk map ini
   const jd=JELLOGER_DEFS[n];
   if(jd){for(const d of jd) spawnJelloger(d)}
 }
@@ -1140,20 +1179,41 @@ const spr=(w,h,f,sx,sy)=>{const c=document.createElement('canvas');c.width=w;c.h
 const nameS=(n,c,f)=>spr(128,24,x=>{x.font=`bold 16px ${f}`;x.textAlign='center';x.lineWidth=4;x.strokeStyle='#0e1a3a';x.strokeText(n,64,17);x.fillStyle=c;x.fillText(n,64,17)},3.2,.6);
 const jbLvlOf=v=>v>=500?4:v>=100?3:v>=50?2:v>=10?1:0;
 const jbLvl=()=>jbLvlOf(cfg.jb);
+// ── Chat bubble AUTO-WRAP & AUTO-RESIZE ──
 function chatS(t,lvl){
-  const W=300,H=40,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+  const FS=19,LH=24,MAXW=340,PAD=14;
+  const tmp=document.createElement('canvas').getContext('2d');
+  tmp.font=`bold ${FS}px monospace`;
+  const words=String(t).split(' ');
+  const lines=[];let cur='';
+  for(const w of words){
+    const test=cur?cur+' '+w:w;
+    if(tmp.measureText(test).width<=MAXW-PAD*2)cur=test;
+    else{if(cur)lines.push(cur);cur=w}
+  }
+  if(cur)lines.push(cur);
+  if(!lines.length)lines.push('...');
+  let W=PAD*2;for(const l of lines){W=Math.max(W,tmp.measureText(l).width+PAD*2)}
+  W=Math.min(MAXW,Math.ceil(W));
+  const H=Math.max(38, lines.length*LH+PAD);
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');
   const p=3,w=W-p*2,h=H-p*2;
   if(lvl<=0){x.fillStyle='#fff';x.fillRect(p,p,w,h);x.strokeStyle='#0e1a3a';x.lineWidth=3;x.strokeRect(p+1,p+1,w-2,h-2)}
   else if(lvl==1){const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#e0f2ff');g.addColorStop(1,'#a8d5ff');x.fillStyle=g;x.fillRect(p,p,w,h);x.strokeStyle='#3d8bff';x.lineWidth=3;x.strokeRect(p+1,p+1,w-2,h-2)}
   else if(lvl==2){const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#4ea8ff');g.addColorStop(1,'#8f5dff');x.fillStyle=g;x.fillRect(p,p,w,h);x.strokeStyle='#fff';x.lineWidth=3;x.strokeRect(p+1,p+1,w-2,h-2)}
-  else if(lvl==3){const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#ff5db1');g.addColorStop(.5,'#8f5dff');g.addColorStop(1,'#4ea8ff');x.fillStyle=g;x.fillRect(p,p,w,h);x.strokeStyle='#fff';x.lineWidth=3;x.strokeRect(p+1,p+1,w-2,h-2);x.fillStyle='#fff';for(let i=0;i<11;i++){x.fillRect(12+i*28,7,3,3);x.fillRect(22+i*26,H-11,3,3)}}
-  else{const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#ff5d5d');g.addColorStop(.25,'#ffd23f');g.addColorStop(.5,'#3fbf5f');g.addColorStop(.75,'#3d8bff');g.addColorStop(1,'#b05dff');x.fillStyle=g;x.fillRect(p,p,w,h);x.strokeStyle='#fff';x.lineWidth=3;x.strokeRect(p+1,p+1,w-2,h-2);x.fillStyle='#fff';for(let i=0;i<13;i++){x.fillRect(8+i*23,5,3,3);x.fillRect(14+i*22,H-10,3,3)}}
-  x.font='bold 19px monospace';x.textAlign='center';x.textBaseline='middle';
+  else if(lvl==3){const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#ff5db1');g.addColorStop(.5,'#8f5dff');g.addColorStop(1,'#4ea8ff');x.fillStyle=g;x.fillRect(p,p,w,h);x.strokeStyle='#fff';x.lineWidth=3;x.strokeRect(p+1,p+1,w-2,h-2);x.fillStyle='#fff';for(let i=0;i<Math.floor(W/28);i++){x.fillRect(12+i*28,7,3,3);x.fillRect(22+i*26,H-11,3,3)}}
+  else{const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#ff5d5d');g.addColorStop(.25,'#ffd23f');g.addColorStop(.5,'#3fbf5f');g.addColorStop(.75,'#3d8bff');g.addColorStop(1,'#b05dff');x.fillStyle=g;x.fillRect(p,p,w,h);x.strokeStyle='#fff';x.lineWidth=3;x.strokeRect(p+1,p+1,w-2,h-2);x.fillStyle='#fff';for(let i=0;i<Math.floor(W/24);i++){x.fillRect(8+i*23,5,3,3);x.fillRect(14+i*22,H-10,3,3)}}
+  x.font=`bold ${FS}px monospace`;x.textAlign='center';x.textBaseline='middle';
   x.fillStyle=lvl<=0?'#000':lvl==1?'#0e1a3a':'#fff';if(lvl>=2){x.shadowColor='#000';x.shadowBlur=5}
-  x.fillText(t.slice(0,32),W/2,H/2+1);x.shadowBlur=0;
+  const startY=H/2-(lines.length-1)*LH/2;
+  for(let i=0;i<lines.length;i++)x.fillText(lines[i],W/2,startY+i*LH+1);
+  x.shadowBlur=0;
   const tex=new THREE.CanvasTexture(c);tex.magFilter=tex.minFilter=THREE.NearestFilter;
   const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
-  s.scale.set(7.5,1,1);s.renderOrder=9;return s;
+  const spriteH=1.0;
+  const spriteW=spriteH*(W/H);
+  s.scale.set(spriteW,spriteH,1);s.renderOrder=9;return s;
 }
 const IC=['..PPP... .PPYPP.. ..PPP... ...G.... .G.G.... .GGG.... ...G.... ...G....','..PPP... .PPPPP.. .WWWWW.. .WWWWW.. ..CCC... ..CCC... ...C.... ...C....','.RR..RR. RRRRRRRR RRRRRRRR RRRRRRRR .RRRRRR. ..RRRR.. ...RR... ........','...OO... ..OOOO.. .OOOOOO. .OOOOOO. ..OOOO.. ...OO... .SSSSSS. ........','R......R .R....R. ..R..R.. ...RR... ...RR... ..R..R.. .R....R. R......R','..YYYY.. .YYYYYY. YKYYYYKY YYYYYYYY YKKKKKKY .YKRRKY. ..YYYY.. ........','..YYYY.. .YYYYYY. YYKYYKYY YYSYYSYY YYSYYSYY YYYKKYYY .YKYYKY. ..YYYY..','..YYYY.. .YYYYYY. YRRYYRRY YRRYYRRY YYYYYYYY YKYYYYKY .YKKKKY. ..YYYY..'],
 PAL={P:'#ff9ec4',Y:'#ffd23f',G:'#3fbf5f',W:'#ffffff',C:'#f6b26b',R:'#ff4d6d',O:'#ff8c1a',S:'#5db5ff',K:'#0e1a3a'};
@@ -1178,7 +1238,7 @@ function mkP(o){
   hearts.visible=tears.visible=false;m.add(eyes,hearts,tears);m.rotation.order='YXZ';root.add(m);
   const sh_blob=new THREE.Mesh(new THREE.CircleGeometry(.85,16).rotateX(-1.5708),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.28}));
   sh_blob.position.y=.02;root.add(sh_blob);
-  const nm=nameS(o.n||o.name||'?',o.nc||'#fff',o.nf||'monospace');nm.position.y=2.1;root.add(nm);
+  if(!o.noName){const nm=nameS(o.n||o.name||'?',o.nc||'#fff',o.nf||'monospace');nm.position.y=2.1;root.add(nm)}
   const icos={};[0,1,2,4].forEach(k=>{const s=icoS(k);s.position.y=3.4;s.visible=false;root.add(s);icos[k]=s});
   sc.add(root);
   return{root,m,shadow:sh_blob,eyes,hearts,tears,icos,x:0,z:0,y:0,vx:0,vz:0,vy:0,py:0,pvy:0,air:0,js:1,jx:1,sv:0,lean:0,flip:0,spd:0,jc:0,jh:0,ty:0,r:0,tx:0,tz:0,tr:0,e:-1,et:0,lEt:-1,lCt:-1,init:0,lx:0,lz:0,tt:0,c1:o.c1,chat:null,ce:0,jbLvl:jbLvlOf(o.jb||0),
@@ -1186,7 +1246,7 @@ function mkP(o){
     balloon:null,nearBalloon:-1};
 }
 function setE(p,e){p.e=e;p.et=performance.now()}
-function say(p,t){if(p.chat)p.root.remove(p.chat);p.chat=chatS(t,p.jbLvl||jbLvl());p.chat.position.y=3;p.root.add(p.chat);p.ce=performance.now()+6500}
+function say(p,t){if(p.chat)p.root.remove(p.chat);p.chat=chatS(t,p.jbLvl||jbLvl());p.chat.position.y=3.0;p.root.add(p.chat);p.ce=performance.now()+6500}
 function animE(p,t){
   const d=(t-p.et)/1000,e=d<4?p.e:-1;let y=0,sx=1,sy=1;
   if(e==3){y=.9*Math.sin(d*4.5)**2;sy=1+.12*Math.cos(d*9)}

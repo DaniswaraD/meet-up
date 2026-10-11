@@ -469,7 +469,6 @@ const LAYOUTS={
   island:{
     sky:[0x5ba8ff,0xfff4c2],edge:0x2d7a3a,
     roadFill:0xe8d8b8,roadTrim:0x8b6a4b,plaza:20,
-    // Hills = ring luar sebagai backdrop
     hills:[
       {x:0,z:210,r:80,h:28},
       {x:160,z:150,r:65,h:22},{x:-160,z:150,r:65,h:22},
@@ -477,45 +476,45 @@ const LAYOUTS={
       {x:160,z:-150,r:60,h:18},{x:-160,z:-150,r:60,h:18},
       {x:0,z:-210,r:70,h:20}
     ],
-    // Roads memancar dari plaza tepi (r=20) ke tiap landmark
     roads:[
-      {w:7,pts:[[0,20],[6,60],[0,110],[0,160]]},           // N → lighthouse
-      {w:6,pts:[[20,0],[60,-8],[100,-5]]},                  // E → hut E
-      {w:6,pts:[[-20,0],[-60,-8],[-100,-5]]},               // W → hut W
-      {w:6,pts:[[14,14],[45,50],[70,75]]},                  // NE → watchtower
-      {w:5,pts:[[-14,14],[-45,50],[-70,75]]},               // NW → shrine
-      {w:5,pts:[[0,-20],[-8,-55],[-15,-95]]},               // S → camp beach
-      {w:5,pts:[[14,-14],[45,-45],[70,-75]]},               // SE → camp
-      {w:5,pts:[[-14,-14],[-45,-45],[-70,-75]]}             // SW → camp
+      {w:7,pts:[[0,20],[6,60],[0,110],[0,160]]},
+      {w:6,pts:[[20,0],[60,-8],[100,-5]]},
+      {w:6,pts:[[-20,0],[-60,-8],[-100,-5]]},
+      {w:6,pts:[[14,14],[45,50],[70,75]]},
+      {w:5,pts:[[-14,14],[-45,50],[-70,75]]},
+      {w:5,pts:[[0,-20],[-8,-55],[-15,-95]]},
+      {w:5,pts:[[14,-14],[45,-45],[70,-75]]},
+      {w:5,pts:[[-14,-14],[-45,-45],[-70,-75]]}
     ],
     treeZones:[
-      // Oak grove timur (dekat hut E)
-      {type:'oak',cx:75,cz:-30,r:35,count:10,rot:0},
-      // Cherry grove barat
-      {type:'cherry',cx:-75,cz:-30,r:35,count:9},
-      // Pine forest di utara (lereng bukit)
-      {type:'pine',cx:0,cz:145,r:45,count:16},
-      // Birch grove NE
-      {type:'birch',cx:110,cz:70,r:30,count:9},
-      // Palm pantai selatan
-      {type:'palm',cx:-30,cz:150,r:18,count:5},
-      {type:'palm',cx:30,cz:150,r:18,count:5},
-      {type:'palm',cx:0,cz:-145,r:20,count:6},
-      // Mixed pine SE & SW
-      {type:'pine',cx:120,cz:-100,r:32,count:9},
-      {type:'pine',cx:-120,cz:-100,r:32,count:9},
-      // Oak pengisi NW/SE interior
-      {type:'oak',cx:-125,cz:75,r:28,count:7},
-      {type:'oak',cx:125,cz:75,r:28,count:7}
+      {type:'oak',cx:85,cz:-35,r:45,count:22},
+      {type:'cherry',cx:-85,cz:-35,r:45,count:20},
+      {type:'pine',cx:0,cz:135,r:60,count:34},
+      {type:'birch',cx:120,cz:80,r:40,count:18},
+      {type:'palm',cx:-50,cz:150,r:22,count:10},
+      {type:'palm',cx:50,cz:150,r:22,count:10},
+      {type:'palm',cx:0,cz:-165,r:28,count:12},
+      {type:'pine',cx:135,cz:-110,r:42,count:20},
+      {type:'oak',cx:100,cz:-140,r:38,count:16},
+      {type:'pine',cx:-135,cz:-110,r:42,count:20},
+      {type:'oak',cx:-100,cz:-140,r:38,count:16},
+      {type:'oak',cx:-135,cz:80,r:38,count:16},
+      {type:'birch',cx:-155,cz:40,r:30,count:12},
+      {type:'oak',cx:150,cz:25,r:30,count:12},
+      {type:'cherry',cx:0,cz:65,r:28,count:12},
+      {type:'oak',cx:0,cz:-65,r:28,count:12},
+      {type:'pine',cx:60,cz:170,r:28,count:12},
+      {type:'pine',cx:-60,cz:170,r:28,count:12}
     ],
-    grassCount:90,flowerCount:70,rockCount:12,
+    grassCount:110,flowerCount:80,rockCount:14,
     landmarks:[
       ['lighthouse',0,165],
       ['hut',105,-5,-Math.PI/2,0x8b5a2b,0xa04030],
       ['hut',-105,-5,Math.PI/2,0xa07850,0x8b3030],
       ['watchtower',75,80],
       ['shrine',-75,80,0x8a8a7a],
-      ['well',32,32],['well',-32,32],['well',32,-32],['well',-32,-32],
+      // Sumur di sudut antara jalan (r=42, sudut 22.5°/157.5°/202.5°/337.5°)
+      ['well',41,17],['well',-41,17],['well',-41,-17],['well',41,-17],
       ['camp',75,-80],['camp',-75,-80],['camp',0,-105],
       ['bench',26,10,0],['bench',-26,10,0],['bench',10,26,Math.PI/2],['bench',-10,26,Math.PI/2],
       ['bench',10,-26,-Math.PI/2],['bench',-10,-26,-Math.PI/2]
@@ -534,38 +533,41 @@ const LAYOUTS={
       {x:0,z:-200,r:65,h:12}
     ],
     roads:[
-      {w:7,pts:[[0,18],[10,55],[20,90]]},                   // N → obelisk N
-      {w:6,pts:[[18,0],[55,-5],[100,0]]},                    // E → oasis
-      {w:6,pts:[[-18,0],[-55,-8],[-95,-5]]},                 // W → obelisk W
-      {w:6,pts:[[12,12],[45,50],[75,80]]},                   // NE → camp
-      {w:5,pts:[[-12,12],[-45,50],[-75,80]]},                // NW → watchtower
-      {w:5,pts:[[0,-18],[-5,-60],[-10,-100]]},               // S → shrine
-      {w:5,pts:[[12,-12],[45,-45],[75,-75]]},                // SE → obelisk SE
-      {w:5,pts:[[-12,-12],[-45,-45],[-75,-75]]}              // SW → camp SW
+      {w:7,pts:[[0,18],[10,55],[20,90]]},
+      {w:6,pts:[[18,0],[55,-5],[100,0]]},
+      {w:6,pts:[[-18,0],[-55,-8],[-95,-5]]},
+      {w:6,pts:[[12,12],[45,50],[75,80]]},
+      {w:5,pts:[[-12,12],[-45,50],[-75,80]]},
+      {w:5,pts:[[0,-18],[-5,-60],[-10,-100]]},
+      {w:5,pts:[[12,-12],[45,-45],[75,-75]]},
+      {w:5,pts:[[-12,-12],[-45,-45],[-75,-75]]}
     ],
     oasis:{x:105,z:0,r:28},
     treeZones:[
-      {type:'palm',cx:105,cz:0,r:20,count:8},
-      {type:'cactus',cx:55,cz:55,r:35,count:12},
-      {type:'cactus',cx:-55,cz:-55,r:35,count:12},
-      {type:'dead',cx:110,cz:90,r:32,count:7},
-      {type:'dead',cx:-110,cz:90,r:32,count:7},
-      {type:'cactus',cx:140,cz:-40,r:30,count:8},
-      {type:'dead',cx:-140,cz:-40,r:30,count:7},
-      {type:'cactus',cx:0,cz:120,r:35,count:10},
-      {type:'dead',cx:0,cz:-140,r:35,count:8},
-      {type:'cactus',cx:70,cz:-100,r:32,count:9},
-      {type:'cactus',cx:-70,cz:-100,r:32,count:9}
+      {type:'palm',cx:105,cz:0,r:22,count:10},
+      {type:'cactus',cx:55,cz:55,r:40,count:16},
+      {type:'cactus',cx:-55,cz:-55,r:40,count:16},
+      {type:'dead',cx:110,cz:90,r:35,count:10},
+      {type:'dead',cx:-110,cz:90,r:35,count:10},
+      {type:'cactus',cx:145,cz:-40,r:32,count:11},
+      {type:'dead',cx:-145,cz:-40,r:32,count:11},
+      {type:'cactus',cx:0,cz:125,r:40,count:14},
+      {type:'dead',cx:0,cz:-140,r:38,count:11},
+      {type:'cactus',cx:75,cz:-100,r:35,count:12},
+      {type:'cactus',cx:-75,cz:-100,r:35,count:12},
+      {type:'dead',cx:80,cz:80,r:32,count:10},
+      {type:'dead',cx:-80,cz:80,r:32,count:10}
     ],
-    grassCount:50,flowerCount:0,rockCount:14,
+    grassCount:65,flowerCount:0,rockCount:16,
     landmarks:[
       ['obelisk',0,105,0xb8a878],
       ['obelisk',-105,-5,0xa89868],
       ['watchtower',-75,80],
       ['shrine',-5,-105,0x8a8a7a],
       ['obelisk',80,-80,0xa89868],
-      ['camp',80,80],['camp',-80,-80],['camp',75,80],
-      ['well',30,30],['well',-30,30],
+      ['camp',80,80],['camp',-80,-80],
+      // Well di sudut antara jalan (r=40)
+      ['well',37,15],['well',-37,15],['well',-37,-15],['well',37,-15],
       ['bench',20,8,0],['bench',-20,8,0],['bench',8,-20,Math.PI/2],['bench',-8,-20,Math.PI/2]
     ],
     lamps:[[0,55],[-60,-8],[60,-8],[40,45],[-40,45],[0,-60],[40,-40],[-40,-40]],
@@ -591,20 +593,23 @@ const LAYOUTS={
       {w:5,pts:[[-10,-10],[-45,-45],[-70,-70]]}
     ],
     treeZones:[
-      {type:'pine',cx:50,cz:-55,r:35,count:14},
-      {type:'pine',cx:-50,cz:-55,r:35,count:14},
-      {type:'pine',cx:50,cz:55,r:35,count:12},
-      {type:'pine',cx:-50,cz:55,r:35,count:12},
-      {type:'birch',cx:95,cz:80,r:30,count:10},
-      {type:'birch',cx:-95,cz:80,r:30,count:10},
-      {type:'pine',cx:95,cz:-80,r:32,count:11},
-      {type:'pine',cx:-95,cz:-80,r:32,count:11},
-      {type:'pine',cx:0,cz:130,r:45,count:16},
-      {type:'birch',cx:0,cz:-155,r:40,count:14},
-      {type:'pine',cx:145,cz:0,r:30,count:9},
-      {type:'pine',cx:-145,cz:0,r:30,count:9}
+      {type:'pine',cx:55,cz:-55,r:38,count:18},
+      {type:'pine',cx:-55,cz:-55,r:38,count:18},
+      {type:'pine',cx:55,cz:55,r:38,count:16},
+      {type:'pine',cx:-55,cz:55,r:38,count:16},
+      {type:'birch',cx:100,cz:80,r:35,count:13},
+      {type:'birch',cx:-100,cz:80,r:35,count:13},
+      {type:'pine',cx:100,cz:-80,r:35,count:14},
+      {type:'pine',cx:-100,cz:-80,r:35,count:14},
+      {type:'pine',cx:0,cz:135,r:50,count:22},
+      {type:'birch',cx:0,cz:-160,r:45,count:18},
+      {type:'pine',cx:150,cz:0,r:35,count:12},
+      {type:'pine',cx:-150,cz:0,r:35,count:12},
+      {type:'pine',cx:0,cz:-55,r:26,count:10},
+      {type:'birch',cx:60,cz:35,r:28,count:10},
+      {type:'pine',cx:-60,cz:35,r:28,count:10}
     ],
-    grassCount:120,flowerCount:30,rockCount:14,
+    grassCount:130,flowerCount:40,rockCount:16,
     landmarks:[
       ['shrine',0,105,0x8a8a7a],
       ['shrine',-90,60,0x7a7a6a],
@@ -612,7 +617,8 @@ const LAYOUTS={
       ['hut',-70,75,1.5,0x6b4a2b,0x2f5a2a],
       ['hut',70,-70,2.2,0x8b5a2b,0x8b3030],
       ['camp',-30,-100],['camp',95,45],['camp',-95,-45],
-      ['well',28,28],['well',-28,28],
+      // Sumur di sudut antara jalan (r=38)
+      ['well',35,15],['well',-35,15],['well',-35,-15],['well',35,-15],
       ['bench',18,8,0],['bench',-18,8,0],['bench',8,-18,Math.PI/2],['bench',-8,-18,Math.PI/2]
     ],
     lamps:[[0,45],[0,-45],[45,5],[-45,5],[40,40],[-40,40]],
@@ -638,25 +644,30 @@ const LAYOUTS={
     ],
     lake:{x:0,z:-115,r:38},
     treeZones:[
-      {type:'snowpine',cx:55,cz:-55,r:35,count:14},
-      {type:'snowpine',cx:-55,cz:-55,r:35,count:14},
-      {type:'snowpine',cx:55,cz:55,r:35,count:14},
-      {type:'snowpine',cx:-55,cz:55,r:35,count:14},
-      {type:'snowpine',cx:0,cz:140,r:45,count:16},
-      {type:'snowpine',cx:0,cz:-165,r:40,count:12},
-      {type:'snowpine',cx:130,cz:-90,r:32,count:10},
-      {type:'snowpine',cx:-130,cz:-90,r:32,count:10},
-      {type:'snowpine',cx:130,cz:90,r:32,count:10},
-      {type:'snowpine',cx:-130,cz:90,r:32,count:10}
+      {type:'snowpine',cx:60,cz:-60,r:38,count:18},
+      {type:'snowpine',cx:-60,cz:-60,r:38,count:18},
+      {type:'snowpine',cx:60,cz:60,r:38,count:18},
+      {type:'snowpine',cx:-60,cz:60,r:38,count:18},
+      {type:'snowpine',cx:0,cz:140,r:50,count:22},
+      {type:'snowpine',cx:0,cz:-170,r:42,count:16},
+      {type:'snowpine',cx:135,cz:-90,r:35,count:13},
+      {type:'snowpine',cx:-135,cz:-90,r:35,count:13},
+      {type:'snowpine',cx:135,cz:90,r:35,count:13},
+      {type:'snowpine',cx:-135,cz:90,r:35,count:13},
+      {type:'snowpine',cx:0,cz:60,r:28,count:10},
+      {type:'snowpine',cx:60,cz:0,r:26,count:9},
+      {type:'snowpine',cx:-60,cz:0,r:26,count:9}
     ],
-    grassCount:0,flowerCount:0,rockCount:14,
+    grassCount:0,flowerCount:0,rockCount:16,
     landmarks:[
       ['igloo',50,55],['igloo',65,68],['igloo',80,50],['igloo',40,68],
       ['igloo',-50,55],['igloo',-65,68],['igloo',-80,50],
-      ['hut',-100,0,1.2,0x6b4a2b,0x5a3050],['hut',100,0,-1.2,0x8b5a2b,0x503020],
+      ['hut',-100,0,1.2,0x6b4a2b,0x5a3050],
+      ['hut',100,0,-1.2,0x8b5a2b,0x503020],
       ['watchtower',75,80],['shrine',-75,80,0xc8d0dc],
       ['camp',75,-80],['camp',-75,-80],
-      ['well',28,28],['well',-28,28],
+      // Sumur di sudut antara jalan (r=40)
+      ['well',37,15],['well',-37,15],['well',-37,-15],['well',37,-15],
       ['bench',18,8,0],['bench',-18,8,0],['bench',8,-18,Math.PI/2],['bench',-8,-18,Math.PI/2]
     ],
     lamps:[[0,55],[-55,-8],[55,-8],[40,48],[-40,48],[0,-55],[42,-42],[-42,-42]],

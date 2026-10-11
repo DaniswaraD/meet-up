@@ -59,7 +59,7 @@ document.querySelectorAll('.ttl').forEach(c=>{c.width=50;c.height=10;const x=c.g
 const cv=$('c'),R=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'low-power'}),sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.1,900);
 R.shadowMap.enabled=false;
 sc.add(new THREE.HemisphereLight(0xffffff,0x667788,.95));
-const dl=new THREE.DirectionalLight(0xffffff,.5);dl.position.set(.5,1,.3);sc.add(dl);
+const dl=new THREE.DirectionalLight(0xffffff,.55);dl.position.set(.5,1,.3);sc.add(dl);
 function rs(){const h=240,w=Math.round(h*innerWidth/innerHeight);R.setPixelRatio(1);R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}addEventListener('resize',rs);rs();
 function setRD(){const r=cfg.rd;const rl=$('rl');if(rl)rl.textContent='Render: '+r+'J';if(sc.fog){sc.fog.near=r;sc.fog.far=r*1.6}cam.far=r*1.7+10;cam.updateProjectionMatrix()}
 const MAPS={island:[0x87c8ff,0x5cb85c],desert:[0xf5d99a,0xe0c070],jungle:[0x3a6a4a,0x2f6b3a],snow:[0xdcecff,0xf4f8ff],parkour:[0x0e1a3a,0x1a1a3a],speedrace:[0x87ceeb,0x4a4a5a]};
@@ -77,18 +77,12 @@ function makeSky(sc1,sc2){
     cl.push(c.r,c.g,c.b);
   }
   geo.setAttribute('color',new THREE.Float32BufferAttribute(cl,3));
-  const mat=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,depthWrite:false});
-  skyDome=new THREE.Mesh(geo,mat);
+  skyDome=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,depthWrite:false}));
   sc.add(skyDome);
   sunMesh=new THREE.Mesh(new THREE.CircleGeometry(28,32),new THREE.MeshBasicMaterial({color:0xfff4c2,transparent:true,opacity:.9}));
-  sunMesh.position.set(-150,140,-200);
-  sunMesh.lookAt(0,50,0);
-  sc.add(sunMesh);
+  sunMesh.position.set(-150,140,-200);sunMesh.lookAt(0,50,0);sc.add(sunMesh);
 }
-function removeSky(){
-  if(skyDome){sc.remove(skyDome);skyDome=null}
-  if(sunMesh){sc.remove(sunMesh);sunMesh=null}
-}
+function removeSky(){if(skyDome){sc.remove(skyDome);skyDome=null}if(sunMesh){sc.remove(sunMesh);sunMesh=null}}
 
 const LM=(c,o)=>new THREE.MeshPhongMaterial(Object.assign({color:c,flatShading:true,shininess:5},o||{}));
 const LS=(c,o)=>new THREE.MeshPhongMaterial(Object.assign({color:c,flatShading:false,shininess:8},o||{}));
@@ -97,7 +91,7 @@ const BOX=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
 const ICO=(r,d)=>new THREE.IcosahedronGeometry(r,d||0);
 const addCol=(x,y,z,w,h,d,opt)=>cols.push(Object.assign({x,y,z,w,h,d,enabled:true,slip:0},opt||{}));
 
-// ═══════════════ INSTANCING & MERGE UTILITY ═══════════════
+// ═══════════════ MERGE & INSTANCE ═══════════════
 function mergeParts(parts){
   const geos=[];let total=0;
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();
@@ -130,6 +124,10 @@ function mergeParts(parts){
   m.setAttribute('color',new THREE.BufferAttribute(C,3));
   return m;
 }
+function addMerged(parts){
+  if(!parts.length)return;
+  world.add(new THREE.Mesh(mergeParts(parts),new THREE.MeshPhongMaterial({vertexColors:true,flatShading:true,shininess:8})));
+}
 function instance(geo,list,parent){
   if(!list||!list.length)return null;
   const mat=new THREE.MeshPhongMaterial({vertexColors:true,flatShading:true,shininess:4});
@@ -149,51 +147,53 @@ function instance(geo,list,parent){
   return im;
 }
 
-// ═══════════════ AMBIENT POOLS ═══════════════
+// ═══════════════ AMBIENT ═══════════════
 const AMB={butterflies:[],birds:[],clouds:[],snow:[],leaves:[],petals:[],smokes:[],stars:[],orbs:[],fireflies:[]};
 function clearAmb(){for(const k in AMB){for(const m of AMB[k])sc.remove(m.m);AMB[k]=[]}}
 function pool(kind,geo,mat,n){for(let i=0;i<n;i++){const m=new THREE.Mesh(geo,mat.clone());m.visible=false;sc.add(m);AMB[kind].push({m,act:false,t:0})}}
 function get(kind){for(const q of AMB[kind])if(!q.act)return q;return null}
 function spawnAmb(kind,data){const q=get(kind);if(!q)return;q.act=true;q.t=0;Object.assign(q,data);q.m.visible=true;q.m.position.set(q.x,q.y,q.z)}
 
-// ═══════════════ ROAD (spline ribbon) ═══════════════
-function road(pts,width,color,edgeCol){
-  const curve=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(p[0],0,p[1])),false,'catmullrom',.5);
-  const N=Math.max(24,Math.ceil(curve.getLength()/2));
-  const points=curve.getSpacedPoints(N);
+// ═══════════════ ROAD (spline ribbon, 4 vertices per cross-section) ═══════════════
+function road(pts,width,fill,trim){
   const V=[],C=[],I=[];
-  const c=new THREE.Color(color);
+  const p3=pts.map(p=>new THREE.Vector3(p[0],0,p[1]));
+  const curve=new THREE.CatmullRomCurve3(p3,false,'centripetal',0.5);
+  const steps=Math.max(24,Math.ceil(curve.getLength()/1.6));
+  const points=curve.getSpacedPoints(steps);
+  const cF=new THREE.Color(fill),cT=new THREE.Color(trim);
+  const iw=width*0.5, ow=width*0.5+0.7, Y=0.14;
   for(let i=0;i<points.length;i++){
     const p=points[i];
     const a=points[Math.max(0,i-1)],b=points[Math.min(points.length-1,i+1)];
-    let dx=b.x-a.x,dz=b.z-a.z;const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
-    const nx=dz,nz=-dx;const hw=width/2;
-    V.push(p.x-nx*hw,.09,p.z-nz*hw);
-    V.push(p.x+nx*hw,.09,p.z+nz*hw);
-    C.push(c.r,c.g,c.b,c.r,c.g,c.b);
-    if(i>0){const a2=(i-1)*2,b2=a2+1,c2=i*2,d2=c2+1;I.push(a2,c2,b2,b2,c2,d2)}
+    let dx=b.x-a.x,dz=b.z-a.z;
+    const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
+    const nx=dz,nz=-dx;
+    V.push(p.x-nx*ow,Y,p.z-nz*ow); C.push(cT.r,cT.g,cT.b);
+    V.push(p.x-nx*iw,Y+.01,p.z-nz*iw); C.push(cF.r,cF.g,cF.b);
+    V.push(p.x+nx*iw,Y+.01,p.z+nz*iw); C.push(cF.r,cF.g,cF.b);
+    V.push(p.x+nx*ow,Y,p.z+nz*ow); C.push(cT.r,cT.g,cT.b);
+    if(i>0){
+      const p0=(i-1)*4,p1=i*4;
+      I.push(p0,p1,p0+1, p1,p1+1,p0+1);
+      I.push(p0+1,p1+1,p0+2, p1+1,p1+2,p0+2);
+      I.push(p0+2,p1+2,p0+3, p1+2,p1+3,p0+3);
+    }
   }
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.Float32BufferAttribute(V,3));
   geo.setAttribute('color',new THREE.Float32BufferAttribute(C,3));
-  geo.setIndex(I);geo.computeVertexNormals();
-  world.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({vertexColors:true,shininess:3})));
-  if(edgeCol){
-    const edgeParts=[];
-    for(let i=0;i<points.length-1;i+=3){
-      const p1=points[i],p2=points[Math.min(i+3,points.length-1)];
-      const dx=p2.x-p1.x,dz=p2.z-p1.z,l=Math.hypot(dx,dz)||1;
-      const nx=dz/l,nz=-dx/l,rx=Math.atan2(dx,dz);
-      const off=width/2+.35;
-      edgeParts.push({geo:BOX(.5,.12,Math.hypot(dx,dz)*1.1),x:(p1.x+p2.x)/2-nx*off,y:.06,z:(p1.z+p2.z)/2-nz*off,ry:rx,color:edgeCol});
-      edgeParts.push({geo:BOX(.5,.12,Math.hypot(dx,dz)*1.1),x:(p1.x+p2.x)/2+nx*off,y:.06,z:(p1.z+p2.z)/2+nz*off,ry:rx,color:edgeCol});
-    }
-    if(edgeParts.length)world.add(new THREE.Mesh(mergeParts(edgeParts),new THREE.MeshPhongMaterial({vertexColors:true,flatShading:true})));
-  }
-  return curve;
+  geo.setIndex(I);
+  const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide}));
+  mesh.renderOrder=1;world.add(mesh);
+  return{points,width};
+}
+function plaza(r,fill,trim){
+  Mt(new THREE.CircleGeometry(r,36).rotateX(-1.5708),new THREE.MeshBasicMaterial({color:trim}),0,.12,0).renderOrder=1;
+  Mt(new THREE.CircleGeometry(r-1.2,36).rotateX(-1.5708),new THREE.MeshBasicMaterial({color:fill}),0,.13,0).renderOrder=2;
 }
 
-// ═══════════════ TREES/ROCKS (cached templates) ═══════════════
+// ═══════════════ TREE GEOMETRY TEMPLATES ═══════════════
 const _treeGeos={};
 function treeGeo(type){
   if(_treeGeos[type])return _treeGeos[type];
@@ -264,9 +264,9 @@ function treeGeo(type){
     P.push({geo:new THREE.IcosahedronGeometry(.7,0),x:.2,y:1.5,z:.5,color:0x3a7a2f});
   }
   else if(type=='rock'){
-    P.push({geo:new THREE.DodecahedronGeometry(.8,0),y:.45,color:0x7a7a72});
-    P.push({geo:new THREE.DodecahedronGeometry(.5,0),x:.6,y:.3,z:.3,color:0x8a8a82});
-    P.push({geo:new THREE.DodecahedronGeometry(.4,0),x:-.5,y:.25,z:-.3,color:0x6a6a62});
+    P.push({geo:new THREE.DodecahedronGeometry(.7,0),y:.4,color:0x7a7a72});
+    P.push({geo:new THREE.DodecahedronGeometry(.45,0),x:.55,y:.28,z:.25,color:0x8a8a82});
+    P.push({geo:new THREE.DodecahedronGeometry(.35,0),x:-.45,y:.22,z:-.25,color:0x6a6a62});
   }
   else if(type=='grassTuft'){
     P.push({geo:new THREE.ConeGeometry(.15,.7,3),y:.35,color:0x4fa040});
@@ -291,17 +291,16 @@ function treeGeo(type){
   return g;
 }
 
-// ═══════════════ LANDMARKS (each returns merged mesh + adds collision) ═══════════════
-function addMerged(parts){
-  if(!parts.length)return;
-  world.add(new THREE.Mesh(mergeParts(parts),new THREE.MeshPhongMaterial({vertexColors:true,flatShading:true,shininess:8})));
-}
+// ═══════════════ LANDMARKS ═══════════════
+const BEACONS=[];
 function hut(x,z,rot,woodCol,roofCol){
   const P=[];
   const w=6,h=5,d=6,t=.4,doorW=1.8;
-  const rotM=v=>[Math.cos(rot)*v[0]-Math.sin(rot)*v[1],Math.sin(rot)*v[0]+Math.cos(rot)*v[1]];
-  const local=(lx,ly,lz)=>{const[a,b]=rotM([lx,lz]);return{x:x+a,y:ly,z:z+b}};
-  const add=(geo,lx,ly,lz,color,extra)=>{const p=local(lx,ly,lz);P.push(Object.assign({geo,x:p.x,y:ly,z:p.z,color,ry:rot},extra||{}))};
+  const c=Math.cos(rot),s=Math.sin(rot);
+  const add=(geo,lx,ly,lz,color,extra)=>{
+    const wx=x+c*lx-s*lz, wz=z+s*lx+c*lz;
+    P.push(Object.assign({geo,x:wx,y:ly,z:wz,color,ry:rot},extra||{}));
+  };
   add(BOX(w+.4,.4,d+.4),0,-.2,0,0x5a3a1a);
   add(BOX(w,h,t),0,h/2,-d/2,woodCol);
   add(BOX(t,h,d),-w/2,h/2,0,woodCol);
@@ -316,78 +315,93 @@ function hut(x,z,rot,woodCol,roofCol){
   addCol(x-w/2,0,z,t,h,d);
   addCol(x+w/2,0,z,t,h,d);
 }
-const BEACONS=[];
 function lighthouse(x,z){
-  const P=[];
-  P.push({geo:new THREE.CylinderGeometry(3.5,4.5,20,12),x,y:10,z,color:0xf4f4f4});
-  for(let i=1;i<=4;i++)P.push({geo:new THREE.CylinderGeometry(4,4,1,12),x,y:i*4,z,color:0xff5d5d});
-  P.push({geo:new THREE.CylinderGeometry(4.5,4.5,1,12),x,y:20.5,z,color:0x2a2a2a});
-  P.push({geo:new THREE.CylinderGeometry(3,3,4,8),x,y:23,z,color:0x2a2a2a});
-  addMerged(P);
-  const lightMesh=Mt(ICO(1.8,1),new THREE.MeshBasicMaterial({color:0xffe27a}),x,23,z);
+  addMerged([
+    {geo:new THREE.CylinderGeometry(3.5,4.5,20,12),x,y:10,z,color:0xf4f4f4},
+    {geo:new THREE.CylinderGeometry(4,4,1,12),x,y:4,z,color:0xff5d5d},
+    {geo:new THREE.CylinderGeometry(4,4,1,12),x,y:8,z,color:0xff5d5d},
+    {geo:new THREE.CylinderGeometry(4,4,1,12),x,y:12,z,color:0xff5d5d},
+    {geo:new THREE.CylinderGeometry(4,4,1,12),x,y:16,z,color:0xff5d5d},
+    {geo:new THREE.CylinderGeometry(4.5,4.5,1,12),x,y:20.5,z,color:0x2a2a2a},
+    {geo:new THREE.CylinderGeometry(3,3,4,8),x,y:23,z,color:0x2a2a2a}
+  ]);
+  Mt(ICO(1.8,1),new THREE.MeshBasicMaterial({color:0xffe27a}),x,23,z);
   const beam=Mt(new THREE.ConeGeometry(15,30,4).rotateX(Math.PI/2),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.15,side:THREE.DoubleSide}),x,23,z);
-  BEACONS.push({mesh:beam,beam,t:Math.random()*6.28});
+  BEACONS.push({beam,t:Math.random()*6.28});
   addCol(x,0,z,8,20,8);
 }
 function obelisk(x,z,col){
-  const P=[
+  addMerged([
     {geo:BOX(6,.8,6),x,y:.4,z,color:0x6a5a4a},
     {geo:BOX(3.5,.8,3.5),x,y:1.2,z,color:0x6a5a4a},
     {geo:new THREE.CylinderGeometry(1.5,2.5,16,4),x,y:9,z,color:col,ry:Math.PI/4},
-    {geo:new THREE.ConeGeometry(2.5,3,4),x,y:18.5,z,color:0xffd23f,ry:Math.PI/4},
-  ];
-  addMerged(P);
+    {geo:new THREE.ConeGeometry(2.5,3,4),x,y:18.5,z,color:0xffd23f,ry:Math.PI/4}
+  ]);
   Mt(ICO(1,1),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:.6}),x,18.5,z);
   addCol(x,0,z,5,18,5);
 }
 function shrine(x,z,col){
-  const P=[];
-  P.push({geo:BOX(12,1,12),x,y:.5,z,color:col||0x8a8a7a});
-  P.push({geo:BOX(9,1,9),x,y:1.5,z,color:col||0x8a8a7a});
-  [[-3,-3],[3,-3],[0,3]].forEach(p=>P.push({geo:new THREE.CylinderGeometry(1,1.2,7,8),x:x+p[0],y:5.5,z:z+p[1],color:col||0x8a8a7a}));
-  P.push({geo:BOX(10,1,8),x,y:9.5,z,color:col||0x8a8a7a});
-  P.push({geo:BOX(2.5,1.5,2.5),x,y:2.75,z,color:0x6a5a4a});
-  addMerged(P);
+  const cc=col||0x8a8a7a;
+  addMerged([
+    {geo:BOX(12,1,12),x,y:.5,z,color:cc},
+    {geo:BOX(9,1,9),x,y:1.5,z,color:cc},
+    {geo:new THREE.CylinderGeometry(1,1.2,7,8),x:x-3,y:5.5,z:z-3,color:cc},
+    {geo:new THREE.CylinderGeometry(1,1.2,7,8),x:x+3,y:5.5,z:z-3,color:cc},
+    {geo:new THREE.CylinderGeometry(1,1.2,7,8),x,y:5.5,z:z+3,color:cc},
+    {geo:BOX(10,1,8),x,y:9.5,z,color:cc},
+    {geo:BOX(2.5,1.5,2.5),x,y:2.75,z,color:0x6a5a4a}
+  ]);
   Mt(ICO(.6,1),new THREE.MeshBasicMaterial({color:0x7fd0ff}),x,3.7,z);
   addCol(x,0,z,12,2,12);
   addCol(x-3,2,z-3,2,7,2);addCol(x+3,2,z-3,2,7,2);addCol(x,2,z+3,2,7,2);
 }
 function watchtower(x,z){
-  const P=[];
-  [[-3,-3],[3,-3],[-3,3],[3,3]].forEach(p=>P.push({geo:new THREE.CylinderGeometry(.6,.8,16,6),x:x+p[0],y:8,z:z+p[1],color:0x8b5a2b}));
-  for(let i=1;i<=3;i++)P.push({geo:BOX(7.5,.4,7.5),x,y:i*4,z,color:0x5a3a1a});
-  P.push({geo:BOX(8.5,.5,8.5),x,y:16,z,color:0x8b5a2b});
-  [[-4,0],[4,0],[0,-4],[0,4]].forEach(p=>P.push({geo:BOX(p[0]?1:9,.3,.4),x:x+p[0],y:17,z:z+p[1],color:0x8b5a2b}));
-  P.push({geo:new THREE.ConeGeometry(7,4,4),x,y:19,z,color:0xa04030,ry:Math.PI/4});
-  addMerged(P);
-  [[-3,-3],[3,-3],[-3,3],[3,3]].forEach(p=>addCol(x+p[0],0,z+p[1],1.5,16,1.5));
+  addMerged([
+    {geo:new THREE.CylinderGeometry(.6,.8,16,6),x:x-3,y:8,z:z-3,color:0x8b5a2b},
+    {geo:new THREE.CylinderGeometry(.6,.8,16,6),x:x+3,y:8,z:z-3,color:0x8b5a2b},
+    {geo:new THREE.CylinderGeometry(.6,.8,16,6),x:x-3,y:8,z:z+3,color:0x8b5a2b},
+    {geo:new THREE.CylinderGeometry(.6,.8,16,6),x:x+3,y:8,z:z+3,color:0x8b5a2b},
+    {geo:BOX(7.5,.4,7.5),x,y:4,z,color:0x5a3a1a},
+    {geo:BOX(7.5,.4,7.5),x,y:8,z,color:0x5a3a1a},
+    {geo:BOX(7.5,.4,7.5),x,y:12,z,color:0x5a3a1a},
+    {geo:BOX(8.5,.5,8.5),x,y:16,z,color:0x8b5a2b},
+    {geo:BOX(9,.3,.4),x,y:17,z:z-4,color:0x8b5a2b},
+    {geo:BOX(9,.3,.4),x,y:17,z:z+4,color:0x8b5a2b},
+    {geo:BOX(.4,.3,9),x:x-4,y:17,z,color:0x8b5a2b},
+    {geo:BOX(.4,.3,9),x:x+4,y:17,z,color:0x8b5a2b},
+    {geo:new THREE.ConeGeometry(7,4,4),x,y:19,z,color:0xa04030,ry:Math.PI/4}
+  ]);
+  addCol(x-3,0,z-3,1.5,16,1.5);addCol(x+3,0,z-3,1.5,16,1.5);
+  addCol(x-3,0,z+3,1.5,16,1.5);addCol(x+3,0,z+3,1.5,16,1.5);
 }
 function oasis(x,z,r){
   Mt(new THREE.CircleGeometry(r,24).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x3aa0d0,shininess:90,transparent:true,opacity:.9}),x,.06,z);
   Mt(new THREE.TorusGeometry(r,.6,4,24).rotateX(1.5708),LM(0xb8a878),x,.3,z);
 }
 function well(x,z){
-  const P=[
+  addMerged([
     {geo:new THREE.CylinderGeometry(2.2,2.4,2,8),x,y:1,z,color:0x8a8a8a},
     {geo:BOX(.35,4.5,.35),x:x-1.6,y:2.5,z:z-1.6,color:0x8b5a2b},
     {geo:BOX(.35,4.5,.35),x:x+1.6,y:2.5,z:z-1.6,color:0x8b5a2b},
     {geo:BOX(.35,4.5,.35),x:x-1.6,y:2.5,z:z+1.6,color:0x8b5a2b},
     {geo:BOX(.35,4.5,.35),x:x+1.6,y:2.5,z:z+1.6,color:0x8b5a2b},
     {geo:new THREE.ConeGeometry(3.5,2,4),x,y:5.8,z,color:0xa04030,ry:Math.PI/4}
-  ];
-  addMerged(P);
+  ]);
   Mt(new THREE.CircleGeometry(1.7,20).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x2a6a9a,shininess:90,transparent:true,opacity:.9}),x,1.9,z);
   addCol(x,0,z,4.8,3,4.8);
 }
-function bench(x,z){
-  const P=[
-    {geo:BOX(4.4,.35,1.4),x,y:.9,z,color:0x8b5a2b},
-    {geo:BOX(4.4,1.1,.3),x,y:1.6,z:z-.55,color:0x8b5a2b},
-    {geo:BOX(.3,.9,.3),x:x-1.8,y:.4,z,color:0x5a3a1a},
-    {geo:BOX(.3,.9,.3),x:x+1.8,y:.4,z,color:0x5a3a1a}
-  ];
-  addMerged(P);
-  addCol(x,.5,z,4.4,.4,1.4);addCol(x,1.1,z-.55,4.4,.9,.3);
+function bench(x,z,rot){
+  rot=rot||0;
+  const c=Math.cos(rot),s=Math.sin(rot);
+  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
+  const p1=T(0,0),p2=T(0,-.55),p3=T(-1.8,0),p4=T(1.8,0);
+  addMerged([
+    {geo:BOX(4.4,.35,1.4),x:p1[0],y:.9,z:p1[1],color:0x8b5a2b,ry:rot},
+    {geo:BOX(4.4,1.1,.3),x:p2[0],y:1.6,z:p2[1],color:0x8b5a2b,ry:rot},
+    {geo:BOX(.3,.9,.3),x:p3[0],y:.4,z:p3[1],color:0x5a3a1a,ry:rot},
+    {geo:BOX(.3,.9,.3),x:p4[0],y:.4,z:p4[1],color:0x5a3a1a,ry:rot}
+  ]);
+  addCol(x,.5,z,4.4,.4,1.4,{ry:rot});
 }
 function camp(x,z){
   const P=[];
@@ -398,42 +412,26 @@ function camp(x,z){
   addMerged(P);
   Mt(ICO(.6,0),new THREE.MeshBasicMaterial({color:0xff8c1a}),x,.5,z);
   Mt(ICO(.35,0),new THREE.MeshBasicMaterial({color:0xffd23f}),x,.8,z);
-  addCol(x,0,z,2,1.2,2);
-  addCol(x+7,0,z,6,4,6);addCol(x-7,0,z+2,5,3.5,5);
+  addCol(x,0,z,2,1.2,2);addCol(x+7,0,z,6,4,6);addCol(x-7,0,z+2,5,3.5,5);
 }
 function igloo(x,z){
-  const P=[
+  addMerged([
     {geo:new THREE.SphereGeometry(5.5,12,8,0,6.28,0,1.57),x,y:0,z,color:0xf0f8ff},
     {geo:BOX(1.8,2.6,.7),x,y:1.3,z:z+5.4,color:0x5a7a9a}
-  ];
-  addMerged(P);
+  ]);
   addCol(x,0,z,10,5,10);
 }
 function river(z,wid){
-  const wm=new THREE.MeshPhongMaterial({color:0x3aa0d0,transparent:true,opacity:.85,shininess:80});
-  Mt(new THREE.PlaneGeometry(500,wid).rotateX(-1.5708),wm,0,.08,z);
+  Mt(new THREE.PlaneGeometry(500,wid).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x3aa0d0,transparent:true,opacity:.85,shininess:80}),0,.08,z);
 }
 function frozenLake(x,z,r){
-  const wm=new THREE.MeshPhongMaterial({color:0xaee0ff,transparent:true,opacity:.85,shininess:90});
-  Mt(new THREE.CircleGeometry(r,32).rotateX(-1.5708),wm,x,.08,z);
+  Mt(new THREE.CircleGeometry(r,32).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0xaee0ff,transparent:true,opacity:.85,shininess:90}),x,.08,z);
   const P=[];
-  for(let i=0;i<12;i++){
+  for(let i=0;i<10;i++){
     const a=Math.random()*6.28,rr=Math.random()*r*.85;
     P.push({geo:BOX(.3,.03,3+Math.random()*4),x:x+Math.cos(a)*rr,y:.1,z:z+Math.sin(a)*rr,color:0xffffff,ry:Math.random()*6.28});
   }
   addMerged(P);
-}
-function bridge(x,z,lenZ,widX){
-  const P=[];
-  const n=Math.floor(lenZ/2);
-  for(let i=0;i<n;i++)P.push({geo:BOX(widX,.4,2),x,y:.4,z:z-lenZ/2+i*2+1,color:0x8b5a2b});
-  [-widX/2,widX/2].forEach(xr=>{
-    for(let i=0;i<=n;i+=3)P.push({geo:BOX(.4,3,.4),x:x+xr,y:1.5,z:z-lenZ/2+i*2,color:0x5a3a1a});
-    P.push({geo:BOX(.4,.3,lenZ),x:x+xr,y:3,z,color:0x5a3a1a});
-    P.push({geo:BOX(.4,.3,lenZ),x:x+xr,y:2,z,color:0x5a3a1a});
-  });
-  addMerged(P);
-  addCol(x,0,z,widX,.6,lenZ);
 }
 function dock(x,z,len,wid){
   const P=[];
@@ -442,25 +440,21 @@ function dock(x,z,len,wid){
     P.push({geo:BOX(.4,3,.4),x:x+wid/2-.4,y:.5,z:z+i,color:0x8b5a2b});
     P.push({geo:BOX(.4,3,.4),x:x-wid/2+.4,y:.5,z:z+i,color:0x8b5a2b});
   }
-  P.push({geo:BOX(wid,.3,.4),x,y:2.5,z:z+len,color:0x8b5a2b});
   P.push({geo:BOX(.3,1.8,.3),x:x-wid/2+.4,y:1.6,z:z+len,color:0x8b5a2b});
   P.push({geo:BOX(.3,1.8,.3),x:x+wid/2-.4,y:1.6,z:z+len,color:0x8b5a2b});
   addMerged(P);
   addCol(x,.3,z+len/2,wid,.5,len);
 }
 function lamp(x,z){
-  const P=[
+  addMerged([
     {geo:new THREE.CylinderGeometry(.25,.35,10,6),x,y:5,z,color:0x2a2a2a},
     {geo:BOX(1.8,.4,1.8),x,y:10.2,z,color:0x2a2a2a}
-  ];
-  addMerged(P);
+  ]);
   Mt(ICO(.7,1),new THREE.MeshBasicMaterial({color:0xffe27a}),x,10,z);
-  const halo=new THREE.Mesh(new THREE.SphereGeometry(1.6,8,6),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.15}));
-  halo.position.set(x,10,z);world.add(halo);
   addCol(x,0,z,.8,10,.8);
 }
 
-// ═══════════════ PARKOUR DATA ═══════════════
+// ═══════════════ PARKOUR ═══════════════
 const PARKOUR=[
   [0,0,0,14,14,3],[10,1,0,5,5,0],[14,2,6,5,5,0],[15,3,13,5,5,0],[12,4,19,5,5,0],
   [5,5,23,5,5,4],[-3,6,24,5,5,0],[-10,7,21,5,5,0],[-15,8,15,5,5,2],[-17,9,8,5,5,0],
@@ -468,115 +462,206 @@ const PARKOUR=[
   [15,15,-14,5,5,0],[19,16,-6,5,5,0],[20,17,3,5,5,0],[18,18,11,5,5,1],[12,19,17,5,5,0],[4,20,21,7,7,3]
 ];
 
-// ═══════════════ LAYOUTS ═══════════════
+// ═══════════════ LAYOUTS — redesigned dengan komposisi ═══════════════
+// Prinsip: Plaza tengah → jalan radial → landmark di ujung jalan → bukit ring luar
+// Pohon pakai pola SECTOR (bukan random circle) agar merata
 const LAYOUTS={
   island:{
-    sky:[0x5ba8ff,0xfff4c2],edge:0x3a8d3a,roadColor:0xd8c8a8,edgeRoad:0x8b6a4b,
-    hills:[{x:130,z:-90,r:50,h:14},{x:-110,z:-70,r:55,h:16},{x:155,z:130,r:45,h:11},{x:-130,z:110,r:48,h:13},{x:80,z:-170,r:40,h:10}],
+    sky:[0x5ba8ff,0xfff4c2],edge:0x2d7a3a,
+    roadFill:0xe8d8b8,roadTrim:0x8b6a4b,plaza:20,
+    // Hills = ring luar sebagai backdrop
+    hills:[
+      {x:0,z:210,r:80,h:28},
+      {x:160,z:150,r:65,h:22},{x:-160,z:150,r:65,h:22},
+      {x:200,z:20,r:55,h:18},{x:-200,z:20,r:55,h:18},
+      {x:160,z:-150,r:60,h:18},{x:-160,z:-150,r:60,h:18},
+      {x:0,z:-210,r:70,h:20}
+    ],
+    // Roads memancar dari plaza tepi (r=20) ke tiap landmark
     roads:[
-      {w:6,pts:[[0,-30],[0,0],[10,40],[8,80],[0,120],[0,180]]},
-      {w:5,pts:[[0,0],[30,-10],[60,-20],[85,-40]]},
-      {w:5,pts:[[0,0],[-30,10],[-60,5],[-85,20]]},
-      {w:4,pts:[[10,40],[50,50],[75,60]]},
-      {w:4,pts:[[10,40],[-40,45],[-70,40]]},
+      {w:7,pts:[[0,20],[6,60],[0,110],[0,160]]},           // N → lighthouse
+      {w:6,pts:[[20,0],[60,-8],[100,-5]]},                  // E → hut E
+      {w:6,pts:[[-20,0],[-60,-8],[-100,-5]]},               // W → hut W
+      {w:6,pts:[[14,14],[45,50],[70,75]]},                  // NE → watchtower
+      {w:5,pts:[[-14,14],[-45,50],[-70,75]]},               // NW → shrine
+      {w:5,pts:[[0,-20],[-8,-55],[-15,-95]]},               // S → camp beach
+      {w:5,pts:[[14,-14],[45,-45],[70,-75]]},               // SE → camp
+      {w:5,pts:[[-14,-14],[-45,-45],[-70,-75]]}             // SW → camp
     ],
-    river:{z:95,w:22},
     treeZones:[
-      {type:'oak',cx:30,cz:-40,r:25,count:10},{type:'cherry',cx:-25,cz:-40,r:20,count:7},
-      {type:'pine',cx:130,cz:-90,r:40,count:18},{type:'oak',cx:90,cz:80,r:35,count:12},
-      {type:'cherry',cx:-90,cz:80,r:35,count:10},{type:'birch',cx:-110,cz:-70,r:40,count:12},
-      {type:'palm',cx:0,cz:190,r:36,count:10},{type:'oak',cx:60,cz:-100,r:30,count:8},
-      {type:'pine',cx:-70,cz:-110,r:30,count:8},{type:'oak',cx:-30,cz:140,r:30,count:9},
-      {type:'cherry',cx:60,cz:140,r:30,count:8},
+      // Oak grove timur (dekat hut E)
+      {type:'oak',cx:75,cz:-30,r:35,count:10,rot:0},
+      // Cherry grove barat
+      {type:'cherry',cx:-75,cz:-30,r:35,count:9},
+      // Pine forest di utara (lereng bukit)
+      {type:'pine',cx:0,cz:145,r:45,count:16},
+      // Birch grove NE
+      {type:'birch',cx:110,cz:70,r:30,count:9},
+      // Palm pantai selatan
+      {type:'palm',cx:-30,cz:150,r:18,count:5},
+      {type:'palm',cx:30,cz:150,r:18,count:5},
+      {type:'palm',cx:0,cz:-145,r:20,count:6},
+      // Mixed pine SE & SW
+      {type:'pine',cx:120,cz:-100,r:32,count:9},
+      {type:'pine',cx:-120,cz:-100,r:32,count:9},
+      // Oak pengisi NW/SE interior
+      {type:'oak',cx:-125,cz:75,r:28,count:7},
+      {type:'oak',cx:125,cz:75,r:28,count:7}
     ],
-    grassCount:110,flowerCount:55,rockCount:14,
+    grassCount:90,flowerCount:70,rockCount:12,
     landmarks:[
-      ['lighthouse',-55,195],['hut',75,55,-.6,0x8b5a2b,0xa04030],['hut',-80,45,.8,0xa07850,0x8b3030],
-      ['hut',60,130,2.4,0x9b6a3b,0x6a2a2a],['shrine',-40,-40,0x8a8a7a],['watchtower',130,-90],
-      ['well',-30,60],['well',120,-60],['camp',20,-70],['camp',-90,60],['camp',120,-60],
-      ['bench',20,5],['bench',-20,5],['bench',0,35],['bench',0,-25],['bench',55,-25],['bench',-55,-25],
+      ['lighthouse',0,165],
+      ['hut',105,-5,-Math.PI/2,0x8b5a2b,0xa04030],
+      ['hut',-105,-5,Math.PI/2,0xa07850,0x8b3030],
+      ['watchtower',75,80],
+      ['shrine',-75,80,0x8a8a7a],
+      ['well',32,32],['well',-32,32],['well',32,-32],['well',-32,-32],
+      ['camp',75,-80],['camp',-75,-80],['camp',0,-105],
+      ['bench',26,10,0],['bench',-26,10,0],['bench',10,26,Math.PI/2],['bench',-10,26,Math.PI/2],
+      ['bench',10,-26,-Math.PI/2],['bench',-10,-26,-Math.PI/2]
     ],
-    ambient:['butterflies','birds','clouds','petals'],
+    lamps:[[0,55],[0,105],[-60,-8],[60,-8],[-40,48],[40,48],[0,-55],[42,-42],[-42,-42]],
+    ambient:['butterflies','birds','clouds','petals']
   },
   desert:{
-    sky:[0xf5d99a,0xfff4c2],edge:0xc99a5b,roadColor:0xd8c088,edgeRoad:0xb8a060,
-    hills:[{x:100,z:100,r:55,h:12},{x:-100,z:80,r:60,h:15},{x:80,z:-120,r:50,h:13},{x:-80,z:-100,r:45,h:11},{x:150,z:-20,r:42,h:10},{x:-160,z:0,r:48,h:12}],
+    sky:[0xf5d99a,0xfff4c2],edge:0xc99a5b,
+    roadFill:0xe6d6b0,roadTrim:0xa88850,plaza:18,
+    hills:[
+      {x:0,z:200,r:70,h:14},
+      {x:170,z:130,r:58,h:12},{x:-170,z:130,r:58,h:12},
+      {x:200,z:-20,r:55,h:10},{x:-200,z:-20,r:55,h:10},
+      {x:170,z:-150,r:55,h:11},{x:-170,z:-150,r:55,h:11},
+      {x:0,z:-200,r:65,h:12}
+    ],
     roads:[
-      {w:6,pts:[[0,-30],[0,0],[30,10],[60,20],[90,20],[105,0]]},
-      {w:5,pts:[[0,0],[-20,-30],[-10,-60],[0,-100]]},
-      {w:5,pts:[[0,0],[-30,-50],[-60,-70],[-100,-60]]},
-      {w:4,pts:[[0,0],[30,-40],[60,-50],[100,-40]]},
+      {w:7,pts:[[0,18],[10,55],[20,90]]},                   // N → obelisk N
+      {w:6,pts:[[18,0],[55,-5],[100,0]]},                    // E → oasis
+      {w:6,pts:[[-18,0],[-55,-8],[-95,-5]]},                 // W → obelisk W
+      {w:6,pts:[[12,12],[45,50],[75,80]]},                   // NE → camp
+      {w:5,pts:[[-12,12],[-45,50],[-75,80]]},                // NW → watchtower
+      {w:5,pts:[[0,-18],[-5,-60],[-10,-100]]},               // S → shrine
+      {w:5,pts:[[12,-12],[45,-45],[75,-75]]},                // SE → obelisk SE
+      {w:5,pts:[[-12,-12],[-45,-45],[-75,-75]]}              // SW → camp SW
     ],
-    oasis:{x:95,z:0,r:32},
+    oasis:{x:105,z:0,r:28},
     treeZones:[
-      {type:'palm',cx:100,cz:0,r:20,count:10},
-      {type:'cactus',cx:40,cz:30,r:40,count:14},{type:'cactus',cx:-50,cz:-40,r:40,count:12},
-      {type:'dead',cx:60,cz:-80,r:30,count:8},{type:'dead',cx:-100,cz:80,r:30,count:7},
-      {type:'cactus',cx:130,cz:80,r:35,count:10},{type:'dead',cx:-130,cz:-70,r:30,count:7},
-      {type:'cactus',cx:80,cz:130,r:30,count:8},
+      {type:'palm',cx:105,cz:0,r:20,count:8},
+      {type:'cactus',cx:55,cz:55,r:35,count:12},
+      {type:'cactus',cx:-55,cz:-55,r:35,count:12},
+      {type:'dead',cx:110,cz:90,r:32,count:7},
+      {type:'dead',cx:-110,cz:90,r:32,count:7},
+      {type:'cactus',cx:140,cz:-40,r:30,count:8},
+      {type:'dead',cx:-140,cz:-40,r:30,count:7},
+      {type:'cactus',cx:0,cz:120,r:35,count:10},
+      {type:'dead',cx:0,cz:-140,r:35,count:8},
+      {type:'cactus',cx:70,cz:-100,r:32,count:9},
+      {type:'cactus',cx:-70,cz:-100,r:32,count:9}
     ],
-    grassCount:50,flowerCount:0,rockCount:20,
+    grassCount:50,flowerCount:0,rockCount:14,
     landmarks:[
-      ['obelisk',0,-100,0xb8a878],['watchtower',-100,80],['shrine',100,100,0x8a8a7a],
-      ['obelisk',-100,-100,0xa89868],['obelisk',100,-100,0xa89868],
-      ['camp',-40,40],['camp',30,-130],['camp',120,40],
-      ['bench',20,5],['bench',-20,5],['bench',0,30],['bench',0,-30],
+      ['obelisk',0,105,0xb8a878],
+      ['obelisk',-105,-5,0xa89868],
+      ['watchtower',-75,80],
+      ['shrine',-5,-105,0x8a8a7a],
+      ['obelisk',80,-80,0xa89868],
+      ['camp',80,80],['camp',-80,-80],['camp',75,80],
+      ['well',30,30],['well',-30,30],
+      ['bench',20,8,0],['bench',-20,8,0],['bench',8,-20,Math.PI/2],['bench',-8,-20,Math.PI/2]
     ],
-    ambient:['birds','clouds'],
+    lamps:[[0,55],[-60,-8],[60,-8],[40,45],[-40,45],[0,-60],[40,-40],[-40,-40]],
+    ambient:['birds','clouds']
   },
   jungle:{
-    sky:[0x3a6a4a,0x8fd0a0],edge:0x1f5a2a,roadColor:0xa08060,edgeRoad:0x6a5040,
-    hills:[{x:100,z:100,r:52,h:18},{x:-100,z:-80,r:60,h:20},{x:-80,z:100,r:48,h:16},{x:120,z:-80,r:44,h:14},{x:60,z:140,r:40,h:13}],
+    sky:[0x3a6a4a,0x8fd0a0],edge:0x1f5a2a,
+    roadFill:0xb09068,roadTrim:0x6a5040,plaza:16,
+    hills:[
+      {x:0,z:200,r:80,h:32},{x:170,z:130,r:70,h:28},{x:-170,z:130,r:70,h:28},
+      {x:200,z:-20,r:65,h:24},{x:-200,z:-20,r:65,h:24},
+      {x:170,z:-150,r:65,h:24},{x:-170,z:-150,r:65,h:24},
+      {x:0,z:-210,r:75,h:26}
+    ],
     roads:[
-      {w:5,pts:[[0,-30],[0,0],[10,-40],[5,-70],[0,-100]]},
-      {w:5,pts:[[0,0],[30,0],[60,10],[90,50]]},
-      {w:4,pts:[[0,0],[-30,10],[-60,0],[-80,-40]]},
-      {w:4,pts:[[0,0],[-20,40],[-50,60]]},
-      {w:4,pts:[[0,0],[20,-20],[40,-40]]},
+      {w:6,pts:[[0,16],[8,55],[0,100]]},
+      {w:6,pts:[[16,0],[55,10],[95,45]]},
+      {w:6,pts:[[-16,0],[-55,15],[-90,60]]},
+      {w:5,pts:[[10,10],[45,55],[60,80]]},
+      {w:5,pts:[[-10,10],[-45,55],[-70,75]]},
+      {w:5,pts:[[0,-16],[-15,-55],[-30,-95]]},
+      {w:5,pts:[[10,-10],[45,-45],[70,-70]]},
+      {w:5,pts:[[-10,-10],[-45,-45],[-70,-70]]}
     ],
     treeZones:[
-      {type:'pine',cx:30,cz:-30,r:40,count:22},{type:'pine',cx:-30,cz:-30,r:40,count:22},
-      {type:'pine',cx:30,cz:30,r:40,count:20},{type:'pine',cx:-30,cz:30,r:40,count:20},
-      {type:'birch',cx:80,cz:60,r:35,count:14},{type:'birch',cx:-80,cz:-60,r:35,count:14},
-      {type:'pine',cx:80,cz:-80,r:35,count:16},{type:'pine',cx:-80,cz:80,r:35,count:16},
-      {type:'birch',cx:0,cz:120,r:40,count:16},{type:'pine',cx:0,cz:-140,r:40,count:16},
-      {type:'pine',cx:130,cz:0,r:30,count:12},{type:'pine',cx:-130,cz:0,r:30,count:12},
+      {type:'pine',cx:50,cz:-55,r:35,count:14},
+      {type:'pine',cx:-50,cz:-55,r:35,count:14},
+      {type:'pine',cx:50,cz:55,r:35,count:12},
+      {type:'pine',cx:-50,cz:55,r:35,count:12},
+      {type:'birch',cx:95,cz:80,r:30,count:10},
+      {type:'birch',cx:-95,cz:80,r:30,count:10},
+      {type:'pine',cx:95,cz:-80,r:32,count:11},
+      {type:'pine',cx:-95,cz:-80,r:32,count:11},
+      {type:'pine',cx:0,cz:130,r:45,count:16},
+      {type:'birch',cx:0,cz:-155,r:40,count:14},
+      {type:'pine',cx:145,cz:0,r:30,count:9},
+      {type:'pine',cx:-145,cz:0,r:30,count:9}
     ],
-    grassCount:120,flowerCount:40,rockCount:18,
+    grassCount:120,flowerCount:30,rockCount:14,
     landmarks:[
-      ['shrine',0,-100,0x8a8a7a],['watchtower',100,100],['shrine',-100,-80,0x7a7a6a],
-      ['hut',-60,40,1.5,0x6b4a2b,0x2f5a2a],['hut',60,90,2.2,0x8b5a2b,0x8b3030],
-      ['camp',15,90],['camp',-60,-90],['camp',120,10],['camp',-120,-30],
-      ['bench',15,5],['bench',-15,5],['bench',0,20],['bench',0,-20],
+      ['shrine',0,105,0x8a8a7a],
+      ['shrine',-90,60,0x7a7a6a],
+      ['watchtower',60,80],
+      ['hut',-70,75,1.5,0x6b4a2b,0x2f5a2a],
+      ['hut',70,-70,2.2,0x8b5a2b,0x8b3030],
+      ['camp',-30,-100],['camp',95,45],['camp',-95,-45],
+      ['well',28,28],['well',-28,28],
+      ['bench',18,8,0],['bench',-18,8,0],['bench',8,-18,Math.PI/2],['bench',-8,-18,Math.PI/2]
     ],
-    ambient:['butterflies','leaves','clouds','fireflies'],
+    lamps:[[0,45],[0,-45],[45,5],[-45,5],[40,40],[-40,40]],
+    ambient:['butterflies','leaves','clouds','fireflies']
   },
   snow:{
-    sky:[0xdcecff,0xf0f6ff],edge:0xcfe4ff,roadColor:0xd0d8e0,edgeRoad:0xa8b8c8,
-    hills:[{x:100,z:100,r:55,h:14},{x:-100,z:-80,r:58,h:13},{x:-100,z:100,r:52,h:11},{x:120,z:-100,r:48,h:12},{x:60,z:160,r:45,h:10}],
+    sky:[0xdcecff,0xf0f6ff],edge:0xcfe4ff,
+    roadFill:0xdee6ee,roadTrim:0xa8b8c8,plaza:18,
+    hills:[
+      {x:0,z:200,r:75,h:30},{x:170,z:130,r:65,h:26},{x:-170,z:130,r:65,h:26},
+      {x:200,z:-20,r:58,h:22},{x:-200,z:-20,r:58,h:22},
+      {x:170,z:-150,r:62,h:24},{x:-170,z:-150,r:62,h:24}
+    ],
     roads:[
-      {w:6,pts:[[0,-30],[0,0],[-10,-40],[-5,-80],[0,-110]]},
-      {w:5,pts:[[0,0],[30,30],[60,50],[90,50]]},
-      {w:5,pts:[[0,0],[-30,30],[-60,30],[-90,60]]},
-      {w:4,pts:[[0,0],[20,-30],[-20,-30]]},
+      {w:6,pts:[[0,18],[8,55],[0,95]]},
+      {w:6,pts:[[18,0],[55,-5],[100,5]]},
+      {w:6,pts:[[-18,0],[-55,-5],[-100,5]]},
+      {w:6,pts:[[12,12],[45,50],[70,75]]},
+      {w:5,pts:[[-12,12],[-45,50],[-70,75]]},
+      {w:5,pts:[[0,-18],[-5,-55],[-10,-85]]},
+      {w:5,pts:[[12,-12],[45,-45],[70,-75]]},
+      {w:5,pts:[[-12,-12],[-45,-45],[-70,-75]]}
     ],
-    lake:{x:0,z:-100,r:42},
+    lake:{x:0,z:-115,r:38},
     treeZones:[
-      {type:'snowpine',cx:30,cz:-30,r:40,count:20},{type:'snowpine',cx:-30,cz:-30,r:40,count:20},
-      {type:'snowpine',cx:30,cz:30,r:40,count:20},{type:'snowpine',cx:-30,cz:30,r:40,count:20},
-      {type:'snowpine',cx:80,cz:0,r:30,count:14},{type:'snowpine',cx:-80,cz:0,r:30,count:14},
-      {type:'snowpine',cx:0,cz:120,r:40,count:16},{type:'snowpine',cx:0,cz:-160,r:40,count:16},
+      {type:'snowpine',cx:55,cz:-55,r:35,count:14},
+      {type:'snowpine',cx:-55,cz:-55,r:35,count:14},
+      {type:'snowpine',cx:55,cz:55,r:35,count:14},
+      {type:'snowpine',cx:-55,cz:55,r:35,count:14},
+      {type:'snowpine',cx:0,cz:140,r:45,count:16},
+      {type:'snowpine',cx:0,cz:-165,r:40,count:12},
+      {type:'snowpine',cx:130,cz:-90,r:32,count:10},
+      {type:'snowpine',cx:-130,cz:-90,r:32,count:10},
+      {type:'snowpine',cx:130,cz:90,r:32,count:10},
+      {type:'snowpine',cx:-130,cz:90,r:32,count:10}
     ],
-    grassCount:0,flowerCount:0,rockCount:22,
+    grassCount:0,flowerCount:0,rockCount:14,
     landmarks:[
-      ['igloo',60,50],['igloo',75,65],['igloo',90,40],['igloo',50,70],['igloo',-70,60],['igloo',-90,90],
-      ['hut',-60,30,1.2,0x6b4a2b,0x5a3050],['hut',80,-40,2.1,0x8b5a2b,0x503020],
-      ['watchtower',100,100],['shrine',-100,-80,0xc8d0dc],
-      ['camp',30,-160],['camp',-100,30],['camp',120,120],
-      ['bench',20,5],['bench',-20,5],['bench',0,30],['bench',0,-30],
+      ['igloo',50,55],['igloo',65,68],['igloo',80,50],['igloo',40,68],
+      ['igloo',-50,55],['igloo',-65,68],['igloo',-80,50],
+      ['hut',-100,0,1.2,0x6b4a2b,0x5a3050],['hut',100,0,-1.2,0x8b5a2b,0x503020],
+      ['watchtower',75,80],['shrine',-75,80,0xc8d0dc],
+      ['camp',75,-80],['camp',-75,-80],
+      ['well',28,28],['well',-28,28],
+      ['bench',18,8,0],['bench',-18,8,0],['bench',8,-18,Math.PI/2],['bench',-8,-18,Math.PI/2]
     ],
-    ambient:['snow','clouds'],
-  },
+    lamps:[[0,55],[-55,-8],[55,-8],[40,48],[-40,48],[0,-55],[42,-42],[-42,-42]],
+    ambient:['snow','clouds']
+  }
 };
 
 // ═══════════════ BUILD ═══════════════
@@ -596,7 +681,6 @@ function build(n){
   sc.fog=new THREE.Fog(sk,cfg.rd,cfg.rd*1.6);setRD();
   const disc=(r,c,y,x=0,z=0)=>Mt(new THREE.CircleGeometry(r,32).rotateX(-1.5708),LM(c),x||0,y,z||0);
 
-  // pools
   pool('clouds',new THREE.SphereGeometry(6,7,5),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.85}),16);
   pool('birds',new THREE.SphereGeometry(.5,5,4),new THREE.MeshBasicMaterial({color:0x1a1a1a}),10);
   pool('butterflies',BOX(.6,.1,.7),new THREE.MeshBasicMaterial({color:0xffe27a}),25);
@@ -639,7 +723,7 @@ function build(n){
     Mt(BOX(trackW+3,1.5,1.5),LM(0xffd23f),0,14,1000);
     for(let z=40;z<1000;z+=40)addCol(0,.4,z,trackW,.7,.3);
     const ts={pine:[],oak:[]};
-    for(let z=20;z<1000;z+=20){const s=20+Math.random()*15;ts[z%40?'pine':'oak'].push({x:(Math.random()<.5?-1:1)*s,z,s:.85+Math.random()*.4,r:Math.random()*6.28})}
+    for(let z=20;z<1000;z+=20){const s=22+Math.random()*12;ts[z%40?'pine':'oak'].push({x:(Math.random()<.5?-1:1)*s,z,s:.85+Math.random()*.4,r:Math.random()*6.28})}
     for(const t in ts)if(ts[t].length)instance(treeGeo(t),ts[t]);
     for(let z=30;z<1000;z+=120)lamp(10,z);
     spawnJBs();return;
@@ -649,81 +733,156 @@ function build(n){
   if(n=='island'){disc(320,0x2a7fd0,0);disc(210,gr,.02)}
   else if(n=='desert'){disc(210,0xc99a5b,0);disc(185,gr,.05)}
   else disc(210,gr,0);
-  // island cliff ring
   const gg=new THREE.CylinderGeometry(215,225,12,48,1,true),pp=gg.attributes.position;
   for(let i=0;i<pp.count;i++){const x=pp.getX(i),z=pp.getZ(i),a=Math.atan2(z,x),k=1+Math.sin(a*9)*.03;pp.setX(i,x*k);pp.setZ(i,z*k);if(pp.getY(i)>0)pp.setY(i,6+Math.abs(Math.sin(a*6))*3)}
   gg.computeVertexNormals();
   Mt(gg,LM({desert:0xc99a5b,jungle:0x1f4d2a,snow:0xcfeaff,island:0x3a8d3a}[n]||0x3a8d3a,{side:THREE.DoubleSide}),0,5.8,0);
 
-  // Hills (merged)
-  if(L.hills&&L.hills.length){
-    const hillParts=[];
-    for(const h of L.hills){
-      hillParts.push({geo:new THREE.SphereGeometry(1,20,12,0,6.2832,0,1.5708),x:h.x,y:0,z:h.z,sx:h.r,sy:h.h,sz:h.r,color:L.edge});
-      for(let k=0;k<3;k++){
-        const a=Math.random()*6.28,d=Math.random()*h.r*.4;
-        const gx=h.x+Math.cos(a)*d,gz=h.z+Math.sin(a)*d;
-        const gy=h.h*Math.sqrt(Math.max(0,1-(d/h.r)**2));
-        hillParts.push({geo:new THREE.IcosahedronGeometry(1.2,0),x:gx,y:gy,z:gz,s:.8+Math.random()*.5,color:gr});
-      }
-    }
-    addMerged(hillParts);
-  }
-
-  // Roads
-  for(const r of L.roads)road(r.pts,r.w,L.roadColor,L.edgeRoad);
-  if(L.river){river(L.river.z,L.river.w);bridge(0,L.river.z,44,12)}
-  if(L.oasis)oasis(L.oasis.x,L.oasis.z,L.oasis.r);
-  if(L.lake)frozenLake(L.lake.x,L.lake.z,L.lake.r);
-
-  // Building zones (reservasi)
+  // ── 1. Landmark zones (reservasi) ──
   const buildingZones=[];
   for(const lm of L.landmarks){
     const t=lm[0];
     if(t=='hut'||t=='shrine'||t=='watchtower'||t=='well'||t=='igloo'||t=='lighthouse'||t=='obelisk')buildingZones.push({x:lm[1],z:lm[2],r:14});
   }
+  // Plaza juga reservasi
+  buildingZones.push({x:0,z:0,r:L.plaza});
+
+  // ── 2. Cek tabrakan dengan bukit ──
+  const hillData=L.hills||[];
+  const hitsHill=(x,z,margin=0)=>{
+    for(const h of hillData){if(Math.hypot(x-h.x,z-h.z)<h.r+margin)return true}
+    return false;
+  };
+
+  // ── 3. Buat bukit dulu (ring luar, skip jika kena bangunan) ──
+  if(L.hills&&L.hills.length){
+    const hillParts=[];
+    for(const h of L.hills){
+      let conflict=false;
+      for(const b of buildingZones){
+        if(Math.hypot(h.x-b.x,h.z-b.z)<h.r+b.r-4){conflict=true;break}
+      }
+      if(conflict)continue;
+      hillParts.push({geo:new THREE.SphereGeometry(1,20,12,0,6.2832,0,1.5708),x:h.x,y:0,z:h.z,sx:h.r,sy:h.h,sz:h.r,color:L.edge});
+      for(let k=0;k<3;k++){
+        const a=Math.random()*6.28,d=Math.random()*h.r*.4;
+        const gx=h.x+Math.cos(a)*d,gz=h.z+Math.sin(a)*d;
+        const gy=h.h*Math.sqrt(Math.max(0,1-(d/h.r)**2));
+        hillParts.push({geo:new THREE.IcosahedronGeometry(1.4,0),x:gx,y:gy,z:gz,s:.9+Math.random()*.5,color:gr});
+      }
+    }
+    if(hillParts.length)addMerged(hillParts);
+  }
+
+  // ── 4. Buat jalan (radial dari plaza) ──
+  const roadData=[];
+  for(const r of L.roads){
+    const safePts=r.pts.filter(([px,pz])=>!hitsHill(px,pz,-4));
+    if(safePts.length<2)continue;
+    roadData.push(road(safePts,r.w,L.roadFill,L.roadTrim));
+  }
+  plaza(L.plaza,L.roadFill,L.roadTrim);
+
+  // Air & dekorasi
+  if(L.oasis)oasis(L.oasis.x,L.oasis.z,L.oasis.r);
+  if(L.lake)frozenLake(L.lake.x,L.lake.z,L.lake.r);
+
+  // ── 5. Fungsi jarak ke jalan ──
+  const distToRoad=(x,z)=>{
+    let m=Infinity;
+    for(const rd of roadData){
+      const w2=rd.width*0.5+3.0;
+      for(let i=0;i<rd.points.length-1;i++){
+        const p1=rd.points[i],p2=rd.points[i+1];
+        const dx=p2.x-p1.x,dz=p2.z-p1.z;
+        const l2=dx*dx+dz*dz;
+        if(l2<1e-6)continue;
+        let t=((x-p1.x)*dx+(z-p1.z)*dz)/l2;
+        t=Math.max(0,Math.min(1,t));
+        const px=p1.x+dx*t,pz=p1.z+dz*t;
+        const d=Math.hypot(x-px,z-pz)-w2;
+        if(d<m)m=d;
+      }
+    }
+    const dP=Math.hypot(x,z)-L.plaza-3.0;
+    if(dP<m)m=dP;
+    return m;
+  };
   const tooClose=(x,z,r)=>{for(const b of buildingZones){if(Math.hypot(x-b.x,z-b.z)<b.r+r)return true}return false};
 
-  // Tree zones
+  // ── 6. Pohon: pola SECTOR agar merata (bukan random cluster) ──
   const trees={};
   const addTree=(type,x,z,s)=>{if(!trees[type])trees[type]=[];trees[type].push({x,y:0,z,s:s||1,r:Math.random()*6.28})};
   for(const tz of L.treeZones){
-    let placed=0,attempts=0;
-    while(placed<tz.count&&attempts<tz.count*4){
-      attempts++;
-      const a=Math.random()*6.28;
-      const d=Math.sqrt(Math.random())*(tz.r||30);
-      const x=tz.cx+Math.cos(a)*d,z=tz.cz+Math.sin(a)*d;
-      if(Math.hypot(x,z)>LIM-6)continue;
-      if(Math.hypot(x,z)<10)continue;
-      if(tooClose(x,z,3))continue;
-      addTree(tz.type,x,z,.85+Math.random()*.4);
-      placed++;
+    // Setiap zona dibagi jadi N sector, 1 pohon per sector
+    let placed=0;
+    for(let i=0;i<tz.count;i++){
+      const sectorAngle=(i/tz.count)*6.28;
+      // Radial spread dalam sector
+      const dRange=tz.r*0.55;
+      let ok=false, tries=0;
+      while(!ok&&tries<8){
+        tries++;
+        const a=sectorAngle+(Math.random()-.5)*(6.28/tz.count)*0.7;
+        const d=tz.r*0.3+Math.random()*dRange;
+        const x=tz.cx+Math.cos(a)*d,z=tz.cz+Math.sin(a)*d;
+        if(Math.hypot(x,z)>LIM-8)continue;
+        if(Math.hypot(x,z)<L.plaza+5)continue;
+        if(tooClose(x,z,4))continue;
+        if(distToRoad(x,z)<1.5)continue;
+        if(hitsHill(x,z,-3))continue;
+        addTree(tz.type,x,z,.85+Math.random()*.4);
+        ok=true;
+      }
     }
   }
 
-  // Grass / flowers / rocks
+  // ── 7. Grass & flower: 60% dekat plaza/road, 40% zona ──
   const grasses=[],flowers=[],rocks=[];
-  for(let i=0;i<L.grassCount;i++){
-    const a=Math.random()*6.28,d=Math.sqrt(Math.random())*(LIM-25);
-    const x=Math.cos(a)*d,z=Math.sin(a)*d;
-    if(Math.hypot(x,z)<10||tooClose(x,z,2))continue;
-    grasses.push({x,y:0,z,s:.8+Math.random()*.6,r:Math.random()*6.28});
-  }
-  for(let i=0;i<L.flowerCount;i++){
-    const a=Math.random()*6.28,d=Math.sqrt(Math.random())*(LIM-25);
-    const x=Math.cos(a)*d,z=Math.sin(a)*d;
-    if(Math.hypot(x,z)<10||tooClose(x,z,2))continue;
-    flowers.push({x,y:0,z,s:1,r:Math.random()*6.28});
-  }
+  const grassType=n=='desert'?'grassDry':n=='snow'?'snowMound':'grassTuft';
+  const spreadGrass=(arr,count,type)=>{
+    for(let i=0;i<count;i++){
+      let x,z;
+      const mode=Math.random();
+      if(mode<0.55){
+        // Ring di sekitar plaza
+        const a=Math.random()*6.28,d=L.plaza+3+Math.random()*22;
+        x=Math.cos(a)*d;z=Math.sin(a)*d;
+      } else if(mode<0.9&&roadData.length){
+        // Di tepi jalan
+        const rd=roadData[(Math.random()*roadData.length)|0];
+        const idx=Math.floor(Math.random()*(rd.points.length-1));
+        const p1=rd.points[idx],p2=rd.points[idx+1];
+        const t=Math.random();
+        const px=p1.x+(p2.x-p1.x)*t,pz=p1.z+(p2.z-p1.z)*t;
+        const dx=p2.x-p1.x,dz=p2.z-p1.z;
+        const l=Math.hypot(dx,dz)||1;
+        const side=Math.random()<.5?-1:1;
+        const off=rd.width*0.5+1+Math.random()*4;
+        x=px+(dz/l)*off*side;z=pz-(dx/l)*off*side;
+      } else {
+        // Random area terbuka
+        const a=Math.random()*6.28,d=40+Math.random()*(LIM-50);
+        x=Math.cos(a)*d;z=Math.sin(a)*d;
+      }
+      if(Math.hypot(x,z)<L.plaza+1)continue;
+      if(tooClose(x,z,3))continue;
+      if(distToRoad(x,z)<-1)continue;
+      arr.push({x,y:0,z,s:.8+Math.random()*.5,r:Math.random()*6.28});
+    }
+  };
+  spreadGrass(grasses,L.grassCount,grassType);
+  spreadGrass(flowers,L.flowerCount,'flower');
   for(let i=0;i<L.rockCount;i++){
-    const a=Math.random()*6.28,d=Math.sqrt(Math.random())*(LIM-15);
+    const a=Math.random()*6.28,d=70+Math.random()*(LIM-80);
     const x=Math.cos(a)*d,z=Math.sin(a)*d;
-    if(Math.hypot(x,z)<12)continue;
-    rocks.push({x,y:0,z,s:.7+Math.random()*.8,r:Math.random()*6.28});
+    if(tooClose(x,z,4))continue;
+    if(distToRoad(x,z)<3)continue;
+    if(hitsHill(x,z,-5))continue;
+    rocks.push({x,y:0,z,s:.7+Math.random()*.7,r:Math.random()*6.28});
   }
 
-  // Landmarks
+  // ── 8. Landmark ──
   for(const lm of L.landmarks){
     const t=lm[0];
     if(t=='lighthouse')lighthouse(lm[1],lm[2]);
@@ -734,17 +893,19 @@ function build(n){
     else if(t=='igloo')igloo(lm[1],lm[2]);
     else if(t=='well')well(lm[1],lm[2]);
     else if(t=='camp')camp(lm[1],lm[2]);
-    else if(t=='bench')bench(lm[1],lm[2]);
+    else if(t=='bench')bench(lm[1],lm[2],lm[3]||0);
   }
-  if(n=='island')dock(-30,195,22,8);
+  if(n=='island')dock(0,-180,20,8);
+  // Lampu
+  if(L.lamps)for(const[x,z]of L.lamps)lamp(x,z);
 
-  // Instance
+  // ── 9. Instance scatter ──
   for(const type in trees)instance(treeGeo(type),trees[type]);
   if(rocks.length)instance(treeGeo('rock'),rocks);
-  if(grasses.length)instance(treeGeo(n=='desert'?'grassDry':n=='snow'?'snowMound':'grassTuft'),grasses);
+  if(grasses.length)instance(treeGeo(grassType),grasses);
   if(flowers.length)instance(treeGeo('flower'),flowers);
 
-  // Ambient spawn
+  // ── 10. Ambient ──
   for(const amb of L.ambient){
     if(amb==='butterflies')for(let i=0;i<18;i++){const a=Math.random()*6.28,d=30+Math.random()*180;spawnAmb('butterflies',{x:Math.cos(a)*d,y:1.5+Math.random()*2,z:Math.sin(a)*d,ph:Math.random()*6.28,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:2+Math.random()*4,spd:.6+Math.random()*.5})}
     if(amb==='birds')for(let i=0;i<8;i++)spawnAmb('birds',{x:(Math.random()-.5)*300,y:25+Math.random()*15,z:(Math.random()-.5)*300,a:Math.random()*6.28,r:60+Math.random()*60,spd:.3+Math.random()*.2,y0:25+Math.random()*15})

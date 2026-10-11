@@ -44,12 +44,20 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 .grid.map{grid-template-columns:1fr 1fr}
 .grid.map button{padding:14px 6px;font-size:10px}
 .grid.map button.on{background:#ffe27a;color:var(--k);--lo:#d4b23a;--hi:#fff8d0}
+#load{background:#8fd0ff}
+.loadwrap{background:#f4f9ff;padding:24px 28px;box-shadow:var(--bd),inset 0 -4px 0 #cfe0f7,inset 0 4px 0 #fff;display:flex;flex-direction:column;gap:16px;align-items:center;min-width:min(80vw,340px)}
+#loadSpinner{width:40px;height:40px;border:4px solid #cfe0f7;border-top-color:#3d8bff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loadbar{width:100%;height:18px;background:#cfe0f7;box-shadow:inset 0 3px 0 #a8b8d8;overflow:hidden}
+.loadbar i{display:block;height:100%;width:0;background:#3d8bff;transition:width .3s}
+#loadMsg{font-size:9px;text-align:center;line-height:1.8;color:#17306b;max-width:100%;word-break:break-word;min-height:14px}
 @media(orientation:landscape){#skin,#set{align-items:flex-end;padding-right:28px}}
 @media(max-height:430px){.ttl{width:min(54vw,330px)}.mb .big{padding:12px;font-size:13px}button{padding:10px}.mb{gap:8px}.card{padding:14px;gap:10px}.grid button{padding:6px 2px}}
 </style></head><body>
 <canvas id="c"></canvas><div id="toast" class="hide"></div>
 <div id="rot"><svg viewBox="0 0 8 8"><rect x="2" y="0" width="4" height="8"/><rect x="3" y="1" width="2" height="5" fill="#17306b"/></svg>Putar HP ke landscape</div>
-<div id="name" class="ui"><canvas class="ttl"></canvas><div class="card"><div class="lbl">Username</div><input id="nm" maxlength="14" placeholder="Nama Jello" autocomplete="off"><button id="ng">Lanjut</button></div></div>
+<div id="load" class="ui"><div class="loadwrap"><div id="loadSpinner"></div><div id="loadMsg">Memuat...</div><div class="loadbar"><i id="loadBar"></i></div></div></div>
+<div id="name" class="ui hide"><canvas class="ttl"></canvas><div class="card"><div class="lbl">Username</div><input id="nm" maxlength="14" placeholder="Nama Jello" autocomplete="off"><button id="ng">Lanjut</button></div></div>
 <div id="menu" class="ui hide"><canvas class="ttl"></canvas><div class="mb"><button id="mp" class="big">Play</button><button id="ms" class="s">Custom Skin</button><button id="mr" class="s">Custom Room</button><button id="mt" class="s">Setting</button><button id="md" class="s">Download</button></div></div>
 <div id="skin" class="ui hide"><div class="card"><div class="r">Warna 1<input type="color" id="c1"></div><div class="r">Warna 2<input type="color" id="c2"></div>
 <div class="lbl">Bentuk</div><div id="shapes" class="grid"></div>

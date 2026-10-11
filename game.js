@@ -55,21 +55,71 @@ const ERR={net:'Tidak ada internet',auth:'Auth gagal — cek Console',db:'Databa
 const G={M:'10001 11011 10101 10001 10001 10001 10001',e:'00000 00000 01110 10001 11111 10000 01110',t:'00100 00100 01110 00100 00100 00100 00011','-':'00000 00000 00000 01110 00000 00000 00000',U:'000000100 000001110 000011111 001000100 001000100 001000100 000111000',P:'11110 10001 10001 11110 10000 10000 10000'};
 document.querySelectorAll('.ttl').forEach(c=>{c.width=50;c.height=10;const x=c.getContext('2d');let ox=2;for(const ch of'Meet-UP'){const rw=G[ch].split(' ');[[2,2,'#0e1a3a'],[1,1,'#17306b'],[0,0,ch=='U'?'#ffd23f':'#fff']].forEach(([dx,dy,col])=>{x.fillStyle=col;rw.forEach((r,j)=>[...r].forEach((v,i)=>v=='1'&&x.fillRect(ox+i+dx,1+j+dy,1,1)))});ox+=rw[0].length+1}});
 
-// ═══════════════ INJECT SHOP CSS + MAP COUNT STYLE ═══════════════
+// ═══════════════ INJECT STYLES (menu kanan + shop box) ═══════════════
 (function injectStyles(){
   const st=document.createElement('style');
   st.textContent=`
-  .shop{margin:6px 4px 0;padding:12px 14px;background:#fff5e0;box-shadow:var(--bd),inset 0 -3px 0 #e0c080,inset 0 3px 0 #fff;width:min(92vw,400px);display:flex;flex-direction:column;gap:5px}
+  /* ── SHOP / REWARD BOX ── */
+  .shop{padding:12px 14px;background:#fff5e0;box-shadow:var(--bd),inset 0 -3px 0 #e0c080,inset 0 3px 0 #fff;display:flex;flex-direction:column;gap:5px}
   .shop .shop-lbl{font-size:9px;color:#a05000;text-align:center;letter-spacing:2px;margin-bottom:4px;font-weight:bold}
-  .shop-row{display:flex;justify-content:space-between;align-items:center;background:#fffbe8;padding:6px 10px;box-shadow:inset 0 2px 0 #fff,0 2px 0 #c9a060}
+  .shop-row{display:flex;justify-content:space-between;align-items:center;background:#fffbe8;padding:7px 10px;box-shadow:inset 0 2px 0 #fff,0 2px 0 #c9a060;cursor:pointer;transition:filter .1s}
+  .shop-row:active{filter:brightness(.94);transform:translateY(2px)}
   .shop-row .amt{color:#c05000;font-size:10px;font-weight:bold;letter-spacing:1px}
   .shop-row .prc{display:flex;gap:8px;align-items:center;font-size:9px}
-  .shop-row .prc s{opacity:.5;color:#888;text-decoration:line-through}
-  .shop-row .prc b{color:#3fbf5f;font-size:10px}
-  .shop .shop-note{font-size:7px;color:#a05000;text-align:center;opacity:.7;margin-top:3px;letter-spacing:1px}
+  .shop-row .prc s{opacity:.5;color:#888;text-decoration:line-through;font-size:8px}
+  .shop-row .prc b{color:#3fbf5f;font-size:11px}
+  .shop .shop-note{font-size:7px;color:#a05000;text-align:center;opacity:.75;margin-top:4px;letter-spacing:1px;line-height:1.5}
+
+  /* ── MENU LAYOUT: TITLE KIRI, MENU KANAN ── */
+  #menu{
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left))!important;
+    gap:20px;
+  }
+  #menu .ttl{
+    width:min(48vw,420px)!important;
+    flex-shrink:0;
+    margin:0!important;
+  }
+  #menu .menu-right{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    width:min(42vw,320px);
+    margin-left:auto;
+    max-height:calc(100vh - 40px);
+    overflow-y:auto;
+    padding:4px;
+  }
+  #menu .menu-right .mb{
+    width:100%!important;
+    margin:0!important;
+  }
+  #menu .menu-right .shop{
+    width:100%!important;
+    margin:0!important;
+  }
+  #menu .menu-right::-webkit-scrollbar{width:4px}
+  #menu .menu-right::-webkit-scrollbar-thumb{background:#17306b;border-radius:0}
+
+  /* ── MAP BUTTON SUBTITLE (player count) ── */
   .grid.map button small{display:block;font-size:7px;line-height:1;margin-top:4px;opacity:.8;font-weight:normal;letter-spacing:0}
   .grid.map button.on small{opacity:1}
   .grid.map button small.on-live{color:#3fbf5f}
+
+  /* ── RESPONSIVE ── */
+  @media(max-height:430px){
+    #menu{padding:14px 3vw!important;gap:12px}
+    #menu .ttl{width:min(42vw,320px)!important}
+    #menu .menu-right{width:min(46vw,300px);gap:10px}
+    .shop{padding:9px 11px}
+    .shop-row{padding:5px 8px}
+    .shop-row .amt{font-size:9px}
+    .shop-row .prc b{font-size:10px}
+    .shop-row .prc s{font-size:7px}
+  }
   `;
   document.head.appendChild(st);
 })();
@@ -1129,28 +1179,51 @@ menuG.add(Mt(new THREE.CylinderGeometry(3.2,3.2,.5,24),LS(0xffffff,{shininess:30
          Mt(new THREE.CylinderGeometry(3.5,3.7,.4,24),LS(0xb8d8ff,{shininess:60}),0,-.6,0));
 sc.add(menuG);
 
-// ═══════════════ INJECT SHOP BOX ═══════════════
-(function injectShop(){
+// ═══════════════ INJECT LAYOUT MENU (kanan) + REWARD BOX ═══════════════
+(function injectShopAndLayout(){
   const menu=$('menu');if(!menu)return;
+  const mb=menu.querySelector('.mb');
+  if(!mb)return;
+
+  // Buat wrapper kolom kanan (berisi tombol + shop)
+  const rightCol=document.createElement('div');
+  rightCol.className='menu-right';
+  menu.insertBefore(rightCol,mb);
+  rightCol.appendChild(mb);
+
+  // Kotak "HADIAH JB" (reward/cashout) dengan harga coret
   const shop=document.createElement('div');
   shop.className='shop';
   shop.innerHTML=`
-    <div class="shop-lbl">💎 TOP UP JB</div>
-    <div class="shop-row">
+    <div class="shop-lbl">🎁 HADIAH JB</div>
+    <div class="shop-row" data-reward="650">
       <span class="amt">650 JB</span>
       <span class="prc"><s>Rp 20.000</s><b>Rp 15.000</b></span>
     </div>
-    <div class="shop-row">
+    <div class="shop-row" data-reward="1000">
       <span class="amt">1.000 JB</span>
       <span class="prc"><s>Rp 35.000</s><b>Rp 25.000</b></span>
     </div>
-    <div class="shop-row">
+    <div class="shop-row" data-reward="5000">
       <span class="amt">5.000 JB</span>
       <span class="prc"><s>Rp 95.000</s><b>Rp 65.000</b></span>
     </div>
-    <div class="shop-note">⚠ HARGA PROMO TERBATAS</div>
+    <div class="shop-note">Kumpulkan JB → tukar hadiah uang!<br>⚠ PROMO TERBATAS</div>
   `;
-  menu.appendChild(shop);
+  rightCol.appendChild(shop);
+
+  // Klik row → feedback (JB cukup atau belum)
+  shop.querySelectorAll('.shop-row').forEach(row=>{
+    row.onclick=()=>{
+      const need=parseInt(row.dataset.reward);
+      const rp=row.querySelector('.prc b').textContent;
+      if(cfg.jb>=need){
+        toast('🎉 Kamu bisa klaim '+rp+'! Hubungi admin.');
+      } else {
+        toast('Kurang '+(need-cfg.jb)+' JB lagi untuk '+rp);
+      }
+    };
+  });
 })();
 
 function setSelf(){
@@ -1192,7 +1265,6 @@ MU.forEach(([k,l])=>{
   ppGrid.append(b);
 });
 
-// Live player count listeners per global room
 async function setupGlobalCounts(){
   try{await ready}catch(e){}
   if(typeof db==='undefined'||!db)return;

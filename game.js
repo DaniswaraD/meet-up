@@ -72,8 +72,8 @@ const SPAWNERS={
   parkour:[],
   speedrace:[[-10,0,4,'super'],[-5,0,4,'super'],[0,0,4,'super'],[5,0,4,'super'],[10,0,4,'super']]
 };
-// Renamed function to avoid conflict with state variable `nearSpawner`
-function isNearSp(x,z,r){if(!curSpawners)return false;for(const s of curSpawners){if(Math.hypot(x-s[0],z-s[2])<r)return true}return false}
+// Function cek tabrakan spawn pad — nama sengaja beda total biar tidak konflik
+function hitPad(x,z,r){if(!curSpawners)return false;for(const s of curSpawners){if(Math.hypot(x-s[0],z-s[2])<r)return true}return false}
 
 // ============================== STRUCTURES ==============================
 function house(hx,hz,wood,roof,opt){
@@ -185,7 +185,7 @@ function igloo(x,z){
   world.add(g);addCol(x,0,z,10,5,10);
 }
 function bigTree(x,z,c){
-  if(isNearSp(x,z,14))return;
+  if(hitPad(x,z,14))return;
   const k=.85+Math.random()*.5,tr=1.1*k;
   Mt(new THREE.CylinderGeometry(1.1*k,1.5*k,6*k,7),LM(0x5a3a1a),x,3*k,z);
   Mt(new THREE.CylinderGeometry(.75*k,1*k,4*k,7),LM(0x6b4a2b),x,6*k+2*k,z);
@@ -195,7 +195,7 @@ function bigTree(x,z,c){
   addCol(x,0,z,tr*2,5*k,tr*2);
 }
 function roundTree(x,z,c){
-  if(isNearSp(x,z,14))return;
+  if(hitPad(x,z,14))return;
   const k=.9+Math.random()*.4;
   Mt(new THREE.CylinderGeometry(1*k,1.4*k,5*k,6),LM(0x5a3a1a),x,2.5*k,z);
   const fm=LM(c,{flatShading:false,shininess:15});
@@ -206,7 +206,7 @@ function roundTree(x,z,c){
   addCol(x,0,z,2*k,4*k,2*k);
 }
 function pineTree(x,z){
-  if(isNearSp(x,z,14))return;
+  if(hitPad(x,z,14))return;
   const k=.85+Math.random()*.5,tr=.9*k;
   Mt(new THREE.CylinderGeometry(.9*k,1.2*k,5*k,6),LM(0x4a2a1a),x,2.5*k,z);
   Mt(new THREE.ConeGeometry(4*k,7*k,7),LM(0x1a5a2a),x,5*k+3.5*k,z);
@@ -215,13 +215,13 @@ function pineTree(x,z){
   addCol(x,0,z,tr*2,4*k,tr*2);
 }
 function rock(x,z,col){
-  if(isNearSp(x,z,12))return;
+  if(hitPad(x,z,12))return;
   const s=1.5+Math.random()*1.8;
   Mt(new THREE.DodecahedronGeometry(s),LM(col||(curMap=='snow'?0xcfd8e0:0x8a8a8a)),x,s*.55,z);
   addCol(x,0,z,s*1.4,s*1.2,s*1.4);
 }
 function cactus(x,z){
-  if(isNearSp(x,z,14))return;
+  if(hitPad(x,z,14))return;
   const g=new THREE.Group();g.position.set(x,0,z);
   const c=LM(0x3c8f4a);
   Mt(new THREE.CylinderGeometry(.8,.9,7,7),c,0,3.5,0,g);
@@ -253,9 +253,7 @@ function bridge(x,z,lenZ,widX){
     Mt(BOX(.4,.3,lenZ),dark,xr,3,0,g);
     Mt(BOX(.4,.3,lenZ),dark,xr,2,0,g);
   });
-  for(let i=1;i<n;i+=4){
-    Mt(BOX(widX*.8,3,1.5),LM(0x4a3020),0,-1.2,-lenZ/2+i*2,g);
-  }
+  for(let i=1;i<n;i+=4)Mt(BOX(widX*.8,3,1.5),LM(0x4a3020),0,-1.2,-lenZ/2+i*2,g);
   world.add(g);
   addCol(x,0,z,widX,.6,lenZ);
   addCol(x-widX/2,1.2,z,.4,2,lenZ);
@@ -715,7 +713,7 @@ function trail(x,z,c){let t=TR.find(q=>q.l<=0);if(!t){if(TR.length>=40)return;co
 
 // ============================== STATE ==============================
 let me,base,rid,host=false,playing=false,joined=false,pl=null,P={},cy=0,zd=10,pitch=.6,keys={},ix=0,iy=0,run=false,jmp=false,last=performance.now(),selMap='island',roomMap='island';
-let inCar=null,nearCar=null,nearSpawner=null,raceTimer=0,raceRunning=false,raceFinished=false;
+let inCar=null,carNear=null,padNear=null,raceTimer=0,raceRunning=false,raceFinished=false;
 const show=id=>SCREENS.forEach(s=>$(s).classList.toggle('hide',s!=id));
 const menuG=new THREE.Group();
 menuG.add(Mt(new THREE.CylinderGeometry(3.2,3.2,.5,24),LM(0xffffff,{shininess:30}),0,-.25,0),
@@ -834,8 +832,8 @@ $('cb').onclick=()=>{$('chat').classList.toggle('hide');$('ci').focus()};
 $('cs').onclick=send;$('ci').onkeydown=e=>{if(e.key=='Enter')send()};
 
 // ---------- CAR INTERACTIONS ----------
-function doSpawn(){if(!nearSpawner)return;spawnCarAt(nearSpawner)}
-function doUse(){if(inCar){exitCar();return}if(nearCar){enterCar(nearCar)}}
+function doSpawn(){if(!padNear)return;spawnCarAt(padNear)}
+function doUse(){if(inCar){exitCar();return}if(carNear){enterCar(carNear)}}
 function enterCar(c){
   c.occupied=true;inCar=c;
   pl.root.visible=false;
@@ -966,15 +964,15 @@ function frame(now){
       if(curMap=='parkour'&&pl.y<-30){pl.x=pl.z=0;pl.y=3;pl.vx=pl.vz=pl.vy=0}
       const rr=Math.hypot(pl.x,pl.z);
       if(rr>LIM){pl.x*=LIM/rr;pl.z*=LIM/rr}
-      nearSpawner=null;nearCar=null;
+      padNear=null;carNear=null;
       let bestS=4.5,bestC=5;
-      for(const s of curSpawners){const d=Math.hypot(pl.x-s[0],pl.z-s[2]);if(d<bestS){bestS=d;nearSpawner=s}}
-      for(const c of cars){if(c.occupied)continue;const d=Math.hypot(pl.x-c.x,pl.z-c.z);if(d<bestC){bestC=d;nearCar=c}}
-      $('spawnBtn').classList.toggle('hide',!nearSpawner);
-      $('useBtn').classList.toggle('hide',!nearCar);
+      for(const s of curSpawners){const d=Math.hypot(pl.x-s[0],pl.z-s[2]);if(d<bestS){bestS=d;padNear=s}}
+      for(const c of cars){if(c.occupied)continue;const d=Math.hypot(pl.x-c.x,pl.z-c.z);if(d<bestC){bestC=d;carNear=c}}
+      $('spawnBtn').classList.toggle('hide',!padNear);
+      $('useBtn').classList.toggle('hide',!carNear);
       const prompt=$('prompt');
-      if(nearCar){prompt.textContent='🚗 '+nearCar.def.name+' — USE masuk';prompt.classList.remove('hide')}
-      else if(nearSpawner){prompt.textContent='✨ Spawner '+CAR_DEFS[nearSpawner[3]].name+' — CAR spawn';prompt.classList.remove('hide')}
+      if(carNear){prompt.textContent='🚗 '+carNear.def.name+' — USE masuk';prompt.classList.remove('hide')}
+      else if(padNear){prompt.textContent='✨ Spawner '+CAR_DEFS[padNear[3]].name+' — CAR spawn';prompt.classList.remove('hide')}
       else prompt.classList.add('hide');
     }
     if(inCar){

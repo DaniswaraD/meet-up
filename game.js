@@ -72,7 +72,7 @@ let dlgBtnEl=null;
     const j=currentDlgTarget;
     const line=j.lines[j.lineIdx % j.lines.length];
     j.lineIdx++;
-    for(let k=0;k<6;k++){const a=k/6*6.28;puff(j.x+Math.cos(a)*.5,j.z+Math.sin(a)*.5,1,'#ffd23f',1.5,1.5)}
+    for(let k=0;k<8;k++){const a=k/8*6.28;puff(j.x+Math.cos(a)*.6,j.z+Math.sin(a)*.6,1,'#ffd23f',2,1.5)}
     say(j,line);
     if(j.secret && j.lineIdx===1){toast('⭐ Kamu menemukan jelloger rahasia: '+j._jname)}
   });
@@ -114,6 +114,7 @@ function setRD(){const r=cfg.rd;const rl=$('rl');if(rl)rl.textContent='Render: '
 const MAPS={island:[0x87c8ff,0x5cb85c],desert:[0xf5d99a,0xe0c070],jungle:[0x3a6a4a,0x2f6b3a],snow:[0xdcecff,0xf4f8ff],parkour:[0x0e1a3a,0x1a1a3a],speedrace:[0x87ceeb,0x4a4a5a]};
 let world=new THREE.Group(),cols=[],plats=[],jbs=[],boostBubbles=[],swings=[],rings=[],WINDMILLS=[],FLAGPOLES=[],hillGrass=[],ANIMALS=[],FOUNTAINS=[],WATERFALLS=[],BALLOONS=[],WATERWHEELS=[],BELLS=[],LANTERNS=[],curMap='island',LIM=200;
 const JELLOGERS=[];
+const JSPARK=[];
 
 let skyDome,sunMesh;
 function makeSky(sc1,sc2){const geo=new THREE.SphereGeometry(450,32,16);const c1=new THREE.Color(sc1),c2=new THREE.Color(sc2);const p=geo.attributes.position,cl=[];for(let i=0;i<p.count;i++){const y=p.getY(i)/450;const t=Math.max(0,Math.min(1,(y+1)/2));const c=c2.clone().lerp(c1,t);cl.push(c.r,c.g,c.b)}geo.setAttribute('color',new THREE.Float32BufferAttribute(cl,3));skyDome=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,depthWrite:false}));sc.add(skyDome);sunMesh=new THREE.Mesh(new THREE.CircleGeometry(28,32),new THREE.MeshBasicMaterial({color:0xfff4c2,transparent:true,opacity:.9}));sunMesh.position.set(-150,140,-200);sunMesh.lookAt(0,50,0);sc.add(sunMesh)}
@@ -131,7 +132,7 @@ function mergeParts(parts){const geos=[];let total=0;const m4=new THREE.Matrix4(
 function addMerged(parts){if(!parts.length)return;const mesh=new THREE.Mesh(mergeParts(parts),new THREE.MeshPhongMaterial({vertexColors:true,flatShading:true,shininess:8}));if(R.shadowMap.enabled){mesh.castShadow=true;mesh.receiveShadow=true}world.add(mesh)}
 function instance(geo,list,parent){if(!list||!list.length)return null;const mat=new THREE.MeshPhongMaterial({vertexColors:true,flatShading:true,shininess:4});const im=new THREE.InstancedMesh(geo,mat,list.length);im.instanceMatrix.setUsage(THREE.StaticDrawUsage);const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();const pos=new THREE.Vector3(),scl=new THREE.Vector3();for(let i=0;i<list.length;i++){const t=list[i];pos.set(t.x,t.y||0,t.z);e.set(0,t.r||0,0);q.setFromEuler(e);const s=t.s||1;scl.set(t.sx||s,t.sy||s,t.sz||s);m4.compose(pos,q,scl);im.setMatrixAt(i,m4)}im.instanceMatrix.needsUpdate=true;if(R.shadowMap.enabled){im.castShadow=true;im.receiveShadow=true}(parent||world).add(im);return im}
 
-const AMB={butterflies:[],birds:[],clouds:[],snow:[],leaves:[],petals:[],smokes:[],stars:[],orbs:[],fireflies:[],bubbles:[],dust:[]};
+const AMB={butterflies:[],birds:[],clouds:[],snow:[],leaves:[],petals:[],smokes:[],stars:[],orbs:[],fireflies:[],bubbles:[],dust:[],wind:[]};
 function clearAmb(){for(const k in AMB){for(const m of AMB[k])sc.remove(m.m);AMB[k]=[]}}
 function pool(kind,geo,mat,n){n=Math.max(1,Math.round(n*AMB_MULT));for(let i=0;i<n;i++){const m=new THREE.Mesh(geo,mat.clone());m.visible=false;sc.add(m);AMB[kind].push({m,act:false,t:0})}}
 function get(kind){for(const q of AMB[kind])if(!q.act)return q;return null}
@@ -189,13 +190,12 @@ function haystack(x,z){const P=[];for(let i=0;i<3;i++){const y=i*1.2+.6,r=2.5-i*
 function cart(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];const p1=T(0,0);P.push({geo:BOX(4,1.2,2.5),x:p1[0],y:1.8,z:p1[1],color:0x8b5a2b,ry:rot});P.push({geo:BOX(3.6,.15,2.1),x:p1[0],y:2.4,z:p1[1],color:0x6b4a2b,ry:rot});[[-1.4,-1.3],[1.4,-1.3],[-1.4,1.3],[1.4,1.3]].forEach(([lx,lz])=>{const w=T(lx,lz);P.push({geo:new THREE.CylinderGeometry(.7,.7,.3,10),x:w[0],y:.7,z:w[1],color:0x3a2a1a,rz:Math.PI/2,ry:rot})});const h1=T(-2.4,0);P.push({geo:BOX(2.5,.2,.2),x:h1[0],y:2.4,z:h1[1],color:0x8b5a2b,ry:rot});addMerged(P);addCol(x,0,z,4.5,2.5,3)}
 function barrels(x,z){const P=[];[[0,0],[1.4,.8],[-1.2,.5],[.3,-1.4],[1.5,-1]].forEach(([ox,oz],i)=>{const bx=x+ox,bz=z+oz;P.push({geo:new THREE.CylinderGeometry(.6,.65,1.4,10),x:bx,y:.7,z:bz,color:i%2?0x8b5a2b:0x7a4a1b});P.push({geo:new THREE.CylinderGeometry(.68,.68,.15,10),x:bx,y:.7,z:bz,color:0x3a2a1a});P.push({geo:new THREE.CylinderGeometry(.68,.68,.15,10),x:bx,y:1.3,z:bz,color:0x3a2a1a})});addMerged(P);addCol(x,0,z,4,1.5,4)}
 function signpost(x,z){addMerged([{geo:new THREE.CylinderGeometry(.15,.18,5,6),x,y:2.5,z,color:0x8b5a2b},{geo:new THREE.SphereGeometry(.25,8,6),x,y:5,z,color:0xffd23f}]);[0.3,2.4,4.1].forEach((a,i)=>{const g=new THREE.Group();g.position.set(x,3.5-i*.7,z);g.rotation.y=a;const sign=new THREE.Mesh(BOX(1.8,.5,.06),LM([0xf0e6d0,0xffd23f,0xff5d5d][i]));if(R.shadowMap.enabled)sign.castShadow=true;sign.position.x=.9;const tip=new THREE.Mesh(new THREE.ConeGeometry(.25,.5,4).rotateZ(-Math.PI/2),LM([0xf0e6d0,0xffd23f,0xff5d5d][i]));if(R.shadowMap.enabled)tip.castShadow=true;tip.position.x=1.95;g.add(sign,tip);world.add(g)});addCol(x,0,z,.5,5,.5)}
-function hotAirBalloon(x,z){const g=new THREE.Group();g.position.set(x,0,z);const mkShadowMesh=(mesh)=>{if(R.shadowMap.enabled)mesh.castShadow=true;return mesh};const env=mkShadowMesh(new THREE.Mesh(new THREE.SphereGeometry(4,16,12),LM(0xff5d5d)));env.scale.set(1,1.2,1);env.position.y=20;g.add(env);[0,1,2,3].forEach(i=>{const stripe=mkShadowMesh(new THREE.Mesh(new THREE.SphereGeometry(4.05,16,12,0,0.3,i*Math.PI/2),LM([0xffd23f,0xffffff,0x3d8bff,0xffd23f][i])));stripe.scale.set(1,1.2,1);stripe.position.y=20;g.add(stripe)});const basket=mkShadowMesh(new THREE.Mesh(BOX(2.4,1.8,2.4),LM(0x8b5a2b)));basket.position.y=12;g.add(basket);const beam1=mkShadowMesh(new THREE.Mesh(BOX(2.5,.1,2.5),LM(0x5a3a1a)));beam1.position.y=12.9;g.add(beam1);for(let i=0;i<4;i++){const a=i/4*6.28;const rope=mkShadowMesh(new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,5,4),LM(0x5a3a1a)));rope.position.set(Math.cos(a)*1.1,15.5,Math.sin(a)*1.1);g.add(rope)}const flame=new THREE.Mesh(new THREE.ConeGeometry(.5,1.2,6),new THREE.MeshBasicMaterial({color:0xff8c1a,transparent:true,opacity:.9}));flame.position.y=13.5;g.add(flame);world.add(g);const b={g,x,z,y:0,vx:0,vz:0,vy:0,flame,t:Math.random()*6.28,rider:null};BALLOONS.push(b);return b}
+function hotAirBalloon(x,z){const g=new THREE.Group();g.position.set(x,0,z);const mkShadowMesh=(mesh)=>{if(R.shadowMap.enabled)mesh.castShadow=true;return mesh};const env=mkShadowMesh(new THREE.Mesh(new THREE.SphereGeometry(4,16,12),LM(0xff5d5d)));env.scale.set(1,1.2,1);env.position.y=20;g.add(env);[0,1,2,3].forEach(i=>{const stripe=mkShadowMesh(new THREE.Mesh(new THREE.SphereGeometry(4.05,16,12,0,0.3,i*Math.PI/2),LM([0xffd23f,0xffffff,0x3d8bff,0xffd23f][i])));stripe.scale.set(1,1.2,1);stripe.position.y=20;g.add(stripe)});const basket=mkShadowMesh(new THREE.Mesh(BOX(2.4,1.8,2.4),LM(0x8b5a2b)));basket.position.y=12;g.add(basket);const beam1=mkShadowMesh(new THREE.Mesh(BOX(2.5,.1,2.5),LM(0x5a3a1a)));beam1.position.y=12.9;g.add(beam1);for(let i=0;i<4;i++){const a=i/4*6.28;const rope=mkShadowMesh(new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,5,4),LM(0x5a3a1a)));rope.position.set(Math.cos(a)*1.1,15.5,Math.sin(a)*1.1);g.add(rope)}const flame=new THREE.Mesh(new THREE.ConeGeometry(.5,1.2,6),new THREE.MeshBasicMaterial({color:0xff8c1a,transparent:true,opacity:.9}));flame.position.y=13.5;g.add(flame);world.add(g);const b={g,x,z,y:0,vx:0,vz:0,vy:0,flame,t:Math.random()*6.28,rider:null,smokeT:0};BALLOONS.push(b);return b}
 function campfire(x,z){const P=[];for(let i=0;i<6;i++){const a=i/6*6.28;P.push({geo:new THREE.CylinderGeometry(.15,.15,1.4,5),x:x+Math.cos(a)*.7,y:.5,z:z+Math.sin(a)*.7,color:0x5a3a1a,rx:Math.PI/2.3,ry:a})}for(let i=0;i<8;i++){const a=i/8*6.28;P.push({geo:new THREE.DodecahedronGeometry(.3,0),x:x+Math.cos(a)*1.2,y:.15,z:z+Math.sin(a)*1.2,color:0x5a5a52})}addMerged(P);const f1=new THREE.Mesh(new THREE.ConeGeometry(.6,1.4,6),new THREE.MeshBasicMaterial({color:0xff5d1a,transparent:true,opacity:.85}));f1.position.set(x,1,z);const f2=new THREE.Mesh(new THREE.ConeGeometry(.4,1,6),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:.9}));f2.position.set(x,1.2,z);world.add(f1,f2);FOUNTAINS.push({parts:[{m:f1,baseAng:0,t:0,isFlame:true},{m:f2,baseAng:1,t:.5,isFlame:true}],x,z,topY:1});addCol(x,0,z,3,.6,3)}
 function totem(x,z){addMerged([{geo:new THREE.CylinderGeometry(1.2,1.4,.5,8),x,y:.25,z,color:0x6a5a4a},{geo:new THREE.BoxGeometry(2,3,2),x,y:2,z,color:0xa07040},{geo:new THREE.BoxGeometry(1.8,2.5,1.8),x,y:4.5,z,color:0x8b5a2b},{geo:new THREE.BoxGeometry(2,2.5,2),x,y:6.8,z,color:0xa07040}]);for(let i=0;i<3;i++){const y=1.5+i*2.3;Mt(BOX(.3,.3,.15),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x-.5,y,z+1.05);Mt(BOX(.3,.3,.15),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x+.5,y,z+1.05);Mt(BOX(1.2,.15,.15),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x,y-.6,z+1.05)}Mt(new THREE.ConeGeometry(.8,3,4).rotateZ(Math.PI/2),LM(0xffd23f),x-2.5,7,z);Mt(new THREE.ConeGeometry(.8,3,4).rotateZ(-Math.PI/2),LM(0xffd23f),x+2.5,7,z);addCol(x,0,z,2.4,8,2.4)}
 function archway(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];const p1=T(-3,0),p2=T(3,0);P.push({geo:BOX(.8,7,.8),x:p1[0],y:3.5,z:p1[1],color:0x8a8a82});P.push({geo:BOX(.8,7,.8),x:p2[0],y:3.5,z:p2[1],color:0x8a8a82});P.push({geo:BOX(7,.8,.8),x,y:7,z,color:0x9a9a92,ry:rot});P.push({geo:BOX(8,.4,.4),x,y:6.6,z,color:0x8a8a82,ry:rot});P.push({geo:new THREE.TorusGeometry(1,.15,4,16),x,y:8.2,z,color:0xffd23f,ry:rot});addMerged(P);addCol(x-3,0,z,.8,7,.8);addCol(x+3,0,z,.8,7,.8)}
 function marketStall(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];P.push({geo:BOX(4,1.8,2),x,y:.9,z,color:0x8b5a2b,ry:rot});P.push({geo:BOX(4.2,.15,2.2),x,y:1.9,z,color:0xa07040,ry:rot});[[-1.8,-.8],[1.8,-.8],[-1.8,.8],[1.8,.8]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:new THREE.CylinderGeometry(.1,.1,3.5,6),x:p[0],y:3.5,z:p[1],color:0x5a3a1a})});P.push({geo:new THREE.ConeGeometry(3.5,1.2,4),x,y:5.5,z,color:0xff5d5d,ry:rot+Math.PI/4});for(let i=0;i<5;i++){const a=Math.random()*6.28,d=Math.random()*1.2;const px=T(d*Math.cos(a),d*Math.sin(a));P.push({geo:ICO(.2,0),x:px[0],y:2.1,z:px[1],color:[0xff6688,0xffee55,0xff8c1a,0xb05dff,0x3fbf5f][i]})}addMerged(P);addCol(x,0,z,4.5,2,2.5)}
 
-// ═══════════════ NEW STRUCTURES ═══════════════
 function stonewall(x1,z1,x2,z2){
   const P=[];const dx=x2-x1,dz=z2-z1;const len=Math.hypot(dx,dz);const n=Math.max(2,Math.floor(len/1.2));const rot=Math.atan2(dx,dz);
   for(let i=0;i<=n;i++){const t=i/n;const px=x1+dx*t,pz=z1+dz*t;
@@ -429,12 +429,12 @@ function beehive(x,z){
   }
   addCol(x,0,z,1,3,1);
 }
-// ═══════════════ STRUKTUR TAMBAHAN ═══════════════
+// FIXED flowerArch — correct rotation math
 function flowerArch(x,z,rot){
   rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
+  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
   const P=[];
-  const p1=[x+c*(-3)-s*0, z+s*(-3)+c*0];
-  const p2=[x+c*(3)-s*0, z+s*(3)+c*0];
+  const p1=T(-3,0),p2=T(3,0);
   P.push({geo:BOX(.8,7,.8),x:p1[0],y:3.5,z:p1[1],color:0xe8e0d0});
   P.push({geo:BOX(.8,7,.8),x:p2[0],y:3.5,z:p2[1],color:0xe8e0d0});
   P.push({geo:new THREE.TorusGeometry(3.2,.5,8,20,Math.PI),x,y:7,z,color:0x3aa84a,ry:rot});
@@ -442,8 +442,10 @@ function flowerArch(x,z,rot){
   const cols=[0xff6688,0xffee55,0xffffff,0xb05dff,0xff8c1a];
   for(let i=0;i<20;i++){
     const a=Math.PI*(i/19);
-    const fx=x+Math.cos(a)*3.2*c, fz=z-Math.sin(a)*3.2*s;
-    Mt(ICO(.25,0),LM(cols[i%cols.length],{shininess:30}),fx,7+Math.sin(a)*3.2,fz);
+    const lx=Math.cos(Math.PI-a)*3.2;
+    const ly=Math.sin(a)*3.2;
+    const p=T(lx,0);
+    Mt(ICO(.25,0),LM(cols[i%cols.length],{shininess:30}),p[0],7+ly,p[1]);
   }
   addCol(x-3,0,z,.8,7,.8);addCol(x+3,0,z,.8,7,.8);
 }
@@ -461,7 +463,7 @@ function wishingWell(x,z){
   addCol(x,0,z,4.5,2.5,4.5);
 }
 function garden(x,z,r){
-  r=r||7;
+  r=r||6;
   addMerged([
     {geo:new THREE.CylinderGeometry(r,r,.3,20),x,y:.15,z,color:0xc8b088}
   ]);
@@ -495,7 +497,6 @@ function torch(x,z){
   addCol(x,0,z,.5,4,.5);
 }
 
-// ═══ ANIMALS ═══
 function makeAnimal(type){
   const g=new THREE.Group();
   const col={cow:0xf0f0f0,sheep:0xffffff,chicken:0xffd23f,pig:0xffb0d0,horse:0x8b5a2b}[type];
@@ -543,7 +544,6 @@ function spawnAnimal(type,x,z,r,spd){
   ANIMALS.push({g,x,z,y:0,vx:0,vz:0,targetX:x,targetZ:z,wanderCd:Math.random()*2,spawnX:x,spawnZ:z,r:r||5,spd:spd||.4,t:Math.random()*6.28,type,legs:g.children.filter(c=>c.userData&&c.userData.leg)});
 }
 
-// ═══════════════ JELLOGER SPAWN & UPDATE ═══════════════
 function spawnJelloger(def){
   const sh=Math.floor(Math.random()*7);
   const p=mkP({n:def.n,c1:def.c1,c2:def.c2,sh,nc:def.nc||'#fff',nf:def.nf||'monospace',noName:true});
@@ -562,6 +562,7 @@ function spawnJelloger(def){
   p.frozen=(def.spd===0);
   p.tt=0; p.lx=def.x; p.lz=def.z; p.init=1;
   p.isJelloger=true; p.jbLvl=0; p._jname=def.n;
+  p.sparkleT=Math.random()*2;
   JELLOGERS.push(p);
   return p;
 }
@@ -589,7 +590,7 @@ function wanderJellogers(dt){
   }
 }
 
-function waterfall(x,z,h,w){addMerged([{geo:BOX(w+4,h,w+4),x,y:h/2,z,color:0x5a5a52},{geo:BOX(w+5,1,w+5),x,y:h,z,color:0x6a6a62},{geo:new THREE.ConeGeometry(w*0.7,1.5,6),x,y:h+.7,z,color:0x4a4a42}]);addCol(x,0,z,w+4,h,w+4);Mt(new THREE.CircleGeometry(w*0.5,24).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x3aa0d0,transparent:true,opacity:.85,shininess:90}),x,h+.05,z);const cvs=document.createElement('canvas');cvs.width=32;cvs.height=32;const c2=cvs.getContext('2d');c2.fillStyle='rgba(120,200,240,.6)';c2.fillRect(0,0,32,32);for(let i=0;i<12;i++){c2.fillStyle='rgba(255,255,255,.85)';c2.fillRect(0,Math.random()*32,32,1+Math.random()*2)}const tex=new THREE.CanvasTexture(cvs);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(1,6);tex.magFilter=tex.minFilter=THREE.LinearFilter;const sheet=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide,opacity:.9}));sheet.position.set(x,h/2,z+w/2+2.05);world.add(sheet);const poolR=w*1.3;Mt(new THREE.CircleGeometry(poolR,32).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x3aa0d0,transparent:true,opacity:.85,shininess:90}),x,.08,z+w/2+2+poolR*0.5);Mt(new THREE.TorusGeometry(poolR,.5,4,32).rotateX(1.5708),LM(0x7a7a6a),x,.2,z+w/2+2+poolR*0.5);WATERFALLS.push({tex})}
+function waterfall(x,z,h,w){addMerged([{geo:BOX(w+4,h,w+4),x,y:h/2,z,color:0x5a5a52},{geo:BOX(w+5,1,w+5),x,y:h,z,color:0x6a6a62},{geo:new THREE.ConeGeometry(w*0.7,1.5,6),x,y:h+.7,z,color:0x4a4a42}]);addCol(x,0,z,w+4,h,w+4);Mt(new THREE.CircleGeometry(w*0.5,24).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x3aa0d0,transparent:true,opacity:.85,shininess:90}),x,h+.05,z);const cvs=document.createElement('canvas');cvs.width=32;cvs.height=32;const c2=cvs.getContext('2d');c2.fillStyle='rgba(120,200,240,.6)';c2.fillRect(0,0,32,32);for(let i=0;i<12;i++){c2.fillStyle='rgba(255,255,255,.85)';c2.fillRect(0,Math.random()*32,32,1+Math.random()*2)}const tex=new THREE.CanvasTexture(cvs);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(1,6);tex.magFilter=tex.minFilter=THREE.LinearFilter;const sheet=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide,opacity:.9}));sheet.position.set(x,h/2,z+w/2+2.05);world.add(sheet);const poolR=w*1.3;Mt(new THREE.CircleGeometry(poolR,32).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x3aa0d0,transparent:true,opacity:.85,shininess:90}),x,.08,z+w/2+2+poolR*0.5);Mt(new THREE.TorusGeometry(poolR,.5,4,32).rotateX(1.5708),LM(0x7a7a6a),x,.2,z+w/2+2+poolR*0.5);WATERFALLS.push({tex,x,z:z+w/2+2,poolR})}
 
 function addSwing(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const p1=T(-2.5,0),p2=T(2.5,0);addMerged([{geo:BOX(.4,8,.4),x:p1[0],y:4,z:p1[1],color:0x8b5a2b},{geo:BOX(.4,8,.4),x:p2[0],y:4,z:p2[1],color:0x8b5a2b},{geo:BOX(5.4,.4,.4),x,y:8,z,color:0x5a3a1a,ry:rot}]);const pivot=new THREE.Group();pivot.position.set(x,7.8,z);pivot.rotation.y=rot;const c1=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,6,5),LM(0x2a2a2a));if(R.shadowMap.enabled)c1.castShadow=true;c1.position.set(-1.1,-3,0);const c2=c1.clone();c2.position.x=1.1;const seat=new THREE.Mesh(BOX(2.4,.2,1),LM(0x8b5a2b));if(R.shadowMap.enabled)seat.castShadow=true;seat.position.y=-6.1;const back=new THREE.Mesh(BOX(2.4,1.2,.15),LM(0x8b5a2b));if(R.shadowMap.enabled)back.castShadow=true;back.position.y=-5.4;back.position.z=-.4;pivot.add(c1,c2,seat,back);world.add(pivot);swings.push({pivot,x,z,rot,angle:0,vel:0});addCol(x-2.5,0,z,.6,8,.6);addCol(x+2.5,0,z,.6,8,.6)}
 function addRing(x,z,r){r=r||10;const P=[];for(let i=0;i<12;i++){const a=i/12*6.28;P.push({geo:new THREE.CylinderGeometry(.3,.4,3,6),x:x+Math.cos(a)*r,y:1.5,z:z+Math.sin(a)*r,color:0x8a8a8a})}for(let i=0;i<4;i++){const a=i/4*6.28+0.39;P.push({geo:BOX(.6,5,.6),x:x+Math.cos(a)*r,y:2.5,z:z+Math.sin(a)*r,color:0xa04030})}addMerged(P);const floor=Mt(new THREE.CircleGeometry(r,32).rotateX(-1.5708),LM(0xc8b088),x,.08,z);if(R.shadowMap.enabled)floor.receiveShadow=true;Mt(new THREE.TorusGeometry(r,.3,4,40).rotateX(1.5708),LM(0xd05040),x,.15,z);Mt(new THREE.TorusGeometry(r,.15,4,40).rotateX(1.5708),new THREE.MeshBasicMaterial({color:0xd05040}),x,1.8,z);Mt(new THREE.TorusGeometry(r,.12,4,40).rotateX(1.5708),new THREE.MeshBasicMaterial({color:0xffffff}),x,3,z);rings.push({x,z,r})}
@@ -603,55 +604,56 @@ const PARKOUR=[
   [6,27,186,6,6,0],[0,27,192,4,4,3],[0,27,200,12,12,0]
 ];
 
-// ═══════════════ SAFE STRUCTS (off-road, only decorative) ═══════════════
+// ═══════════════ SAFE STRUCTS — semua di luar jalan ═══════════════
 const SAFE_STRUCTS=[
-  // Farm zone E
-  ['windmill',120,50],['barn',85,45],['haystack',100,30],['haystack',105,38],
-  ['scarecrow',70,50],['beehive',75,42],['beehive',95,55],
-  ['fence',60,25,60,65],['fence',60,25,110,25],['fence',110,25,110,65],
-  ['crates',68,68],['crates',90,68],
-  ['stumplog',115,70],['logpile',125,30],
-  // Market SE
-  ['marketstall',95,-15,.5],['marketstall',105,-25,-.3],['marketstall',110,-40,.8],
-  ['barrels',115,-15],['barrels',85,-35],
-  ['crates',90,-50],['potshelf',100,-55],
-  ['lanternpost',90,-25],['lanternpost',108,-30],
+  // Farm zone E (jauh dari jalan)
+  ['windmill',125,55],['barn',88,48],['haystack',108,35],['haystack',113,42],
+  ['scarecrow',75,55],['beehive',80,48],['beehive',100,58],
+  ['fence',65,30,65,68],['fence',65,30,115,30],['fence',115,30,115,68],
+  ['crates',72,72],['crates',95,72],
+  ['stumplog',118,75],['logpile',130,35],
+  // Market SE (jauh dari jalan)
+  ['marketstall',100,-20,.5],['marketstall',110,-30,-.3],['marketstall',115,-45,.8],
+  ['barrels',120,-20],['barrels',90,-40],
+  ['crates',95,-55],['potshelf',105,-60],
+  ['lanternpost',95,-30],['lanternpost',112,-35],
   // Ancient SW
-  ['stonecircle',-110,-90],['ruinpillar',-95,-70],['ruinpillar',-125,-75],
-  ['ruinpillar',-100,-105],['obelisk',-105,-5,0xa89868],
-  ['statuegarden',-100,-55],['totem',-100,100],
-  // Water S
-  ['boat',30,-180,Math.PI/6],['boat',-20,-185,-Math.PI/4],
-  ['beachhut',50,-160,Math.PI/3],['beachhut',-40,-160,-Math.PI/3],
-  ['beachumbrella',20,-165],['beachumbrella',-25,-170],['beachumbrella',60,-140],
+  ['stonecircle',-115,-95],['ruinpillar',-100,-75],['ruinpillar',-130,-80],
+  ['ruinpillar',-105,-110],['obelisk',-110,-10,0xa89868],
+  ['statuegarden',-105,-60],['totem',-105,105],
+  // Water S (jauh dari jalan S)
+  ['boat',45,-180,Math.PI/6],['boat',-35,-185,-Math.PI/4],
+  ['beachhut',55,-165,Math.PI/3],['beachhut',-50,-165,-Math.PI/3],
+  ['beachumbrella',30,-172],['beachumbrella',-35,-175],['beachumbrella',65,-148],
   // East decorative
-  ['waterwheel',135,60],['woodenbridge',140,75,Math.PI/2],
-  ['belltower',145,25],['stonewall',130,20,130,55],
-  ['picnictable',115,-90],['picnictable',100,-95],
+  ['waterwheel',140,65],['woodenbridge',145,80,Math.PI/2],
+  ['belltower',150,30],['stonewall',135,25,135,60],
+  ['picnictable',120,-95],['picnictable',105,-100],
   // West decorative
-  ['windmill',-120,-50],['watertower',-140,25],
-  ['stonewall',-130,-30,-130,-70],['belltower',-145,60],
-  ['picnictable',-115,90],['picnictable',-125,80],
+  ['windmill',-125,-55],['watertower',-145,30],
+  ['stonewall',-135,-35,-135,-75],['belltower',-150,65],
+  ['picnictable',-120,95],['picnictable',-130,85],
   // Scattered
-  ['flagpole',120,-60],['flagpole',-120,-60],
-  ['pond',55,120,6],['pond',-55,120,6],['pond',130,-100,5],
-  ['rockformation',55,-120],['rockformation',-55,-120],
-  ['rockformation',155,10],['rockformation',-155,10],
-  ['rockformation',100,140],['rockformation',-100,-140],
-  ['flowerbed',38,90,2.5],['flowerbed',-38,90,2.5],
-  ['flowerbed',38,-90,2.5],['flowerbed',-38,-90,2.5],
-  ['flowerbed',80,90,2.5],['flowerbed',-80,-90,2.5],
-  ['crates',140,-80],['crates',-140,-80],
-  ['archway',105,60,0],['archway',-105,60,0],
-  ['giantmushroom',-90,60,.8],['giantmushroom',-85,65,.6],['giantmushroom',-95,65,.7],
-  ['logpile',150,110],['logpile',-150,110],
-  ['stumplog',-80,-30],['stumplog',155,-30],
-  // ── tambahan baru (offset aman dari jalan) ──
-  ['flowerarch',132,-50,0],['flowerarch',-132,-50,0],
-  ['wishingwell',36,-62],['wishingwell',-36,-62],
-  ['garden',72,38,6],['garden',-72,38,6],['garden',72,-42,6],['garden',-72,-42,6],
-  ['statuejello',58,-28],['statuejello',-58,-28],['statuejello',58,28],['statuejello',-58,28],
-  ['torch',35,15],['torch',-35,15],['torch',35,-15],['torch',-35,-15]
+  ['flagpole',125,-65],['flagpole',-125,-65],
+  ['pond',60,125,6],['pond',-60,125,6],['pond',135,-105,5],
+  ['rockformation',60,-125],['rockformation',-60,-125],
+  ['rockformation',160,15],['rockformation',-160,15],
+  ['rockformation',105,145],['rockformation',-105,-145],
+  ['flowerbed',42,95,2.5],['flowerbed',-42,95,2.5],
+  ['flowerbed',42,-95,2.5],['flowerbed',-42,-95,2.5],
+  ['flowerbed',85,95,2.5],['flowerbed',-85,-95,2.5],
+  ['crates',145,-85],['crates',-145,-85],
+  ['archway',110,65,0],['archway',-110,65,0],
+  ['giantmushroom',-95,65,.8],['giantmushroom',-90,70,.6],['giantmushroom',-100,70,.7],
+  ['logpile',155,115],['logpile',-155,115],
+  ['stumplog',-85,-35],['stumplog',160,-35],
+  // ── Struktur tambahan baru, posisi di area terpencil ──
+  ['flowerarch',138,-55,0],['flowerarch',-138,-55,0],
+  ['wishingwell',45,-70],['wishingwell',-45,-70],
+  ['garden',90,42,5],['garden',-90,42,5],['garden',90,-48,5],['garden',-90,-48,5],
+  ['statuejello',75,-30],['statuejello',-75,-30],['statuejello',75,30],['statuejello',-75,30],
+  ['torch',55,15],['torch',-55,15],['torch',55,-15],['torch',-55,-15],
+  ['torch',15,55],['torch',-15,55],['torch',15,-55],['torch',-15,-55]
 ];
 
 const LAYOUTS={
@@ -676,7 +678,7 @@ const LAYOUTS={
     swings:[[15,25,0],[-15,25,0]],
     battleRing:[150,150,12],
     lamps:[[0,55],[0,105],[-60,-8],[60,-8],[-40,48],[40,48],[0,-115],[42,-42],[-42,-42]],
-    ambient:['butterflies','birds','clouds','petals','bubbles','dust']
+    ambient:['butterflies','birds','clouds','petals','bubbles','dust','wind']
   },
   desert:{
     sky:[0xf5d99a,0xfff4c2],edge:0xc99a5b,roadFill:0xe6d6b0,roadTrim:0xa88850,plaza:18,
@@ -699,7 +701,7 @@ const LAYOUTS={
     swings:[[14,22,0],[-14,22,0]],
     battleRing:[150,150,12],
     lamps:[[0,55],[-60,-8],[60,-8],[40,45],[-40,45],[0,-115],[40,-40],[-40,-40]],
-    ambient:['birds','clouds','dust']
+    ambient:['birds','clouds','dust','wind']
   },
   jungle:{
     sky:[0x3a6a4a,0x8fd0a0],edge:0x1f5a2a,roadFill:0xb09068,roadTrim:0x6a5040,plaza:16,
@@ -721,7 +723,7 @@ const LAYOUTS={
     swings:[[13,22,0],[-13,22,0]],
     battleRing:[150,150,12],
     lamps:[[0,45],[0,-105],[45,5],[-45,5],[40,40],[-40,40]],
-    ambient:['butterflies','leaves','clouds','fireflies','bubbles','dust']
+    ambient:['butterflies','leaves','clouds','fireflies','bubbles','dust','wind']
   },
   snow:{
     sky:[0xdcecff,0xf0f6ff],edge:0xcfe4ff,roadFill:0xdee6ee,roadTrim:0xa8b8c8,plaza:18,
@@ -746,74 +748,57 @@ const LAYOUTS={
     swings:[[15,25,0],[-15,25,0]],
     battleRing:[150,150,12],
     lamps:[[0,55],[-55,-8],[55,-8],[40,48],[-40,48],[0,-115],[42,-42],[-42,-42]],
-    ambient:['snow','clouds','dust']
+    ambient:['snow','clouds','dust','wind']
   }
 };
 
-// ═══════════════ JELLOGER DEFS — posisi terkurasi sesuai peran ═══════════════
+// ═══════════════ JELLOGER DEFS ═══════════════
 const JELLOGER_DEFS={
   island:[
-    // ── Sekitar farm (barn 85,45 / haystack 100,30 / windmill 120,50) ──
     {n:'Petani Jelloger',   c1:'#8b5a2b', c2:'#d4a848', x:92, z:52, r:5, spd:.35, lines:['Hewan ni bikin kesal, soalnya dia tak mau makan, padahal udah di belikan makan 200 kilo']},
-    {n:'Peternak Jelloger', c1:'#c8a878', c2:'#8b5a2b', x:108,z:28, r:5, spd:.4,  lines:['Ayam-ayamku bertelur 30 butir hari ini!']},
-    {n:'Penggembala',       c1:'#a0d0a0', c2:'#4a7a4a', x:82, z:32, r:6, spd:.4,  lines:['Kambing-kambingku lepas lagi, dasar nakal']},
-    {n:'Tukang Kayu',       c1:'#8b5a2b', c2:'#5a3a1b', x:112,z:62, r:5, spd:.3,  lines:['Kayu dari pohon ini kuat sekali, tahan air']},
-    {n:'Penambang',         c1:'#5a5a52', c2:'#2a2a22', x:150,z:22, r:6, spd:.3,  lines:['Aku mencari emas di dalam tanah, belum ketemu']},
-    // ── Pasar (marketstall 95,-15 / 105,-25 / 110,-40) ──
-    {n:'Pedagang Jelloger', c1:'#ff8c1a', c2:'#d05000', x:95, z:-8, r:4, spd:.35, lines:['Beli barang murah-murah! Beli banyak lebih murah!']},
-    {n:'Pedagang Buah',     c1:'#ffe27a', c2:'#b08b20', x:112,z:-38,r:4, spd:.3,  lines:['Buah-buahan segar! Baru dipetik pagi ini!']},
-    {n:'Penjual Roti',      c1:'#d4a848', c2:'#8b6010', x:100,z:-30,r:4, spd:.3,  lines:['Roti hangat! Roti hangat!']},
-    // ── Plaza (fountain 0,0 / statue 20,40) ──
+    {n:'Peternak Jelloger', c1:'#c8a878', c2:'#8b5a2b', x:112,z:32, r:5, spd:.4,  lines:['Ayam-ayamku bertelur 30 butir hari ini!']},
+    {n:'Penggembala',       c1:'#a0d0a0', c2:'#4a7a4a', x:88, z:38, r:6, spd:.4,  lines:['Kambing-kambingku lepas lagi, dasar nakal']},
+    {n:'Tukang Kayu',       c1:'#8b5a2b', c2:'#5a3a1b', x:118,z:66, r:5, spd:.3,  lines:['Kayu dari pohon ini kuat sekali, tahan air']},
+    {n:'Penambang',         c1:'#5a5a52', c2:'#2a2a22', x:155,z:28, r:6, spd:.3,  lines:['Aku mencari emas di dalam tanah, belum ketemu']},
+    {n:'Pedagang Jelloger', c1:'#ff8c1a', c2:'#d05000', x:100,z:-13, r:4, spd:.35, lines:['Beli barang murah-murah! Beli banyak lebih murah!']},
+    {n:'Pedagang Buah',     c1:'#ffe27a', c2:'#b08b20', x:117,z:-43,r:4, spd:.3,  lines:['Buah-buahan segar! Baru dipetik pagi ini!']},
+    {n:'Penjual Roti',      c1:'#d4a848', c2:'#8b6010', x:105,z:-35,r:4, spd:.3,  lines:['Roti hangat! Roti hangat!']},
     {n:'Guru Jelloger',     c1:'#3aa8d0', c2:'#1a6080', x:14, z:14, r:4, spd:.3,  lines:['Belajar itu penting, tapi bermain juga perlu']},
     {n:'Dokter Jelloger',   c1:'#ffffff', c2:'#ff5d5d', x:-14,z:14, r:4, spd:.3,  lines:['Kalau kamu sakit, minum ramuan dari aku']},
     {n:'Pemusik Jelloger',  c1:'#ffd23f', c2:'#8b6a10', x:22, z:22, r:4, spd:.25, lines:['Dengarkan lagu baruku, judulnya "Jello Bahagia"']},
     {n:'Penari Jelloger',   c1:'#ff90b8', c2:'#8b3060', x:-22,z:22, r:4, spd:.5,  lines:['Ayo menari bersama! Goyangkan badanmu!']},
     {n:'Seniman Jelloger',  c1:'#b05dff', c2:'#5a1a8b', x:24, z:36, r:4, spd:.35, lines:['Aku sedang melukis matahari terbit, indah sekali']},
-    // ── Gazebo (60,35) & (-60,35) ──
     {n:'Pendeta Jelloger',  c1:'#ffffff', c2:'#c0c0c0', x:-66,z:40, r:4, spd:.2,  lines:['Semoga harimu menyenangkan, anakku']},
-    // ── Watchtower 75,80 / shrine -75,80 ──
     {n:'Prajurit Jelloger', c1:'#8a8a82', c2:'#3a3a32', x:80, z:82, r:5, spd:.4,  lines:['Aku berjaga di sini dari pagi sampai pagi lagi']},
     {n:'Petualang Jelloger',c1:'#3fbf5f', c2:'#1a6a2a', x:110,z:140,r:8, spd:.55, lines:['Kudengar ada harta karun di puncak gunung!']},
-    // ── Campfire area (50,50)/(-50,-50)/(50,-50)/(-50,50) ──
     {n:'Koki Jelloger',     c1:'#ff5d5d', c2:'#8b1a1a', x:54, z:45, r:3, spd:.3,  lines:['Makanan di sini paling enak seantero pulau!']},
     {n:'Penjaga Api',       c1:'#ff5d1a', c2:'#8b1a00', x:45, z:55, r:3, spd:.25, lines:['Jangan biarkan api unggun ini padam ya']},
-    // ── Dermaga & pantai (dock 0,-180 / boat 30,-180 / -20,-185) ──
     {n:'Nelayan Jelloger',  c1:'#3a8dff', c2:'#1a4a9a', x:12, z:-175,r:5, spd:.3,  lines:['Ikan hari ini banyak sekali, tapi badai akan datang']},
     {n:'Pelaut Jelloger',   c1:'#4a6a8a', c2:'#1a2a4a', x:-25,z:-178,r:5, spd:.4,  lines:['Kapalku siap berlayar ke pulau seberang']},
-    // ── Mercusuar 0,165 ──
     {n:'Penjaga Mercusuar', c1:'#f4f4f4', c2:'#8a8a8a', x:8,  z:160, r:4, spd:.2,  lines:['Aku menjaga cahaya ini agar kapal tidak tersesat']},
-    // ── Hutan (cherry -85,-35 / oak -100,-140) ──
     {n:'Penjaga Hutan',     c1:'#2f6b3a', c2:'#1a3a20', x:-80,z:-30, r:6, spd:.3,  lines:['Pohon-pohon ini umurnya lebih tua dari kakekku']},
     {n:'Pemandu Jelloger',  c1:'#7fd0ff', c2:'#3a80b0', x:-10,z:95,  r:5, spd:.35, lines:['Ikuti aku, aku tunjukkan tempat terbaik di pulau ini']},
-    // ── Secret (pojok-pojok pulau, tapi masih di darat) ──
     {n:'@@) JEl00G335',     c1:'#00ff00', c2:'#003300', x:130,z:130, r:2, spd:0, secret:true, lines:['QUFYWDIwMTE=']},
     {n:'DANIS Jelloger',    c1:'#ff00ff', c2:'#660066', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Halo saya danis, ini game buatanku']},
     {n:'Cepu Jelloger',     c1:'#ffff00', c2:'#666600', x:130,z:-130, r:2, spd:0, secret:true, lines:['ada 3 jelloger rahasia di sini selain saya']},
     {n:'Weird Jelloger',    c1:'#ff0000', c2:'#330000', x:-130,z:130, r:2, spd:0, secret:true, lines:['jangan']}
   ],
   desert:[
-    // ── Pasar / bazaar ──
-    {n:'Pedagang Permadani',c1:'#c0501a', c2:'#7a2a00', x:112,z:-38, r:5, spd:.35,lines:['Permadani ini ditenun oleh nenekku, kualitasnya terbaik!']},
-    {n:'Penenun Jelloger',  c1:'#b05dff', c2:'#5a1a8b', x:100,z:-30, r:4, spd:.25,lines:['Kain ini dibuat dari bulu unta asli']},
-    {n:'Pembuat Tembikar',  c1:'#a07040', c2:'#5a3a1b', x:95, z:-8,  r:4, spd:.25,lines:['Hati-hati, tembikar ini mudah pecah']},
-    // ── Oasis (105,0,r=28) ──
+    {n:'Pedagang Permadani',c1:'#c0501a', c2:'#7a2a00', x:117,z:-43, r:5, spd:.35,lines:['Permadani ini ditenun oleh nenekku, kualitasnya terbaik!']},
+    {n:'Penenun Jelloger',  c1:'#b05dff', c2:'#5a1a8b', x:105,z:-35, r:4, spd:.25,lines:['Kain ini dibuat dari bulu unta asli']},
+    {n:'Pembuat Tembikar',  c1:'#a07040', c2:'#5a3a1b', x:100,z:-13, r:4, spd:.25,lines:['Hati-hati, tembikar ini mudah pecah']},
     {n:'Penjaga Oasis',     c1:'#3aa0d0', c2:'#1a6080', x:118,z:0,   r:5, spd:.3, lines:['Oasis ini adalah sumber kehidupan kami']},
     {n:'Penjual Air',       c1:'#7fd0ff', c2:'#3a80b0', x:118,z:18,  r:4, spd:.4, lines:['Air! Air segar! Hanya 5 koin!']},
     {n:'Penunggang Unta',   c1:'#d4a848', c2:'#8b6010', x:125,z:-20, r:6, spd:.55,lines:['Untaku bernama Jelly, dia suka meludah ke orang asing']},
-    // ── Sumur (37,15) ──
     {n:'Penggali Sumur',    c1:'#8b5a2b', c2:'#5a3a1b', x:42, z:18,  r:3, spd:.25,lines:['Aku menggali 30 meter, belum ketemu air juga']},
-    // ── Obelisk / kuil ──
     {n:'Penjaga Piramida',  c1:'#c8a878', c2:'#7a5a30', x:5,  z:108, r:3, spd:.2, lines:['Jangan masuk! Kutukan akan menimpamu']},
     {n:'Prajurit Firaun',   c1:'#ffd23f', c2:'#8b6010', x:-100,z:-10,r:4, spd:.3, lines:['Firaun memerintahkan aku berjaga di sini']},
     {n:'Penjaga Kuil',      c1:'#c8a878', c2:'#7a5a30', x:-18,z:-105,r:4, spd:.2, lines:['Kuil ini berumur 5000 tahun']},
     {n:'Pemburu Harta',     c1:'#ffd23f', c2:'#8b6a10', x:75, z:-78, r:5, spd:.6, lines:['Aku dengar ada emas di piramida tua itu']},
     {n:'Penambang Emas',    c1:'#ffd23f', c2:'#8b6010', x:-115,z:-10,r:5, spd:.3, lines:['Aku cari emas di tambang itu, sumpah!']},
-    // ── Gazebo (60,35) ──
     {n:'Penari Perut',      c1:'#ff90b8', c2:'#8b3060', x:65, z:40,  r:4, spd:.55,lines:['Ayo lihat tarianku! Hanya 10 koin!']},
     {n:'Penyanyi Jelloger', c1:'#ff8c1a', c2:'#d05000', x:-65,z:40,  r:4, spd:.3, lines:['Dengarkan suaraku! Aku penyanyi terbaik!']},
-    // ── Camp (80,80 / -80,-80) ──
     {n:'Pembuat Roti',      c1:'#d4a848', c2:'#8b6010', x:45, z:-40, r:3, spd:.25,lines:['Roti baru keluar dari oven!']},
-    // ── Bebas ──
     {n:'Ahli Bintang',      c1:'#3a3a8a', c2:'#101040', x:-25,z:55,  r:4, spd:.2, lines:['Bintang-bintang di gurun lebih terang dari di kota']},
     {n:'Pengembara Pasir',  c1:'#d4a848', c2:'#8b6010', x:140,z:60,  r:8, spd:.55,lines:['Aku sudah 3 hari berjalan tanpa air, tolong...']},
     {n:'Kurir Jelloger',    c1:'#ff5d5d', c2:'#8b1a1a', x:25, z:-65, r:5, spd:.8, lines:['Permisi! Aku sedang buru-buru!']},
@@ -821,30 +806,23 @@ const JELLOGER_DEFS={
     {n:'Pelukis Pasir',     c1:'#ffb84a', c2:'#8b6010', x:88, z:72,  r:4, spd:.3, lines:['Aku melukis dengan pasir, seni unik bukan?']},
     {n:'Penjaga Gerbang',   c1:'#8a8a82', c2:'#3a3a32', x:-10,z:10,  r:3, spd:.2, lines:['Selamat datang di kota gurun!']},
     {n:'Penjaga Harta',     c1:'#ffd23f', c2:'#8b6010', x:-148,z:-45,r:5, spd:.25,lines:['Harta ini tidak boleh disentuh siapapun!']},
-    // ── Secret ──
     {n:'Firaun Jelloger',   c1:'#ffd700', c2:'#8b6010', x:130,z:130, r:2, spd:0, secret:true, lines:['Piramida itu bukan milikku, tapi aku yang membuatnya']},
     {n:'Pedagang Unta J.',  c1:'#c0501a', c2:'#5a1a00', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Untaku bernama Jelly, dia suka meludah ke orang']},
     {n:'Mumi Jelloger',     c1:'#e0d8b0', c2:'#8a8050', x:130,z:-130, r:2, spd:0, secret:true, lines:['Aku sudah tidur 3000 tahun, jangan bangunkan aku']},
     {n:'Fatamorgana J.',    c1:'#ffffff', c2:'#ffd23f', x:-130,z:130, r:2, spd:0, secret:true, lines:['Aku tidak ada di sini, kamu hanya berhalusinasi']}
   ],
   jungle:[
-    // ── Shrine 0,105 / -90,60 ──
     {n:'Penjaga Candi',     c1:'#8a8a82', c2:'#3a3a32', x:8,  z:108, r:3, spd:.2, lines:['Candi ini dibangun oleh jello kuno 10000 tahun lalu']},
     {n:'Dukun Jelloger',    c1:'#b05dff', c2:'#5a1a8b', x:-95,z:60,  r:5, spd:.25,lines:['Ramuan ini bisa menyembuhkan segala penyakit']},
-    // ── Watchtower 60,80 / hut -70,75 ──
     {n:'Pemanjat Pohon',    c1:'#5a3a1b', c2:'#2a1a00', x:65, z:80,  r:4, spd:.4, lines:['Aku bisa memanjat pohon tertinggi dalam 10 detik']},
     {n:'Pengumpul Buah',    c1:'#ffe27a', c2:'#b08b20', x:-95,z:-30, r:6, spd:.4, lines:['Buah durian di pohon itu sudah matang!']},
     {n:'Penebang Kayu',     c1:'#8b5a2b', c2:'#5a3a1b', x:95, z:50,  r:5, spd:.4, lines:['Kayu jati dari hutan ini paling kuat']},
-    // ── Gazebo 55,32 ──
     {n:'Penari Hutan',      c1:'#ff90b8', c2:'#8b3060', x:-30,z:30,  r:4, spd:.55,lines:['Aku menari untuk roh hutan']},
     {n:'Pemusik Tradisional',c1:'#ffd23f',c2:'#8b6a10', x:-25,z:60,  r:4, spd:.3, lines:['Aku mainkan alat musik dari bambu']},
-    // ── Camp (95,45 / -30,-100 / -95,-45) ──
     {n:'Penjaga Api Unggun',c1:'#ff5d1a', c2:'#8b1a00', x:50, z:-45, r:3, spd:.25,lines:['Api ini tidak boleh padam, ini penjaga malam']},
-    // ── Sungai / air terjun ──
     {n:'Penjaga Sungai',    c1:'#3aa0d0', c2:'#1a6080', x:45, z:-85, r:5, spd:.3, lines:['Jangan buang sampah ke sungai!']},
     {n:'Pemandu Air Terjun',c1:'#3aa0d0', c2:'#1a6080', x:-150,z:-40,r:5, spd:.35,lines:['Air terjun di utara sangat indah!']},
     {n:'Penjaga Mata Air',  c1:'#7fd0ff', c2:'#3a80b0', x:25, z:60,  r:4, spd:.3, lines:['Mata air ini suci, jangan dikotori']},
-    // ── Goa / hutan dalam ──
     {n:'Penjaga Goa',       c1:'#5a5a52', c2:'#2a2a22', x:135,z:-58, r:4, spd:.25,lines:['Di dalam goa itu ada kelelawar raksasa']},
     {n:'Penjaga Hutan',     c1:'#1a5a2a', c2:'#0a2a10', x:65, z:65,  r:5, spd:.35,lines:['Hutan ini adalah rumah bagi ribuan makhluk']},
     {n:'Pemburu Jelloger',  c1:'#5a3a1b', c2:'#2a1a00', x:-65,z:65,  r:6, spd:.5, lines:['Aku melihat jejak jaguar tadi malam']},
@@ -856,30 +834,22 @@ const JELLOGER_DEFS={
     {n:'Pengrajin Anyaman', c1:'#d4a848', c2:'#8b6010', x:-105,z:-5, r:4, spd:.3, lines:['Anyaman bambu ini tahan air loh']},
     {n:'Petani Karet',      c1:'#c8a878', c2:'#7a5a30', x:-105,z:-75,r:5, spd:.35,lines:['Getah karet ini bisa jadi ban mobil']},
     {n:'Pengembara Rimba',  c1:'#3fbf5f', c2:'#1a6a2a', x:130,z:80,  r:8, spd:.6, lines:['Aku tersesat 3 hari di hutan ini']},
-    // ── Secret ──
     {n:'Dewa Rimba',        c1:'#3fbf5f', c2:'#0a2a10', x:130,z:130, r:2, spd:0, secret:true, lines:['Hutan ini menyimpan rahasia yang tidak boleh kau ketahui']},
     {n:'Orang Utan J.',     c1:'#c0501a', c2:'#5a1a00', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Ugh ugh ugh, aku bukan monyet, aku jello']},
     {n:'Penjaga Candi Kuno',c1:'#c8a878', c2:'#7a5a30', x:130,z:-130, r:2, spd:0, secret:true, lines:['Candi ini menyimpan kekuatan jello purba']},
     {n:'Ratu Lebah',        c1:'#ffd23f', c2:'#8b6a10', x:-130,z:130, r:2, spd:0, secret:true, lines:['Lebah-lebahku membuat madu terbaik di dunia']}
   ],
   snow:[
-    // ── Igloo (50,55 / 65,68 / 80,50 / -50,55 / -65,68 / -80,50) ──
     {n:'Penjaga Igloo',     c1:'#f0f8ff', c2:'#a8b8c8', x:65, z:80,  r:4, spd:.3, lines:['Igloo ini hangat di dalam, percaya deh']},
     {n:'Pembuat Salju',     c1:'#ffffff', c2:'#c0c0c0', x:-55,z:60,  r:4, spd:.25,lines:['Aku membuat boneka salju setiap hari']},
-    // ── Danau beku (0,-115,r=38) ──
     {n:'Nelayan Es',        c1:'#7fd0ff', c2:'#3a80b0', x:15, z:-115,r:5, spd:.35,lines:['Aku memancing di bawah es, dingin sekali']},
     {n:'Penjaga Danau',     c1:'#aee0ff', c2:'#5a90b0', x:-20,z:-118,r:4, spd:.25,lines:['Danau ini membeku sepanjang tahun']},
     {n:'Pemancing Es',      c1:'#7fd0ff', c2:'#3a80b0', x:18, z:-100,r:4, spd:.3, lines:['Ikan di bawah es sangat besar']},
-    // ── Camp (75,-80 / -75,-80) ──
     {n:'Penjaga Api',       c1:'#ff5d1a', c2:'#8b1a00', x:55, z:-55, r:3, spd:.3, lines:['Api ini tidak boleh padam, ini nyawa kami']},
-    // ── Hut (100,0 / -100,0) ──
     {n:'Pembuat Pakaian',   c1:'#b05dff', c2:'#5a1a8b', x:105,z:-5,  r:4, spd:.3, lines:['Mantel bulu ini hangat sekali']},
     {n:'Pengukir Es',       c1:'#aee0ff', c2:'#5a90b0', x:80, z:80,  r:4, spd:.25,lines:['Ukiran es ini akan bertahan sampai musim panas']},
-    // ── Mercusuar 0,140 ──
     {n:'Penjaga Mercusuar Es',c1:'#f4f4f4',c2:'#8a8a8a', x:8,  z:140, r:4, spd:.2, lines:['Cahaya ini menuntun kapal di badai salju']},
-    // ── Watchtower 75,80 / shrine -75,80 ──
     {n:'Penjaga Hutan Pinus',c1:'#2f6b3a',c2:'#1a3a20', x:65, z:65,  r:5, spd:.35,lines:['Pohon pinus ini berumur 200 tahun']},
-    // ── Pemburu / pengembara ──
     {n:'Pemburu Anjing Laut',c1:'#5a5a52',c2:'#2a2a22', x:-65,z:-65, r:5, spd:.5, lines:['Anjing laut di sini sangat lincah']},
     {n:'Penggembala Rusa',  c1:'#8b5a2b', c2:'#5a3a1b', x:125,z:-22, r:6, spd:.4, lines:['Rusa-rusa ini suka makan wortel']},
     {n:'Pemanjat Gunung',   c1:'#3a3a8a', c2:'#101040', x:-105,z:5,  r:6, spd:.55,lines:['Aku sudah mendaki 3 gunung tertinggi!']},
@@ -892,7 +862,6 @@ const JELLOGER_DEFS={
     {n:'Kurir Salju',       c1:'#ff5d5d', c2:'#8b1a1a', x:25, z:-60, r:5, spd:.8, lines:['Permisi! Aku antar paket!']},
     {n:'Penjaga Ski',       c1:'#3a8dff', c2:'#1a4a9a', x:95, z:-95, r:5, spd:.5, lines:['Jalur ski di sini paling menantang']},
     {n:'Penjaga Perbatasan',c1:'#8a8a82', c2:'#3a3a32', x:-8, z:95,  r:4, spd:.2, lines:['Berhenti! Siapa kau?']},
-    // ── Secret ──
     {n:'Yeti Jelloger',     c1:'#f0f8ff', c2:'#7fa0c0', x:130,z:130, r:2, spd:0, secret:true, lines:['Aku bukan monster, aku hanya kesepian']},
     {n:'Santa Jelloger',    c1:'#ff0000', c2:'#8b0000', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Ho ho ho, apa kamu sudah jadi anak baik tahun ini?']},
     {n:'Penguin Jelloger',  c1:'#1a1a2a', c2:'#ffffff', x:130,z:-130, r:2, spd:0, secret:true, lines:['Aku bisa berenang lebih cepat dari kamu']},
@@ -908,6 +877,7 @@ function build(n){
   jbs.forEach(j=>sc.remove(j.m));jbs=[];
   boostBubbles.forEach(b=>sc.remove(b.m));boostBubbles=[];
   swings=[];rings=[];WINDMILLS=[];FLAGPOLES=[];ANIMALS=[];FOUNTAINS=[];WATERFALLS=[];BALLOONS=[];WATERWHEELS=[];BELLS=[];LANTERNS=[];BEACONS.length=0;clearJellogers();
+  JSPARK.forEach(s=>sc.remove(s.m));JSPARK.length=0;
   removeSky();clearAmb();
   curMap=n;
   LIM=(n=='parkour')?240:n=='speedrace'?160:200;
@@ -931,6 +901,7 @@ function build(n){
   pool('fireflies',new THREE.SphereGeometry(.18,4,3),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true}),30);
   pool('bubbles',new THREE.SphereGeometry(.15,5,4),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.6}),20);
   pool('dust',new THREE.SphereGeometry(.08,3,3),new THREE.MeshBasicMaterial({color:0xffeeaa,transparent:true,opacity:.7}),25);
+  pool('wind',BOX(.6,.02,.02),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.35}),30);
 
   if(n=='parkour'){
     for(let i=0;i<PARKOUR.length;i++){
@@ -1002,7 +973,6 @@ function build(n){
   }
   if(L.extras)for(const ex of L.extras)buildingZones.push({x:ex[1],z:ex[2],r:8});
   if(L.animals)for(const a of L.animals)buildingZones.push({x:a[1],z:a[2],r:a[3]+2});
-  // zone tambahan untuk jelloger agar vegetasi tidak mengganggu
   if(JELLOGER_DEFS[n])for(const jd of JELLOGER_DEFS[n])buildingZones.push({x:jd.x,z:jd.z,r:5});
 
   const hillData=L.hills||[];
@@ -1135,7 +1105,7 @@ function build(n){
   if(flowers.length)instance(treeGeo('flower'),flowers);
 
   for(const amb of L.ambient){
-    if(amb==='butterflies')for(let i=0;i<Math.round(25*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=30+Math.random()*180;spawnAmb('butterflies',{x:Math.cos(a)*d,y:1.5+Math.random()*2,z:Math.sin(a)*d,ph:Math.random()*6.28,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:2+Math.random()*4,spd:.6+Math.random()*.5})}
+    if(amb==='butterflies')for(let i=0;i<Math.round(25*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=30+Math.random()*180;spawnAmb('butterflies',{x:Math.cos(a)*d,y:1.5+Math.random()*2,z:Math.sin(a)*d,ph:Math.random()*6.28,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:2+Math.random()*4,spd:.6+Math.random()*.5,spark:0})}
     if(amb==='birds')for(let i=0;i<Math.round(10*AMB_MULT_GFX);i++)spawnAmb('birds',{x:(Math.random()-.5)*300,y:25+Math.random()*15,z:(Math.random()-.5)*300,a:Math.random()*6.28,r:60+Math.random()*60,spd:.3+Math.random()*.2,y0:25+Math.random()*15})
     if(amb==='clouds')for(let i=0;i<Math.round(14*AMB_MULT_GFX);i++)spawnAmb('clouds',{x:(Math.random()-.5)*400,y:40+Math.random()*20,z:(Math.random()-.5)*400,spd:.5+Math.random()*1,sx:1+Math.random()*1.2,sy:1+Math.random()*.4,sz:.8+Math.random()*.8})
     if(amb==='leaves')for(let i=0;i<Math.round(20*AMB_MULT_GFX);i++)spawnAmb('leaves',{x:(Math.random()-.5)*200,y:8+Math.random()*10,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*2,vz:(Math.random()-.5)*2,ph:Math.random()*6.28})
@@ -1144,6 +1114,7 @@ function build(n){
     if(amb==='fireflies')for(let i=0;i<Math.round(30*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=20+Math.random()*150;spawnAmb('fireflies',{x:Math.cos(a)*d,y:.5+Math.random()*3,z:Math.sin(a)*d,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:1+Math.random()*2,ph:Math.random()*6.28,spd:.3+Math.random()*.4})}
     if(amb==='bubbles')for(let i=0;i<Math.round(18*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=20+Math.random()*100;spawnAmb('bubbles',{x:Math.cos(a)*d,y:Math.random()*2,z:Math.sin(a)*d,vy:.6+Math.random()*.8})}
     if(amb==='dust')for(let i=0;i<Math.round(25*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=15+Math.random()*120;spawnAmb('dust',{x:Math.cos(a)*d,y:1+Math.random()*8,z:Math.sin(a)*d,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.3,vz:(Math.random()-.5)*.4})}
+    if(amb==='wind')for(let i=0;i<Math.round(30*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=15+Math.random()*150;spawnAmb('wind',{x:Math.cos(a)*d,y:1+Math.random()*15,z:Math.sin(a)*d,vx:(Math.random()-.5)*3,vz:(Math.random()-.5)*3,ph:Math.random()*6.28})}
   }
 
   spawnJBs();
@@ -1179,7 +1150,6 @@ const spr=(w,h,f,sx,sy)=>{const c=document.createElement('canvas');c.width=w;c.h
 const nameS=(n,c,f)=>spr(128,24,x=>{x.font=`bold 16px ${f}`;x.textAlign='center';x.lineWidth=4;x.strokeStyle='#0e1a3a';x.strokeText(n,64,17);x.fillStyle=c;x.fillText(n,64,17)},3.2,.6);
 const jbLvlOf=v=>v>=500?4:v>=100?3:v>=50?2:v>=10?1:0;
 const jbLvl=()=>jbLvlOf(cfg.jb);
-// ── Chat bubble AUTO-WRAP & AUTO-RESIZE ──
 function chatS(t,lvl){
   const FS=19,LH=24,MAXW=340,PAD=14;
   const tmp=document.createElement('canvas').getContext('2d');
@@ -1243,7 +1213,7 @@ function mkP(o){
   sc.add(root);
   return{root,m,shadow:sh_blob,eyes,hearts,tears,icos,x:0,z:0,y:0,vx:0,vz:0,vy:0,py:0,pvy:0,air:0,js:1,jx:1,sv:0,lean:0,flip:0,spd:0,jc:0,jh:0,ty:0,r:0,tx:0,tz:0,tr:0,e:-1,et:0,lEt:-1,lCt:-1,init:0,lx:0,lz:0,tt:0,c1:o.c1,chat:null,ce:0,jbLvl:jbLvlOf(o.jb||0),
     boostMul:1,boostTime:0,boostCooldown:0,sitting:null,nearSwing:-1,_prevJump:false,hp:10,maxHp:10,inRing:false,invuln:0,koTimer:0,
-    balloon:null,nearBalloon:-1};
+    balloon:null,nearBalloon:-1,dustT:0,sparkleT:Math.random()*2};
 }
 function setE(p,e){p.e=e;p.et=performance.now()}
 function say(p,t){if(p.chat)p.root.remove(p.chat);p.chat=chatS(t,p.jbLvl||jbLvl());p.chat.position.y=3.0;p.root.add(p.chat);p.ce=performance.now()+6500}
@@ -1269,18 +1239,27 @@ function animE(p,t){
 }
 function jelly(p,dt){
   const vy=(p.y-p.py)/Math.max(dt,.001);p.py=p.y;const air=p.y>.08;
-  if(air&&!p.air){p.js=.65;puff(p.x,p.z,7,p.c1)}
-  if(!air&&p.air){const impact=Math.min(1,Math.abs(p.pvy)/14);p.js=Math.max(.5,.9-impact*.45);p.sv=0;puff(p.x,p.z,10+Math.floor(impact*8),p.c1,2+impact*2);trail(p.x,p.z,p.c1);if(impact>.5){for(let k=0;k<8;k++){const a=k/8*6.28;trail(p.x+Math.cos(a)*.6,p.z+Math.sin(a)*.6,p.c1)}}}
-  if(air&&p.air&&vy-p.pvy>6&&vy>3){p.flip=.01;puff(p.x,p.z,8,'#ffe27a',5)}
+  if(air&&!p.air){p.js=.65;puff(p.x,p.z,9,p.c1)}
+  if(!air&&p.air){const impact=Math.min(1,Math.abs(p.pvy)/14);p.js=Math.max(.5,.9-impact*.45);p.sv=0;puff(p.x,p.z,14+Math.floor(impact*10),p.c1,2+impact*2);trail(p.x,p.z,p.c1);if(impact>.5){for(let k=0;k<10;k++){const a=k/10*6.28;trail(p.x+Math.cos(a)*.8,p.z+Math.sin(a)*.8,p.c1)}}}
+  if(air&&p.air&&vy-p.pvy>6&&vy>3){p.flip=.01;puff(p.x,p.z,10,'#ffe27a',5)}
   p.air=air;p.pvy=vy;const ty=air?1+Math.max(-.2,Math.min(.4,vy*.05)):1;
   p.sv+=((ty-p.js)*240-p.sv*11)*dt;p.js=Math.max(.45,Math.min(1.6,p.js+p.sv*dt));p.jx=1/Math.sqrt(p.js);
   if(p.flip>0){p.flip+=dt*13;if(p.flip>6.283)p.flip=0}
   p.lean+=((air?0:Math.min(.3,p.spd*.035))-p.lean)*Math.min(1,dt*10);
 }
 const PT=[],pG=BOX(.25,.25,.25);
-function puff(x,z,n,c,up,y){for(let i=0;i<n;i++){let q=PT.find(o=>o.l<=0);if(!q){if(PT.length>=80)return;const m=Mt(pG,new THREE.MeshBasicMaterial({transparent:true}),0,0,0);q={m,l:0,vx:0,vy:0,vz:0};PT.push(q)}const a=Math.random()*6.283,v=1.5+Math.random()*2;q.l=.6;q.vx=Math.cos(a)*v;q.vz=Math.sin(a)*v;q.vy=1.5+Math.random()*(up||2.5);q.m.material.color.set(i%3?c:'#ffffff');q.m.position.set(x,y!==undefined?y:.15,z);q.m.visible=true}}
-const TR=[],trG=new THREE.CircleGeometry(.6,7).rotateX(-1.5708);
-function trail(x,z,c){let t=TR.find(q=>q.l<=0);if(!t){if(TR.length>=40)return;const m=Mt(trG,new THREE.MeshBasicMaterial({transparent:true,depthWrite:false}),0,0,0);t={m,l:0};TR.push(t)}t.l=2.5;t.m.material.color.set(c);t.m.position.set(x,.06,z);t.m.visible=true}
+function puff(x,z,n,c,up,y){for(let i=0;i<n;i++){let q=PT.find(o=>o.l<=0);if(!q){if(PT.length>=140)return;const m=Mt(pG,new THREE.MeshBasicMaterial({transparent:true}),0,0,0);q={m,l:0,vx:0,vy:0,vz:0};PT.push(q)}const a=Math.random()*6.283,v=1.5+Math.random()*2;q.l=.7;q.vx=Math.cos(a)*v;q.vz=Math.sin(a)*v;q.vy=1.5+Math.random()*(up||2.5);q.m.material.color.set(i%3?c:'#ffffff');q.m.position.set(x,y!==undefined?y:.15,z);q.m.visible=true}}
+
+// ══════ TRAIL DIPERTEBAL ══════
+const TR=[],trG=new THREE.CircleGeometry(1.2,10).rotateX(-1.5708);
+function trail(x,z,c){
+  let t=TR.find(q=>q.l<=0);
+  if(!t){if(TR.length>=100)return;const m=Mt(trG,new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide}),0,0,0);t={m,l:0};TR.push(t)}
+  t.l=3.5;t.m.material.color.set(c);t.m.material.opacity=.9;t.m.position.set(x,.09,z);t.m.visible=true;
+}
+
+// ══════ Aura/glow saat boost ══════
+const AURA=[];
 
 let me,base,rid,host=false,playing=false,joined=false,pl=null,P={},cy=0,zd=10,pitch=.6,keys={},ix=0,iy=0,run=false,jmp=false,last=performance.now(),selMap='island',roomMap='island';
 let raceTimer=0,raceRunning=false,raceFinished=false,raceArmed=false;
@@ -1310,7 +1289,34 @@ MU.forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.
 const ppGrid=$('playMaps');
 const countUnsubs={};
 MU.forEach(([k,l])=>{const b=document.createElement('button');b.dataset.map=k;b.innerHTML=l+'<small data-cnt>· · ·</small>';b.onclick=async()=>{selMap=k;$('mp').disabled=true;await join('g_'+k,k,false);$('mp').disabled=false;start(k)};ppGrid.append(b)});
-async function setupGlobalCounts(){try{await ready}catch(e){}if(typeof db==='undefined'||!db)return;for(const [k,l] of MU){if(countUnsubs[k])continue;const ref=db.ref('rooms/g_'+k+'/players');const cb=s=>{const v=s.val()||{};const now=Date.now();let cnt=0;for(const id in v){const t=v[id].lastSeen||0;if(now-t<90000)cnt++}const btn=[...ppGrid.children].find(x=>x.dataset.map===k);if(!btn)return;const small=btn.querySelector('[data-cnt]');if(!small)return;if(cnt>0){small.textContent='👤 '+cnt+' online';small.className='on-live';small.style.color='#3fbf5f'}else{small.textContent='· kosong ·';small.className='';small.style.color=''}};ref.on('value',cb);countUnsubs[k]={ref,cb}}}
+
+// ══════ GLOBAL COUNT — diperbaiki (5 menit threshold, hanya yang punya lastSeen valid) ══════
+async function setupGlobalCounts(){
+  try{await ready}catch(e){}
+  if(typeof db==='undefined'||!db)return;
+  for(const [k,l] of MU){
+    if(countUnsubs[k])continue;
+    const ref=db.ref('rooms/g_'+k+'/players');
+    const cb=s=>{
+      const v=s.val()||{};
+      const now=Date.now();
+      let cnt=0;
+      for(const id in v){
+        const p=v[id]||{};
+        const t=p.lastSeen;
+        if(typeof t==='number' && t>0 && (now-t)<300000)cnt++;
+      }
+      const btn=[...ppGrid.children].find(x=>x.dataset.map===k);
+      if(!btn)return;
+      const small=btn.querySelector('[data-cnt]');
+      if(!small)return;
+      if(cnt>0){small.textContent='👤 '+cnt+' online';small.className='on-live';small.style.color='#3fbf5f'}
+      else{small.textContent='· kosong ·';small.className='';small.style.color=''}
+    };
+    ref.on('value',cb);
+    countUnsubs[k]={ref,cb};
+  }
+}
 setupGlobalCounts();
 for(const k of['c1','c2','nc']){const el=$(k);el.value=cfg[k];el.oninput=()=>{cfg[k]=el.value;sv();setSelf()}}
 $('rd').value=cfg.rd;$('rd').oninput=e=>{cfg.rd=+e.target.value;sv();setRD()};
@@ -1385,16 +1391,36 @@ function frame(now){
       let nearestB=-1,ndB=5;for(let i=0;i<BALLOONS.length;i++){const b=BALLOONS[i];const d=Math.hypot(pl.x-b.x,pl.z-b.z);if(d<ndB && b.y<2){nearestB=i;ndB=d}}pl.nearBalloon=nearestB;
       if(nearest>=0){$('prompt').textContent='Tekan JUMP untuk duduk di ayunan';$('prompt').classList.remove('hide')}else if(nearestB>=0){$('prompt').textContent='Tekan JUMP untuk naik balon udara';$('prompt').classList.remove('hide')}else $('prompt').classList.add('hide');
       if(freshJump){if(pl.nearBalloon>=0){const b=BALLOONS[pl.nearBalloon];b.rider=pl;pl.balloon=b;pl.vx=pl.vz=pl.vy=0;toast('🎈 Balon udara! Joystick gerak · JUMP turun · RUN/Space naik')}else if(pl.nearSwing>=0 && pl.y<1.5){pl.sitting=pl.nearSwing;pl.vx=pl.vz=pl.vy=0;pl.r=swings[pl.nearSwing].rot}else{const GY=groundYSafe();if(pl.y<=GY+.01)pl.jc=0;if(pl.jc<2){pl.vy=pl.jc?9:8;pl.jc++}}}
-      if(pl.boostTime>0){pl.boostTime-=dt;if(pl.boostTime<=0){pl.boostMul=1;pl.boostTime=0}if(Math.random()<dt*12){const a=Math.random()*6.28;puff(pl.x+Math.cos(a)*.6,pl.z+Math.sin(a)*.6,1,'#ff8c1a',1.5,pl.y+.5)}}if(pl.boostCooldown>0)pl.boostCooldown-=dt;
-      let a=ix+(keys.KeyD?1:0)-(keys.KeyA?1:0),b=iy+(keys.KeyW?1:0)-(keys.KeyS?1:0);const l=Math.hypot(a,b);if(l>1)a/=l,b/=l;const mx=Math.cos(cy)*a-Math.sin(cy)*b,mz=-Math.sin(cy)*a-Math.cos(cy)*b;const sp=((run||keys.ShiftLeft)?9:5)*(pl.boostMul||1);const{GY,GSLIP,GBOUNCE}=groundY();const fric=GSLIP?2.5:24;pl.vx+=(mx*sp-pl.vx)*Math.min(1,dt*fric);pl.vz+=(mz*sp-pl.vz)*Math.min(1,dt*fric);pl.x+=pl.vx*dt;pl.z+=pl.vz*dt;resolveH();if(a||b){const t=Math.atan2(mx,mz);let d=t-pl.r;d=Math.atan2(Math.sin(d),Math.cos(d));pl.r+=d*Math.min(1,dt*12)}if(pl.y<=GY+.01)pl.jc=0;pl.vy-=22*dt;pl.y+=pl.vy*dt;if(pl.y<=GY){if(GBOUNCE&&pl.pvy<-1){pl.vy=16;pl.jc=0;puff(pl.x,pl.z,12,'#ff5db1',4);for(let k=0;k<8;k++){const ang=k/8*6.28;trail(pl.x+Math.cos(ang)*.8,pl.z+Math.sin(ang)*.8,'#ff5db1')}}else{pl.y=GY;if(pl.vy<0)pl.vy=0}}
+      if(pl.boostTime>0){pl.boostTime-=dt;if(pl.boostTime<=0){pl.boostMul=1;pl.boostTime=0}if(Math.random()<dt*20){const a=Math.random()*6.28;puff(pl.x+Math.cos(a)*.8,pl.z+Math.sin(a)*.8,1,'#ff8c1a',1.8,pl.y+.5)}if(Math.random()<dt*15){const a=Math.random()*6.28;trail(pl.x+Math.cos(a)*.9,pl.z+Math.sin(a)*.9,'#ffd23f')}}if(pl.boostCooldown>0)pl.boostCooldown-=dt;
+      let a=ix+(keys.KeyD?1:0)-(keys.KeyA?1:0),b=iy+(keys.KeyW?1:0)-(keys.KeyS?1:0);const l=Math.hypot(a,b);if(l>1)a/=l,b/=l;const mx=Math.cos(cy)*a-Math.sin(cy)*b,mz=-Math.sin(cy)*a-Math.cos(cy)*b;const sp=((run||keys.ShiftLeft)?9:5)*(pl.boostMul||1);const{GY,GSLIP,GBOUNCE}=groundY();const fric=GSLIP?2.5:24;pl.vx+=(mx*sp-pl.vx)*Math.min(1,dt*fric);pl.vz+=(mz*sp-pl.vz)*Math.min(1,dt*fric);pl.x+=pl.vx*dt;pl.z+=pl.vz*dt;resolveH();if(a||b){const t=Math.atan2(mx,mz);let d=t-pl.r;d=Math.atan2(Math.sin(d),Math.cos(d));pl.r+=d*Math.min(1,dt*12)}if(pl.y<=GY+.01)pl.jc=0;pl.vy-=22*dt;pl.y+=pl.vy*dt;if(pl.y<=GY){if(GBOUNCE&&pl.pvy<-1){pl.vy=16;pl.jc=0;puff(pl.x,pl.z,12,'#ff5db1',4);for(let k=0;k<10;k++){const ang=k/10*6.28;trail(pl.x+Math.cos(ang)*.9,pl.z+Math.sin(ang)*.9,'#ff5db1')}}else{pl.y=GY;if(pl.vy<0)pl.vy=0}}
+      // ══ EFEK JEJAK KAKI (DUST) ══
+      if(pl.spd>0.8 && !pl.air && pl.y<.3){
+        pl.dustT=(pl.dustT||0)-dt;
+        if(pl.dustT<=0){
+          pl.dustT=0.045;
+          puff(pl.x+(Math.random()-.5)*.5,pl.z+(Math.random()-.5)*.5,1,'#d4c8a8',1.2,.12);
+          if(pl.boostTime>0){puff(pl.x,pl.z,1,'#ff8c1a',1,.1)}
+        }
+      }
+      // ══ SPARKLE/EFEK IDLE JELLOGER (dipicu dari sini agar sinkron) ══
+      for(const j of JELLOGERS){
+        j.sparkleT=(j.sparkleT||Math.random()*2)-dt;
+        if(j.sparkleT<=0){
+          j.sparkleT=2.5+Math.random()*3;
+          const sx=j.x+(Math.random()-.5)*1.2;
+          const sz=j.z+(Math.random()-.5)*1.2;
+          puff(sx,sz,1,'#ffe27a',1.5,1.8);
+          if(Math.random()<0.4)trail(sx,sz,'#7fd0ff');
+        }
+      }
     }
     if(curMap=='parkour'&&pl.y<-30){pl.x=pl.z=0;pl.y=3;pl.vx=pl.vz=pl.vy=0}
     const rr=Math.hypot(pl.x,pl.z);if(rr>LIM){pl.x*=LIM/rr;pl.z*=LIM/rr}
     let inAnyRing=false;for(const ring of rings){const dr=Math.hypot(pl.x-ring.x,pl.z-ring.z);if(dr<ring.r-0.5)inAnyRing=true}if(inAnyRing&&!pl.inRing){pl.hp=pl.maxHp;pl.invuln=1.5;toast('⚔️ Masuk ring! HP kamu 10/10')}pl.inRing=inAnyRing;if(pl.koTimer>0)pl.koTimer-=dt;if(pl.invuln>0)pl.invuln-=dt;
-    if(pl.inRing && pl.koTimer<=0 && pl.invuln<=0 && !pl.balloon){for(const id in P){const e=P[id];const dh=Math.hypot(pl.x-e.x,pl.z-e.z);if(dh<1.5 && e.y > pl.y + 1.3 && e.y < pl.y + 3.5){pl.hp-=10;pl.invuln=1.0;puff(pl.x,pl.z,18,'#ff5d5d',3,pl.y+1);for(let k=0;k<8;k++){const ang=k/8*6.28;trail(pl.x+Math.cos(ang)*.9,pl.z+Math.sin(ang)*.9,'#ff5d5d')}if(pl.hp<=0){pl.hp=pl.maxHp;pl.koTimer=3;pl.inRing=false;const ring=rings[0];if(ring){const a=Math.atan2(pl.x-ring.x,pl.z-ring.z);pl.x=ring.x+Math.sin(a)*(ring.r+4);pl.z=ring.z+Math.cos(a)*(ring.r+4);pl.y=1}toast('💀 KO! Keluar dari ring, HP reset 10/10')}break;}}}
+    if(pl.inRing && pl.koTimer<=0 && pl.invuln<=0 && !pl.balloon){for(const id in P){const e=P[id];const dh=Math.hypot(pl.x-e.x,pl.z-e.z);if(dh<1.5 && e.y > pl.y + 1.3 && e.y < pl.y + 3.5){pl.hp-=10;pl.invuln=1.0;puff(pl.x,pl.z,18,'#ff5d5d',3,pl.y+1);for(let k=0;k<10;k++){const ang=k/10*6.28;trail(pl.x+Math.cos(ang)*1.1,pl.z+Math.sin(ang)*1.1,'#ff5d5d')}if(pl.hp<=0){pl.hp=pl.maxHp;pl.koTimer=3;pl.inRing=false;const ring=rings[0];if(ring){const a=Math.atan2(pl.x-ring.x,pl.z-ring.z);pl.x=ring.x+Math.sin(a)*(ring.r+4);pl.z=ring.z+Math.cos(a)*(ring.r+4);pl.y=1}toast('💀 KO! Keluar dari ring, HP reset 10/10')}break;}}}
     const hpb=$('hpbar');if(pl.inRing && !pl.balloon){hpb.classList.remove('hide');hpb.querySelector('.fill').style.width=Math.max(0,(pl.hp/pl.maxHp)*100)+'%';hpb.querySelector('.txt').textContent=pl.hp+'/'+pl.maxHp+' HP'}else hpb.classList.add('hide');
-    for(const bb of boostBubbles){if(!bb.act){if(bb.respawn>0){bb.respawn-=dt;if(bb.respawn<=0){bb.act=true;bb.m.visible=true}}continue}bb.t+=dt;bb.m.position.y=bb.baseY+Math.sin(bb.t*2+bb.ph)*0.35;bb.m.rotation.y+=dt*1.8;bb.ring.rotation.z+=dt*2.5;bb.outer.material.opacity=0.25+Math.sin(bb.t*3+bb.ph)*0.15;const dx=pl.x-bb.x,dz=pl.z-bb.z,dy=pl.y-bb.baseY;if(dx*dx+dz*dz<3.5&&Math.abs(dy)<2.2&&pl.boostCooldown<=0){pl.boostMul=2.2;pl.boostTime=3;pl.boostCooldown=0.8;for(let k=0;k<14;k++){const ang=k/14*6.28;puff(bb.x+Math.cos(ang)*.8,bb.z+Math.sin(ang)*.8,1,k%2?'#ff8c1a':'#ffd23f',2.5,bb.m.position.y)}bb.act=false;bb.m.visible=false;bb.respawn=9;toast('⚡ BOOST!')}}
-    for(let i=jbs.length-1;i>=0;i--){const j=jbs[i];const dx=pl.x-j.x,dz=pl.z-j.z,dy=pl.y+1-j.m.position.y;const d2=dx*dx+dz*dz+dy*dy;if(d2<9&&d2>2.4){const dd=Math.sqrt(d2)||.01;const pull=Math.min(1,dt*6/dd);j.x+=dx*pull;j.z+=dz*pull;j.y+=dy*pull*.6;j.m.position.x=j.x;j.m.position.z=j.z}j.m.position.y=j.y+Math.sin(now/500+j.ph)*.3;j.m.rotation.y=now/1000+j.ph;j.m.scale.setScalar(0.9+Math.sin(now/220+j.ph)*0.18);if(d2<2.4){const oldLvl=jbLvl();cfg.jb++;sv();$('jbn').textContent=cfg.jb+' JB';jbPop(j.x,j.y+.5,j.z);for(let k=0;k<10;k++){const ang=k/10*6.28;puff(j.x+Math.cos(ang)*.6,j.z+Math.sin(ang)*.6,1,'#7fd0ff',1.5,j.m.position.y)}sc.remove(j.m);jbs.splice(i,1);if(pl.boostTime>0){pl.boostTime=0;pl.boostMul=1;for(let k=0;k<18;k++){const ang=k/18*6.28;puff(pl.x+Math.cos(ang)*.8,pl.z+Math.sin(ang)*.8,1,k%2?'#ffffff':'#ffb84a',2,pl.y+.8)}trail(pl.x,pl.z,'#ffffff');trail(pl.x,pl.z,'#ffb84a')}pl.jbLvl=jbLvlOf(cfg.jb);me&&me.update({jb:cfg.jb});if(jbLvl()>oldLvl)toast('🎉 Chat bubble baru! ('+cfg.jb+' JB)')}}
+    for(const bb of boostBubbles){if(!bb.act){if(bb.respawn>0){bb.respawn-=dt;if(bb.respawn<=0){bb.act=true;bb.m.visible=true}}continue}bb.t+=dt;bb.m.position.y=bb.baseY+Math.sin(bb.t*2+bb.ph)*0.35;bb.m.rotation.y+=dt*1.8;bb.ring.rotation.z+=dt*2.5;bb.outer.material.opacity=0.25+Math.sin(bb.t*3+bb.ph)*0.15;if(Math.random()<dt*6){const a=Math.random()*6.28;puff(bb.x+Math.cos(a)*1,puff_y,bb.z+Math.sin(a)*1,1,'#ffd23f',1.5,bb.m.position.y)}};
+    for(let i=jbs.length-1;i>=0;i--){const j=jbs[i];const dx=pl.x-j.x,dz=pl.z-j.z,dy=pl.y+1-j.m.position.y;const d2=dx*dx+dz*dz+dy*dy;if(d2<9&&d2>2.4){const dd=Math.sqrt(d2)||.01;const pull=Math.min(1,dt*6/dd);j.x+=dx*pull;j.z+=dz*pull;j.y+=dy*pull*.6;j.m.position.x=j.x;j.m.position.z=j.z}j.m.position.y=j.y+Math.sin(now/500+j.ph)*.3;j.m.rotation.y=now/1000+j.ph;j.m.scale.setScalar(0.9+Math.sin(now/220+j.ph)*0.18);if(Math.random()<dt*4){puff(j.x,j.z,1,'#7fd0ff',1,1.5)};if(d2<2.4){const oldLvl=jbLvl();cfg.jb++;sv();$('jbn').textContent=cfg.jb+' JB';jbPop(j.x,j.y+.5,j.z);for(let k=0;k<12;k++){const ang=k/12*6.28;puff(j.x+Math.cos(ang)*.7,j.z+Math.sin(ang)*.7,1,'#7fd0ff',1.5,j.m.position.y)}sc.remove(j.m);jbs.splice(i,1);if(pl.boostTime>0){pl.boostTime=0;pl.boostMul=1;for(let k=0;k<18;k++){const ang=k/18*6.28;puff(pl.x+Math.cos(ang)*.8,pl.z+Math.sin(ang)*.8,1,k%2?'#ffffff':'#ffb84a',2,pl.y+.8)}trail(pl.x,pl.z,'#ffffff');trail(pl.x,pl.z,'#ffb84a')}pl.jbLvl=jbLvlOf(cfg.jb);me&&me.update({jb:cfg.jb});if(jbLvl()>oldLvl)toast('🎉 Chat bubble baru! ('+cfg.jb+' JB)')}}
     if(curMap=='speedrace'){if(raceArmed&&!raceFinished){if(pl.z>2.5){raceArmed=false;raceRunning=true;raceTimer=0;toast('🏁 Timer mulai!')}}if(raceRunning&&!raceFinished){raceTimer+=dt;$('raceTimer').classList.remove('hide');$('raceTimer').textContent=raceTimer.toFixed(2)+'s';if(pl.z>=150){raceFinished=true;raceRunning=false;let reward=10,label='Selesai';if(raceTimer<10){reward=100;label='🏆 LUAR BIASA!'}else if(raceTimer<15){reward=50;label='🥇 Bagus!'}else if(raceTimer<22){reward=20;label='👍 OK!'}cfg.jb+=reward;sv();$('jbn').textContent=cfg.jb+' JB';me&&me.update({jb:cfg.jb});toast(label+' '+raceTimer.toFixed(2)+'s — +'+reward+' JB!');raceTimer=0}}else if(raceFinished){$('raceTimer').classList.remove('hide');$('raceTimer').textContent='✓ '+raceTimer.toFixed(2)+'s'}} else $('raceTimer').classList.add('hide');
     for(const b of BEACONS){b.t+=dt;b.beam.rotation.y=b.t*.8}
     for(const w of WINDMILLS){w.t+=dt;w.g.rotation.z=w.t*1.2}
@@ -1402,11 +1428,10 @@ function frame(now){
     for(const ww of WATERWHEELS){ww.t+=dt;ww.g.rotation.z=ww.t*1.5}
     for(const bl of BELLS){bl.t+=dt;bl.g.rotation.z=Math.sin(bl.t*1.5)*0.12}
     for(const lp of LANTERNS){lp.t+=dt;lp.g.rotation.y=Math.sin(lp.t*.5)*0.05}
-    for(const wf of WATERFALLS){wf.tex.offset.y-=dt*1.8}
+    for(const wf of WATERFALLS){wf.tex.offset.y-=dt*1.8;if(Math.random()<dt*8){puff(wf.x+(Math.random()-.5)*wf.poolR*1.5,wf.z+(Math.random()-.5)*wf.poolR*1.5,1,'#9ee0ff',1.5,.5)}}
     for(const fo of FOUNTAINS){for(const p of fo.parts){if(p.isFlame){p.t=(p.t+dt*3)%1;const s=1-p.t*.7;p.m.scale.set(s,s,s);p.m.material.opacity=.75-Math.abs(p.t-.5)*.8;continue}p.t=(p.t+dt*1.3)%1;const a=p.baseAng+p.t*2;const r=Math.abs(Math.sin(p.t*Math.PI));const xr=Math.cos(a)*r*1.5;const zr=Math.sin(a)*r*1.5;p.m.position.set(fo.x+xr,fo.topY+p.t*2-r*0.5,fo.z+zr);p.m.material.opacity=1-p.t*.7;p.m.scale.setScalar(1-p.t*.5)}}
-    for(const b of BALLOONS){b.t+=dt;if(b.flame){b.flame.scale.set(1,.8+Math.sin(b.t*20)*.4,1);b.flame.material.opacity=.7+Math.sin(b.t*15)*.2}if(!b.rider){b.y=Math.max(0,b.y);b.g.position.y=b.y+Math.sin(b.t*1.5)*0.15}}
+    for(const b of BALLOONS){b.t+=dt;if(b.flame){b.flame.scale.set(1,.8+Math.sin(b.t*20)*.4,1);b.flame.material.opacity=.7+Math.sin(b.t*15)*.2}if(!b.rider){b.y=Math.max(0,b.y);b.g.position.y=b.y+Math.sin(b.t*1.5)*0.15}b.smokeT=(b.smokeT||0)-dt;if(b.smokeT<=0){b.smokeT=0.15;puff(b.x,b.z,1,'#cccccc',1.5,b.y+13)}}
     for(const a of ANIMALS){a.t+=dt;a.wanderCd-=dt;const dxT=a.targetX-a.x,dzT=a.targetZ-a.z;const distT=Math.hypot(dxT,dzT);if(distT<0.6 || a.wanderCd<=0){const ang=Math.random()*6.28;const d=Math.random()*a.r*0.7+a.r*0.3;a.targetX=a.spawnX+Math.cos(ang)*d;a.targetZ=a.spawnZ+Math.sin(ang)*d;a.wanderCd=2.5+Math.random()*3}if(distT>0.1){const nx=dxT/distT, nz=dzT/distT;const desiredVx=nx*a.spd, desiredVz=nz*a.spd;a.vx+=(desiredVx-a.vx)*Math.min(1,dt*2.5);a.vz+=(desiredVz-a.vz)*Math.min(1,dt*2.5)}else{a.vx*=Math.pow(0.2,dt);a.vz*=Math.pow(0.2,dt)}a.x+=a.vx*dt;a.z+=a.vz*dt;const speed=Math.hypot(a.vx,a.vz);if(speed>0.05){const targetRot=Math.atan2(a.vx,a.vz);let dr=targetRot-a.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));a.g.rotation.y+=dr*Math.min(1,dt*6)}const y=groundYSafeAt(a.x,a.z);a.g.position.set(a.x,y,a.z);for(let i=0;i<a.legs.length;i++){const leg=a.legs[i];const phase=(i%2)*Math.PI;const amp=Math.min(0.4,speed*0.8);leg.rotation.x=Math.sin(a.t*10+phase)*amp}const bob=Math.abs(Math.sin(a.t*10))*0.05*Math.min(1,speed*3);a.g.position.y+=bob}
-    // ── Jellogers ──
     wanderJellogers(dt);
     let nearestJ=null, ndJ=3.5;
     for(const j of JELLOGERS){const dj=Math.hypot(pl.x-j.x,pl.z-j.z);if(dj<ndJ){ndJ=dj;nearestJ=j}}
@@ -1417,7 +1442,7 @@ function frame(now){
         dlgBtnEl.textContent='💬 Bicara dengan '+currentDlgTarget._jname+(currentDlgTarget.secret?' ⭐':'');
       } else dlgBtnEl.classList.remove('show');
     }
-    for(const q of AMB.butterflies){if(!q.act)continue;q.t+=dt;const a=q.t*q.spd+q.ph;q.m.position.set(q.cx+Math.cos(a)*q.r,q.y+Math.sin(q.t*3)*.4,q.cz+Math.sin(a)*q.r);q.m.rotation.y=-a;q.m.rotation.z=Math.sin(q.t*8)*.4}
+    for(const q of AMB.butterflies){if(!q.act)continue;q.t+=dt;const a=q.t*q.spd+q.ph;q.m.position.set(q.cx+Math.cos(a)*q.r,q.y+Math.sin(q.t*3)*.4,q.cz+Math.sin(a)*q.r);q.m.rotation.y=-a;q.m.rotation.z=Math.sin(q.t*8)*.4;q.spark=(q.spark||0)-dt;if(q.spark<=0&&Math.random()<0.15){q.spark=1.2;trail(q.m.position.x,q.m.position.z,'#ffe27a')}}
     for(const q of AMB.fireflies){if(!q.act)continue;q.t+=dt;const a=q.t*q.spd+q.ph;q.m.position.set(q.cx+Math.cos(a)*q.r,q.y+Math.sin(q.t*2)*.5,q.cz+Math.sin(a)*q.r);q.m.material.opacity=.5+Math.sin(q.t*3+q.ph)*.5}
     for(const q of AMB.birds){if(!q.act)continue;q.t+=dt;const a=q.t*q.spd+q.ph;q.m.position.set(Math.cos(a)*q.r,q.y0+Math.sin(q.t*2)*1.5,Math.sin(a)*q.r);q.m.rotation.y=-a+Math.PI/2}
     for(const q of AMB.clouds){if(!q.act)continue;q.t+=dt;q.m.position.x+=q.spd*dt;if(q.m.position.x>250)q.m.position.x=-250;q.m.scale.set(q.sx,q.sy,q.sz)}
@@ -1429,6 +1454,7 @@ function frame(now){
     for(const q of AMB.orbs){if(!q.act)continue;q.t+=dt;q.m.position.y+=Math.sin(q.t*1.5+q.ph)*dt*1.5;q.m.position.x+=Math.cos(q.t*.7+q.ph)*dt;q.m.position.z+=Math.sin(q.t*.7+q.ph)*dt}
     for(const q of AMB.bubbles){if(!q.act)continue;q.t+=dt;q.m.position.y+=q.vy*dt;q.m.material.opacity=Math.max(0,.6-q.t*.3);if(q.m.position.y>8||q.t>2){q.act=false;q.m.visible=false;const a=Math.random()*6.28,d=20+Math.random()*100;spawnAmb('bubbles',{x:Math.cos(a)*d,y:0.1,z:Math.sin(a)*d,vy:.6+Math.random()*.8})}}
     for(const q of AMB.dust){if(!q.act)continue;q.t+=dt;q.m.position.x+=q.vx*dt;q.m.position.y+=Math.sin(q.t*2+q.ph)*.3*dt;q.m.position.z+=q.vz*dt;q.m.material.opacity=.4+Math.sin(q.t*2)*.3;if(q.t>6){q.act=false;q.m.visible=false}}
+    for(const q of AMB.wind){if(!q.act)continue;q.t+=dt;q.m.position.x+=q.vx*dt;q.m.position.z+=q.vz*dt;q.m.rotation.y=Math.atan2(q.vx,q.vz);q.m.material.opacity=.15+Math.sin(q.t*2+q.ph)*.2;if(Math.abs(q.m.position.x)>200||Math.abs(q.m.position.z)>200){q.act=false;q.m.visible=false;const a=Math.random()*6.28,d=15+Math.random()*150;spawnAmb('wind',{x:Math.cos(a)*d,y:1+Math.random()*15,z:Math.sin(a)*d,vx:(Math.random()-.5)*3,vz:(Math.random()-.5)*3,ph:Math.random()*6.28})}}
   } else {
     pl.r=0;pl.vx=pl.vz=0;$('prompt').classList.add('hide');
     currentDlgTarget=null;
@@ -1439,13 +1465,15 @@ function frame(now){
   for(const p of all){
     if(p!==pl)p.root.visible=playing;
     if(p!==pl){p.x+=(p.tx-p.x)*Math.min(1,dt*10);p.z+=(p.tz-p.z)*Math.min(1,dt*10);p.y+=((p.ty||0)-p.y)*Math.min(1,dt*14);let d=p.tr-p.r;d=Math.atan2(Math.sin(d),Math.cos(d));p.r+=d*Math.min(1,dt*10)}
-    if(Math.hypot(p.x-p.lx,p.z-p.lz)>.02&&p.y<.1&&(p.tt-=dt)<=0){trail(p.x,p.z,p.c1);p.tt=.12}
+    // Trail trigger lebih sensitif
+    if(Math.hypot(p.x-p.lx,p.z-p.lz)>.015&&p.y<.15&&(p.tt-=dt)<=0){trail(p.x,p.z,p.c1);p.tt=.06}
     p.spd=Math.hypot(p.x-p.lx,p.z-p.lz)/Math.max(dt,.001);
     p.lx=p.x;p.lz=p.z;jelly(p,dt);
     p.root.position.set(p.x,p.y,p.z);p.m.rotation.y=p.r;animE(p,now);
   }
   PT.forEach(q=>{if(q.l>0){q.l-=dt;q.vy-=14*dt;q.m.position.x+=q.vx*dt;q.m.position.y+=q.vy*dt;q.m.position.z+=q.vz*dt;q.m.material.opacity=Math.min(1,q.l*3);q.m.scale.setScalar(Math.max(.2,q.l*1.5));if(q.l<=0)q.m.visible=false}});
-  TR.forEach(t=>{if(t.l>0){t.l-=dt;t.m.material.opacity=Math.max(0,t.l/2.5)*.7;t.m.scale.setScalar(.6+.4*t.l/2.5);if(t.l<=0)t.m.visible=false}});
+  // Trail update lebih lama & lebih opacity
+  TR.forEach(t=>{if(t.l>0){t.l-=dt;t.m.material.opacity=Math.max(0,t.l/3.5)*.9;t.m.scale.setScalar(.5+.5*t.l/3.5);if(t.l<=0)t.m.visible=false}});
   for(let i=jbPops.length-1;i>=0;i--){const p=jbPops[i];p.l-=dt;p.sp.position.y+=dt*2.2;p.sp.material.opacity=Math.max(0,p.l);if(p.l<=0){sc.remove(p.sp);jbPops.splice(i,1)}}
   if(playing){
     const cp=Math.cos(pitch);

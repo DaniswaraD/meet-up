@@ -1,4 +1,31 @@
-const $=i=>document.getElementById(i),cfg=Object.assign({name:'',c1:'#3a8dff',c2:'#7fd0ff',sh:0,nc:'#ffffff',nf:'monospace',rd:180,jb:0},JSON.parse(localStorage.mu||'{}')),sv=()=>localStorage.mu=JSON.stringify(cfg);
+const $=i=>document.getElementById(i);
+const cfg=Object.assign({name:'',c1:'#3a8dff',c2:'#7fd0ff',sh:0,nc:'#ffffff',nf:'monospace',rd:180,jb:0},JSON.parse(localStorage.mu||'{}'));
+const sv=()=>localStorage.mu=JSON.stringify(cfg);
+
+// ============================================================
+// BOOTSTRAP / LOADING — PALING ATAS, SEBELUM KODE LAIN
+// ============================================================
+const loadMsg=$('loadMsg'),loadBar=$('loadBar');
+function setLoad(m,p){if(loadMsg)loadMsg.textContent=m;if(loadBar)loadBar.style.width=(p*100)+'%'}
+let booted=false;
+function finishBoot(delay){
+  if(booted)return;booted=true;
+  setTimeout(()=>{
+    const l=$('load');if(l)l.classList.add('hide');
+    const n=$('nm');if(n)n.value=cfg.name;
+    ['name','menu','skin','croom','lobby','set'].forEach(s=>{
+      const e=$(s);if(e)e.classList.toggle('hide',s!=(cfg.name?'menu':'name'));
+    });
+  },delay||400);
+}
+// Hard fallback — kalau apa pun crash, loading tetap hilang
+setTimeout(()=>{if(!booted){setLoad('⚠ Memuat paksa...',1);finishBoot(0)}},7000);
+
+// ============================================================
+// SEMUA KODE GAME DIBUNGKUS TRY/CATCH — kalau crash, loading tetap selesai
+// ============================================================
+try{
+
 if(typeof firebase!='undefined')firebase.initializeApp({apiKey:"AIzaSyBrcEg6Ddw8PLmKJxi8rf9-N7eGsy4AUFs",authDomain:"meet-up-e1be8.firebaseapp.com",databaseURL:"https://meet-up-e1be8-default-rtdb.firebaseio.com",projectId:"meet-up-e1be8",storageBucket:"meet-up-e1be8.firebasestorage.app",messagingSenderId:"47326775225",appId:"1:47326775225:web:290a6644c0559ee2979868"});
 const TS=typeof firebase!='undefined'?firebase.database.ServerValue.TIMESTAMP:0,KX='X';let db,uid,tT;
 const toast=t=>{const e=$('toast');e.textContent=t;e.classList.remove('hide');clearTimeout(tT);tT=setTimeout(()=>e.classList.add('hide'),5000)};
@@ -34,17 +61,15 @@ const cv=$('c'),R=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPrefer
 sc.add(new THREE.HemisphereLight(0xffffff,0x667788,.95));
 const dl=new THREE.DirectionalLight(0xffffff,.5);dl.position.set(.5,1,.3);sc.add(dl);
 function rs(){const h=240,w=Math.round(h*innerWidth/innerHeight);R.setPixelRatio(1);R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}addEventListener('resize',rs);rs();
-function setRD(){const r=cfg.rd;$('rl').textContent='Render distance: '+r+'J';if(sc.fog){sc.fog.near=r;sc.fog.far=r*1.6}cam.far=r*1.7+10;cam.updateProjectionMatrix()}
+function setRD(){const r=cfg.rd;const rl=$('rl');if(rl)rl.textContent='Render distance: '+r+'J';if(sc.fog){sc.fog.near=r;sc.fog.far=r*1.6}cam.far=r*1.7+10;cam.updateProjectionMatrix()}
 const MAPS={island:[0x8fd0ff,0x5cb85c],desert:[0xf2d49b,0xe0c070],jungle:[0x4a7f5a,0x2f6b3a],snow:[0xdcecff,0xf4f8ff],parkour:[0x141433,0x1a1a3a]};
 let world=new THREE.Group(),obs=[],plats=[],jbs=[],curMap='island',LIM=200;
 
-// Phong material supports flatShading in this three.js version; Lambert does NOT.
 const LM=(c,o)=>new THREE.MeshPhongMaterial(Object.assign({color:c,flatShading:true,shininess:5},o||{}));
 const M=(g,c,x,y,z,par)=>{const m=new THREE.Mesh(g,LM(c));m.position.set(x,y,z);(par||world).add(m);return m};
 const Mt=(g,mat,x,y,z,par)=>{const m=new THREE.Mesh(g,mat);m.position.set(x,y,z);(par||world).add(m);return m};
 const C=(a,b,h,k)=>new THREE.CylinderGeometry(a,b,h,k),K=(r,h,k)=>new THREE.ConeGeometry(r,h,k);
 
-// ---------- STRUCTURES (jello ≈ 1 unit ≈ 30cm) ----------
 function house(x,z,rot,wood,roof){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;
   const w=14,h=10,d=12;
@@ -174,7 +199,6 @@ function frozenLake(x,z,r){
   Mt(new THREE.CircleGeometry(r,32).rotateX(-1.5708),wm,x,.08,z);
 }
 
-// ---------- BUILD MAP ----------
 function build(n){
   sc.remove(world);world=new THREE.Group();sc.add(world);obs=[];plats=[];
   jbs.forEach(j=>sc.remove(j.m));jbs=[];curMap=n;LIM=200;
@@ -269,7 +293,6 @@ function build(n){
   spawnJBs();
 }
 
-// ---------- JB ----------
 const jbGeo=new THREE.SphereGeometry(.45,8,6);
 function spawnJBs(){
   jbs.forEach(j=>sc.remove(j.m));jbs=[];
@@ -283,12 +306,10 @@ function spawnJBs(){
   }
 }
 
-// ---------- SPRITES ----------
 const spr=(w,h,f,sx,sy)=>{const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'));const t=new THREE.CanvasTexture(c);t.magFilter=t.minFilter=THREE.NearestFilter;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));s.scale.set(sx,sy,1);s.renderOrder=9;return s},
 nameS=(n,c,f)=>spr(128,24,x=>{x.font=`bold 16px ${f}`;x.textAlign='center';x.lineWidth=4;x.strokeStyle='#000';x.strokeText(n,64,17);x.fillStyle=c;x.fillText(n,64,17)},3.2,.6);
 const jbLvlOf=v=>v>=500?4:v>=100?3:v>=50?2:v>=10?1:0;
 const jbLvl=()=>jbLvlOf(cfg.jb);
-
 function chatS(t,lvl){
   const W=300,H=40,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
   const p=3,w=W-p*2,h=H-p*2;
@@ -306,13 +327,11 @@ function chatS(t,lvl){
   s.scale.set(7.5,1,1);s.renderOrder=9;return s;
 }
 
-// ---------- EMOTE ICONS ----------
 const IC=['..PPP... .PPYPP.. ..PPP... ...G.... .G.G.... .GGG.... ...G.... ...G....','..PPP... .PPPPP.. .WWWWW.. .WWWWW.. ..CCC... ..CCC... ...C.... ...C....','.RR..RR. RRRRRRRR RRRRRRRR RRRRRRRR .RRRRRR. ..RRRR.. ...RR... ........','...OO... ..OOOO.. .OOOOOO. .OOOOOO. ..OOOO.. ...OO... .SSSSSS. ........','R......R .R....R. ..R..R.. ...RR... ...RR... ..R..R.. .R....R. R......R','..YYYY.. .YYYYYY. YKYYYYKY YYYYYYYY YKKKKKKY .YKRRKY. ..YYYY.. ........','..YYYY.. .YYYYYY. YYKYYKYY YYSYYSYY YYSYYSYY YYYKKYYY .YKYYKY. ..YYYY..','..YYYY.. .YYYYYY. YRRYYRRY YRRYYRRY YYYYYYYY YKYYYYKY .YKKKKY. ..YYYY..'],
 PAL={P:'#ff9ec4',Y:'#ffd23f',G:'#3fbf5f',W:'#ffffff',C:'#f6b26b',R:'#ff4d6d',O:'#ff8c1a',S:'#5db5ff',K:'#17306b'};
 const icoC=i=>{const c=document.createElement('canvas');c.width=c.height=8;const x=c.getContext('2d');IC[i].split(' ').forEach((r,j)=>[...r].forEach((v,k)=>{if(v!='.'){x.fillStyle=PAL[v];x.fillRect(k,j,1,1)}}));return c},
 icoS=i=>{const t=new THREE.CanvasTexture(icoC(i));t.magFilter=t.minFilter=THREE.NearestFilter;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));s.scale.set(1.3,1.3,1);s.renderOrder=9;return s};
 
-// ---------- CHARACTER ----------
 function mkP(o){
   const sh=o.sh|0,root=new THREE.Group(),m=new THREE.Group();
   const geo=[new THREE.SphereGeometry(.9,8,5,0,6.2832,0,1.5708),new THREE.BoxGeometry(1.5,1,1.5).translate(0,.5,0),new THREE.ConeGeometry(1,1.3,3).translate(0,.65,0),new THREE.SphereGeometry(.85,8,6).translate(0,.85,0),new THREE.CylinderGeometry(.8,.9,1.1,8).translate(0,.55,0),new THREE.ConeGeometry(1,1.4,4).translate(0,.7,0),new THREE.OctahedronGeometry(.95).translate(0,.95,0)][sh];
@@ -365,7 +384,6 @@ const TR=[],trG=new THREE.CircleGeometry(.6,7).rotateX(-1.5708);
 function trail(x,z,c){let t=TR.find(q=>q.l<=0);if(!t){if(TR.length>=40)return;const m=Mt(trG,new THREE.MeshBasicMaterial({transparent:true,depthWrite:false}),0,0,0);t={m,l:0};TR.push(t)}
   t.l=2.5;t.m.material.color.set(c);t.m.position.set(x,.06,z);t.m.visible=true}
 
-// ---------- STATE ----------
 let me,base,rid,host=false,playing=false,joined=false,pl=null,P={},cy=0,zd=10,pitch=.6,keys={},ix=0,iy=0,run=false,jmp=false,last=performance.now(),selMap='island',roomMap='island';
 const screens=['name','menu','skin','croom','lobby','set'],show=id=>screens.forEach(s=>$(s).classList.toggle('hide',s!=id));
 const menuG=new THREE.Group();
@@ -374,12 +392,12 @@ menuG.add(Mt(new THREE.CylinderGeometry(3.2,3.2,.5,24),LM(0xffffff,{shininess:30
 sc.add(menuG);
 
 function setSelf(){
-  const keep=pl?{x:pl.x,z:pl.z,y:pl.y,r:pl.r,vx:pl.vx,vz:pl.vz,vy:pl.vy,jc:pl.jc,air:pl.air,py:pl.py,pvy:pl.pvy,js:pl.js,jx:pl.jx,sv:pl.sv,lean:pl.lean,flip:pl.flip,spd:pl.spd,ty:pl.ty,tx:pl.tx,tz:pl.tz,tr:pl.tr,e:pl.e,et:pl.et,lEt:pl.lEt,lCt:pl.lCt,init:pl.init,lx:pl.lx,lz:pl.lz,tt:pl.tt}:null;
-  if(pl&&pl.root.parent)pl.root.parent.remove(pl.root);
+  const keep=(pl&&typeof pl.x==='number')?{x:pl.x,z:pl.z,y:pl.y,r:pl.r,vx:pl.vx,vz:pl.vz,vy:pl.vy,jc:pl.jc,air:pl.air,py:pl.py,pvy:pl.pvy,js:pl.js,jx:pl.jx,sv:pl.sv,lean:pl.lean,flip:pl.flip,spd:pl.spd,ty:pl.ty,tx:pl.tx,tz:pl.tz,tr:pl.tr,e:pl.e,et:pl.et,lEt:pl.lEt,lCt:pl.lCt,init:pl.init,lx:pl.lx,lz:pl.lz,tt:pl.tt}:null;
+  if(pl&&pl.root&&pl.root.parent)pl.root.parent.remove(pl.root);
   pl=mkP({...cfg,n:cfg.name});
   if(keep)Object.assign(pl,keep);
   (playing?sc:menuG).add(pl.root);
-  $('jbn').textContent=cfg.jb+' JB';
+  const jbn=$('jbn');if(jbn)jbn.textContent=cfg.jb+' JB';
 }
 function menuMode(){
   playing=false;world.visible=false;menuG.visible=true;
@@ -391,22 +409,23 @@ function menuMode(){
 build('island');setSelf();menuMode();
 document.querySelectorAll('.bk').forEach(b=>b.onclick=()=>show('menu'));
 
-// ---------- UI GRIDS ----------
 const SHAPES=['Setengah','Kotak','Segitiga','Bola','Silinder','Piramida','Permata'];
-const shGrid=$('shapes');SHAPES.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;b.className=cfg.sh==i?'on':'';b.onclick=()=>{cfg.sh=i;sv();setSelf();[...shGrid.children].forEach((x,j)=>x.classList.toggle('on',j==i))};shGrid.append(b)});
+const shGrid=$('shapes');
+if(shGrid)SHAPES.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;b.className=cfg.sh==i?'on':'';b.onclick=()=>{cfg.sh=i;sv();setSelf();[...shGrid.children].forEach((x,j)=>x.classList.toggle('on',j==i))};shGrid.append(b)});
 const FONTS=['monospace','sans-serif','serif','cursive','Impact','Georgia','Verdana','Trebuchet MS','Courier New'];
-const fGrid=$('fonts');FONTS.forEach(n=>{const b=document.createElement('button');b.textContent=n;b.style.fontFamily=n;b.className=cfg.nf==n?'on':'';b.onclick=()=>{cfg.nf=n;sv();setSelf();[...fGrid.children].forEach(x=>x.classList.toggle('on',x.textContent==n))};fGrid.append(b)});
+const fGrid=$('fonts');
+if(fGrid)FONTS.forEach(n=>{const b=document.createElement('button');b.textContent=n;b.style.fontFamily=n;b.className=cfg.nf==n?'on':'';b.onclick=()=>{cfg.nf=n;sv();setSelf();[...fGrid.children].forEach(x=>x.classList.toggle('on',x.textContent==n))};fGrid.append(b)});
 const MU=[['island','Pulau'],['desert','Gurun'],['jungle','Jungle'],['snow','Salju'],['parkour','Parkour']];
-const mGrid=$('maps');MU.forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.className=selMap==k?'on':'';b.onclick=()=>{selMap=k;[...mGrid.children].forEach((x,j)=>x.classList.toggle('on',MU[j][0]==k))};mGrid.append(b)});
-for(const k of['c1','c2','nc']){const el=$(k);el.value=cfg[k];el.oninput=()=>{cfg[k]=el.value;sv();setSelf()}}
-$('rd').value=cfg.rd;$('rd').oninput=e=>{cfg.rd=+e.target.value;sv();setRD()};
-$('sb').onclick=()=>{$('set').classList.add('hide');playing?$('pause').classList.remove('hide'):show('menu')};
+const mGrid=$('maps');
+if(mGrid)MU.forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.className=selMap==k?'on':'';b.onclick=()=>{selMap=k;[...mGrid.children].forEach((x,j)=>x.classList.toggle('on',MU[j][0]==k))};mGrid.append(b)});
+for(const k of['c1','c2','nc']){const el=$(k);if(el){el.value=cfg[k];el.oninput=()=>{cfg[k]=el.value;sv();setSelf()}}}
+const rdEl=$('rd');if(rdEl){rdEl.value=cfg.rd;rdEl.oninput=e=>{cfg.rd=+e.target.value;sv();setRD()}}
+const sbEl=$('sb');if(sbEl)sbEl.onclick=()=>{$('set').classList.add('hide');playing?$('pause').classList.remove('hide'):show('menu')};
 $('ms').onclick=()=>show('skin');$('mr').onclick=()=>show('croom');$('mt').onclick=()=>show('set');
 let dp;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e});$('md').onclick=()=>dp?dp.prompt():alert('Menu browser > "Tambahkan ke layar utama"');
 $('ng').onclick=()=>{const v=$('nm').value.trim().slice(0,14);if(!v)return;cfg.name=v;sv();setSelf();show('menu')};
 
-// ---------- NET ----------
-async function join(id,map,h){const er=await ready;if(er&&er!='timeout'){toast(ERR[er]);return 0}if(er=='timeout'){toast('Koneksi lambat, main solo');return 0}
+async function join(id,map,h){const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){toast(ERR[er]);return 0}
   try{return await join2(id,map,h)}catch(e){toast('Gagal masuk: '+(e.code||e.message));return 0}}
 async function join2(id,map,h){
   rid=id;host=h;roomMap=map;base=db.ref('rooms/'+id);me=base.child('players/'+uid);me.onDisconnect().remove();
@@ -454,11 +473,11 @@ async function leave(){
 }
 $('mp').onclick=async()=>{const m=selMap;$('mp').disabled=true;const ok=await join('g_'+m,m,false);$('mp').disabled=false;start(m)};
 const code=()=>Math.random().toString(36).slice(2,7).toUpperCase();
-$('rc').onclick=async()=>{const er=await ready;if(er){return toast(ERR[er]||'Offline')}
+$('rc').onclick=async()=>{const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){return toast(ERR[er])}
   const m=selMap,c=code();
   try{await db.ref('rooms/'+c+'/meta').set({host:uid,map:m,started:false})}catch(e){return toast('Gagal buat room: '+e.code)}
   if(await join(c,m,true)){$('lc').textContent=c;$('lg').classList.remove('hide');show('lobby')}};
-$('rj').onclick=async()=>{const er=await ready;if(er){return toast(ERR[er]||'Offline')}
+$('rj').onclick=async()=>{const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){return toast(ERR[er])}
   const c=$('ri').value.trim().toUpperCase();let r;
   try{r=await db.ref('rooms/'+c+'/meta').once('value')}catch(e){return toast('Gagal: '+e.code)}
   if(!r.exists())return toast('Room tidak ditemukan');
@@ -468,14 +487,12 @@ $('lx').onclick=leave;$('pe').onclick=leave;
 $('pb').onclick=()=>$('pause').classList.remove('hide');$('pr').onclick=()=>$('pause').classList.add('hide');
 $('ps').onclick=()=>{$('pause').classList.add('hide');$('set').classList.remove('hide')};
 
-// ---------- HOTBAR & CHAT ----------
 IC.forEach((ic,i)=>{const b=document.createElement('button');b.append(icoC(i));b.insertAdjacentHTML('beforeend','<small>'+(i+1)+'</small>');b.onclick=()=>emo(i);$('bar').append(b)});
-function emo(i){if(!playing)return;const n=pl.e==i?-1:i;setE(pl,n);me&&me.update({e:n,et:TS});[...$('bar').children].forEach((b,j)=>b.classList.toggle('on',j==n));setTimeout(()=>[...$('bar').children].forEach(b=>b.classList.remove('on')),700)}
-function send(){const t=$('ci').value.trim();if(t){say(pl,t);me&&me.update({ch:t,ct:TS})}$('ci').value='';$('chat').classList.add('hide')}
+function emo(i){if(!playing||!pl)return;const n=pl.e==i?-1:i;setE(pl,n);me&&me.update({e:n,et:TS});[...$('bar').children].forEach((b,j)=>b.classList.toggle('on',j==n));setTimeout(()=>[...$('bar').children].forEach(b=>b.classList.remove('on')),700)}
+function send(){if(!pl)return;const t=$('ci').value.trim();if(t){say(pl,t);me&&me.update({ch:t,ct:TS})}$('ci').value='';$('chat').classList.add('hide')}
 $('cb').onclick=()=>{$('chat').classList.toggle('hide');$('ci').focus()};
 $('cs').onclick=send;$('ci').onkeydown=e=>{if(e.key=='Enter')send()};
 
-// ---------- INPUT ----------
 addEventListener('keydown',e=>{if(e.target.tagName=='INPUT')return;keys[e.code]=1;if(e.key>='1'&&e.key<='8')emo(+e.key-1);
   if(e.key=='Enter'){$('chat').classList.remove('hide');$('ci').focus();e.preventDefault()}});
 addEventListener('keyup',e=>keys[e.code]=0);
@@ -502,7 +519,6 @@ joy.ontouchend=()=>{ix=iy=0;kn.style.left=kn.style.top='40px'};
 $('jb').ontouchstart=()=>jmp=true;
 $('rb').ontouchstart=()=>{run=!run;$('rb').classList.toggle('s',!run)};
 
-// ---------- GAME LOOP ----------
 function frame(now){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,(now-last)/1000);last=now;
@@ -582,7 +598,6 @@ function frame(now){
     cam.position.set(pl.x+Math.sin(cy)*cp*zd,pl.y+1+Math.sin(pitch)*zd,pl.z+Math.cos(cy)*cp*zd);
     cam.lookAt(pl.x,pl.y+.8,pl.z);
   } else {
-    // menu scene: pedestal rotates, camera close-up to showcase jello
     menuG.rotation.y+=dt*.55;
     const t=now/1000;
     cam.position.set(Math.sin(t*.3)*.4,2.1,5.2);
@@ -602,48 +617,40 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 setInterval(()=>{
-  if(playing&&me&&(Math.abs(pl.x-(pl.sx||0))>.05||Math.abs(pl.z-(pl.sz||0))>.05||Math.abs(pl.r-(pl.sr||0))>.05||Math.abs(pl.y-(pl.sy2||0))>.05)){
+  if(playing&&me&&pl&&(Math.abs(pl.x-(pl.sx||0))>.05||Math.abs(pl.z-(pl.sz||0))>.05||Math.abs(pl.r-(pl.sr||0))>.05||Math.abs(pl.y-(pl.sy2||0))>.05)){
     pl.sx=pl.x;pl.sz=pl.z;pl.sr=pl.r;pl.sy2=pl.y;
     me.update({x:+pl.x.toFixed(2),z:+pl.z.toFixed(2),y:+pl.y.toFixed(2),r:+pl.r.toFixed(2)});
   }
 },120);
 
-// ---------- BOOTSTRAP ----------
-const loadMsg=$('loadMsg'),loadBar=$('loadBar');
-function setLoad(m,p){loadMsg.textContent=m;loadBar.style.width=(p*100)+'%'}
-let booted=false;
-function finishBoot(msg,delay){
-  if(booted)return;booted=true;
-  if(msg)setLoad(msg,1);
-  setTimeout(()=>{
-    $('load').classList.add('hide');
-    $('nm').value=cfg.name;
-    if(cfg.name)show('menu');else show('name');
-  },delay||400);
-}
+// Bootstrap async — setelah semua siap
 (async()=>{
   try{
     setLoad('Memeriksa koneksi...',0.15);
-    await new Promise(r=>setTimeout(r,250));
+    await new Promise(r=>setTimeout(r,200));
     setLoad('Login & database...',0.5);
     const er=await ready;
-    if(er&&er!='timeout'&&er!=''&&er!='net'){
+    if(er&&er!=''&&er!='net'){
       setLoad('⚠ '+(ERR[er]||er)+' — lanjut offline',0.8);
-      await new Promise(r=>setTimeout(r,1500));
-    } else if(er=='timeout'||er=='net'){
-      setLoad('⚠ Koneksi lambat — lanjut offline',0.8);
       await new Promise(r=>setTimeout(r,1200));
     } else {
       setLoad('Login berhasil!',0.9);
-      await new Promise(r=>setTimeout(r,300));
+      await new Promise(r=>setTimeout(r,250));
     }
-    finishBoot('Siap!',350);
+    setLoad('Siap!',1);
+    finishBoot(300);
   }catch(e){
+    console.error('Bootstrap:',e);
     setLoad('⚠ Error — lanjut offline',0.8);
-    finishBoot('Siap!',800);
+    finishBoot(500);
   }
 })();
-// Hard fallback: paksa lanjut setelah 9 detik apapun yang terjadi
-setTimeout(()=>finishBoot('',0),9000);
+
+}catch(e){
+  // Kalau ada error apa pun di atas, paksa loading selesai
+  console.error('Init error:',e);
+  setLoad('⚠ '+e.message,1);
+  finishBoot(500);
+}
 
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

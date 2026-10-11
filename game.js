@@ -53,8 +53,31 @@ document.querySelectorAll('.ttl').forEach(c=>{c.width=50;c.height=10;const x=c.g
 #hpbar .fill{position:absolute;left:2px;top:2px;bottom:2px;width:calc(100% - 4px);background:linear-gradient(#ff5d5d,#b32b30);transition:width .2s}
 #hpbar .txt{position:relative;z-index:1;width:100%;text-align:center;font-size:10px;color:#fff;font-weight:bold;text-shadow:1px 1px 0 #000}
 #prompt{background:rgba(23,48,107,.95);color:#fff;padding:10px 18px;font-size:11px;box-shadow:0 0 0 3px #ffd23f,0 4px 0 #0005}
+#dlgBtn{position:fixed;bottom:270px;left:50%;transform:translateX(-50%);background:#ffd23f;color:#17306b;padding:12px 22px;font:inherit;font-size:11px;font-weight:bold;box-shadow:0 0 0 4px #17306b,0 4px 0 #0005;cursor:pointer;z-index:12;display:none;border:0;font-family:inherit;letter-spacing:1px;animation:dpop .18s ease-out}
+#dlgBtn.show{display:block}
+#dlgBtn:active{transform:translateX(-50%) translateY(3px);filter:brightness(.92)}
+@keyframes dpop{from{transform:translateX(-50%) scale(.75)}to{transform:translateX(-50%) scale(1)}}
 `;document.head.appendChild(st)})();
 (function(){const h=document.createElement('div');h.id='hpbar';h.className='hide';h.innerHTML='<div class="fill"></div><div class="txt">10/10</div>';document.body.appendChild(h)})();
+
+// ═══════════════ JELLOGER DIALOG UI ═══════════════
+let currentDlgTarget=null;
+let dlgBtnEl=null;
+(function injectDialog(){
+  const b=document.createElement('button');
+  b.id='dlgBtn'; b.textContent='💬 Bicara';
+  document.body.appendChild(b);
+  dlgBtnEl=b;
+  b.addEventListener('click',()=>{
+    if(!currentDlgTarget)return;
+    const j=currentDlgTarget;
+    const line=j.lines[j.lineIdx % j.lines.length];
+    j.lineIdx++;
+    for(let k=0;k<6;k++){const a=k/6*6.28;puff(j.x+Math.cos(a)*.5,j.z+Math.sin(a)*.5,1,'#ffd23f',1.5,1.5)}
+    say(j,line);
+    if(j.secret && j.lineIdx===1){toast('⭐ Kamu menemukan jelloger rahasia: '+j._jname)}
+  });
+})();
 
 const cv=$('c'),R=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'low-power'}),sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.1,900);
 R.shadowMap.enabled=false;
@@ -91,6 +114,7 @@ function rs(){const h=240,w=Math.round(h*innerWidth/innerHeight);R.setSize(w,h,f
 function setRD(){const r=cfg.rd;const rl=$('rl');if(rl)rl.textContent='Render: '+r+'J';if(sc.fog){sc.fog.near=r;sc.fog.far=r*1.6}cam.far=r*1.7+10;cam.updateProjectionMatrix()}
 const MAPS={island:[0x87c8ff,0x5cb85c],desert:[0xf5d99a,0xe0c070],jungle:[0x3a6a4a,0x2f6b3a],snow:[0xdcecff,0xf4f8ff],parkour:[0x0e1a3a,0x1a1a3a],speedrace:[0x87ceeb,0x4a4a5a]};
 let world=new THREE.Group(),cols=[],plats=[],jbs=[],boostBubbles=[],swings=[],rings=[],WINDMILLS=[],FLAGPOLES=[],hillGrass=[],ANIMALS=[],FOUNTAINS=[],WATERFALLS=[],BALLOONS=[],WATERWHEELS=[],BELLS=[],LANTERNS=[],curMap='island',LIM=200;
+const JELLOGERS=[];
 
 let skyDome,sunMesh;
 function makeSky(sc1,sc2){const geo=new THREE.SphereGeometry(450,32,16);const c1=new THREE.Color(sc1),c2=new THREE.Color(sc2);const p=geo.attributes.position,cl=[];for(let i=0;i<p.count;i++){const y=p.getY(i)/450;const t=Math.max(0,Math.min(1,(y+1)/2));const c=c2.clone().lerp(c1,t);cl.push(c.r,c.g,c.b)}geo.setAttribute('color',new THREE.Float32BufferAttribute(cl,3));skyDome=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,depthWrite:false}));sc.add(skyDome);sunMesh=new THREE.Mesh(new THREE.CircleGeometry(28,32),new THREE.MeshBasicMaterial({color:0xfff4c2,transparent:true,opacity:.9}));sunMesh.position.set(-150,140,-200);sunMesh.lookAt(0,50,0);sc.add(sunMesh)}
@@ -181,21 +205,17 @@ function stonewall(x1,z1,x2,z2){
     P.push({geo:BOX(.75,.45,.75),x:px+(i%2?.15:-.15),y:1.35,z:pz,color:i%3?0x6a6a62:0x8a8a82,ry:rot});
   }
   addMerged(P);
-  // collision as line of boxes
   for(let i=0;i<=n;i+=2){const t=i/n;addCol(x1+dx*t,0,z1+dz*t,1.2,2,1.2)}
 }
 function waterwheel(x,z){
-  // Pole + wheel
   addMerged([
     {geo:BOX(.6,3,.6),x:x-2,y:1.5,z,color:0x5a3a1a},
     {geo:BOX(.6,3,.6),x:x+2,y:1.5,z,color:0x5a3a1a},
     {geo:BOX(4.5,.5,.5),x,y:3,z,color:0x5a3a1a}
   ]);
-  // Animated wheel
   const g=new THREE.Group();g.position.set(x,2,z);
   const ring1=new THREE.Mesh(new THREE.TorusGeometry(1.8,.25,6,16),LM(0x8b5a2b));if(R.shadowMap.enabled)ring1.castShadow=true;g.add(ring1);
   for(let i=0;i<8;i++){const a=i/8*6.28;const spoke=new THREE.Mesh(BOX(.15,3.4,.15),LM(0x6b4a2b));spoke.rotation.z=a;if(R.shadowMap.enabled)spoke.castShadow=true;g.add(spoke)}
-  // Paddles
   for(let i=0;i<8;i++){const a=i/8*6.28;const p=new THREE.Mesh(BOX(.4,.6,.6),LM(0x7a4a1b));p.position.set(Math.cos(a)*1.8,Math.sin(a)*1.8,0);if(R.shadowMap.enabled)p.castShadow=true;g.add(p)}
   g.rotation.y=Math.PI/2;world.add(g);
   WATERWHEELS.push({g,t:Math.random()*6.28});
@@ -205,17 +225,13 @@ function woodenBridge(x,z,rot){
   rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
   const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
   const P=[];const len=14,wid=5;
-  // Arched planks
   for(let i=0;i<14;i++){
     const t=i/13;const py=Math.sin(t*Math.PI)*.8;
     const p=T(0,-len/2+t*len);
     P.push({geo:BOX(wid,.2,len/14+.05),x:p[0],y:.6+py,z:p[1],color:0x8b5a2b,ry:rot});
   }
-  // Rails
   [-wid/2,wid/2].forEach(xr=>{
     for(let i=0;i<=6;i++){const t=i/6;const py=Math.sin(t*Math.PI)*.8;const p=T(xr,-len/2+t*len);P.push({geo:BOX(.3,2.5,.3),x:p[0],y:1.5+py,z:p[1],color:0x5a3a1a})}
-    for(let i=0;i<=2;i++){const y=1.5+i*.8;P.push({geo:BOX(.2,.2,len),x:0,y:y+Math.sin(.5)*.4,z:0,color:0x6b4a2b,ry:rot,px:0})}
-    // rail curves
     for(let i=0;i<=12;i++){const t=i/12;const py=Math.sin(t*Math.PI)*.8;const p=T(xr,-len/2+t*len);P.push({geo:BOX(.15,.15,len/12+.1),x:p[0],y:2.2+py,z:p[1],color:0x6b4a2b,ry:rot})}
   });
   addMerged(P);
@@ -226,7 +242,6 @@ function ruinPillar(x,z){
   P.push({geo:new THREE.CylinderGeometry(1.4,1.6,.5,8),x,y:.25,z,color:0x9a9a8a});
   P.push({geo:new THREE.CylinderGeometry(1,1.1,4+Math.random()*2,8),x,y:2.5,z,color:0x9a9a8a});
   if(Math.random()<.6)P.push({geo:new THREE.CylinderGeometry(1.2,1,.4,8),x,y:5.2,z,color:0x9a9a8a});
-  // Cracks
   P.push({geo:BOX(.3,.3,.1),x:x+.9,y:3,z:z+.6,color:0x6a6a5a});
   P.push({geo:BOX(.2,.4,.1),x:x-.8,y:2,z:z-.5,color:0x6a6a5a});
   addMerged(P);
@@ -241,7 +256,6 @@ function bellTower(x,z){
     {geo:new THREE.ConeGeometry(3,2.5,4),x,y:11.7,z,color:0xa04030,ry:Math.PI/4},
     {geo:BOX(.4,.4,2.5),x,y:10,z,color:0x5a3a1a}
   ]);
-  // Hanging bell (animated)
   const g=new THREE.Group();g.position.set(x,10,z);
   const bell=new THREE.Mesh(new THREE.ConeGeometry(.9,1.4,10),LM(0xffd23f,{shininess:60}));
   if(R.shadowMap.enabled)bell.castShadow=true;
@@ -266,20 +280,15 @@ function boat(x,z,rot){
   rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
   const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
   const P=[];
-  // Hull (simplified as stacked boxes)
   P.push({geo:BOX(2,.6,4),x,y:.4,z,color:0x8b5a2b,ry:rot});
   P.push({geo:BOX(2.2,.3,4.2),x,y:.1,z,color:0x5a3a1a,ry:rot});
   const bow1=T(0,-2);const bow2=T(0,2);
   P.push({geo:new THREE.ConeGeometry(.8,1,4),x:bow1[0],y:.5,z:bow1[1],color:0x8b5a2b,ry:rot+Math.PI/4});
   P.push({geo:new THREE.ConeGeometry(.8,1,4),x:bow2[0],y:.5,z:bow2[1],color:0x8b5a2b,ry:rot-Math.PI/4});
-  // Seats
   [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(1.8,.15,.4),x:p[0],y:.75,z:p[1],color:0xa07040,ry:rot})});
-  // Mast + sail
   const mastP=T(0,0);P.push({geo:new THREE.CylinderGeometry(.08,.1,3,6),x:mastP[0],y:2.2,z:mastP[1],color:0x5a3a1a});
-  // Oar
   const oarP=T(1.2,0);P.push({geo:new THREE.CylinderGeometry(.1,.1,3,5),x:oarP[0],y:.5,z:oarP[1],color:0x6b4a2b,rx:Math.PI/2,ry:rot});
   addMerged(P);
-  // Sail
   const g=new THREE.Group();g.position.set(mastP[0],2.5,mastP[1]);g.rotation.y=rot;
   const sail=new THREE.Mesh(new THREE.PlaneGeometry(1.8,2),new THREE.MeshBasicMaterial({color:0xf0e6d0,side:THREE.DoubleSide}));
   if(R.shadowMap.enabled)sail.castShadow=true;
@@ -290,14 +299,10 @@ function beachHut(x,z,rot){
   rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
   const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
   const P=[];
-  // 4 posts
   [[-1.5,-1.5],[1.5,-1.5],[-1.5,1.5],[1.5,1.5]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.2,3,.2),x:p[0],y:1.5,z:p[1],color:0x8b5a2b,ry:rot})});
-  // Floor
   P.push({geo:BOX(3.5,.2,3.5),x,y:.15,z,color:0xa07040,ry:rot});
-  // Straw roof
   P.push({geo:new THREE.ConeGeometry(3,2,4),x,y:4,z,color:0xd4a848,ry:rot+Math.PI/4});
   P.push({geo:new THREE.ConeGeometry(3.2,.4,8),x,y:4.9,z,color:0xc09840,ry:rot});
-  // Roof skirt
   P.push({geo:BOX(3.6,.4,3.6),x,y:3,z,color:0xc09840,ry:rot});
   addMerged(P);
   addCol(x,0,z,3.5,3,3.5);
@@ -308,7 +313,6 @@ function beachUmbrella(x,z){
     {geo:new THREE.ConeGeometry(2.5,1,8),x,y:3.2,z,color:0xff5d5d},
     {geo:new THREE.ConeGeometry(2.5,1,8,0,6.28,0),x,y:3.3,z,color:0xffffff,ry:Math.PI/8}
   ]);
-  // Towel
   Mt(BOX(1.8,.05,1),LM(0x3d8bff),x+.9,.12,z);
 }
 function logPile(x,z){
@@ -326,7 +330,6 @@ function statueGarden(x,z){
   P.push({geo:new THREE.CylinderGeometry(4,4,.3,20),x,y:.15,z,color:0xa8a8a0});
   P.push({geo:new THREE.TorusGeometry(4,.3,4,20).rotateX(1.5708),x,y:.35,z,color:0x8a8a82});
   addMerged(P);
-  // 3 small statues around
   for(let i=0;i<3;i++){
     const a=i/3*6.28;const sx=x+Math.cos(a)*2.4,sz=z+Math.sin(a)*2.4;
     addMerged([
@@ -344,7 +347,6 @@ function potShelf(x,z,rot){
   [[-1,-.3],[1,-.3],[-1,.3],[1,.3]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.1,2,.1),x:p[0],y:1,z:p[1],color:0x5a3a1a})});
   for(let y=0.5;y<=1.8;y+=0.65){P.push({geo:BOX(2.3,.1,.7),x,y,z,color:0x8b5a2b,ry:rot})}
   addMerged(P);
-  // Pots
   for(let i=0;i<5;i++){
     const sx=Math.random()*2-1;const sz=(Math.random()-.5)*.4;
     const sy=[0.7,1.35,2][i%3];const p=T(sx,sz);
@@ -356,7 +358,6 @@ function lanternPost(x,z){
   addMerged([{geo:new THREE.CylinderGeometry(.15,.2,4.5,6),x,y:2.25,z,color:0x3a2a1a}]);
   const g=new THREE.Group();g.position.set(x,4.2,z);
   const box=new THREE.Mesh(BOX(.7,1,.7),LM(0x5a3a1a));g.add(box);
-  // Glass sides
   const glass=new THREE.Mesh(BOX(.6,.8,.62),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.7}));g.add(glass);
   const top=new THREE.Mesh(new THREE.ConeGeometry(.55,.3,4),LM(0x3a2a1a));top.position.y=.65;top.rotation.y=Math.PI/4;g.add(top);
   world.add(g);
@@ -374,7 +375,6 @@ function stoneCircle(x,z){
     P.push({geo:BOX(.75,.3,.75),x:px,y:h+.1,z:pz,color:0x9a9a92,ry:Math.random()*.4});
     addCol(px,0,pz,1.2,h,1.2);
   }
-  // Center altar
   P.push({geo:BOX(2.5,.5,2.5),x,y:.25,z,color:0x8a8a82});
   P.push({geo:BOX(1.8,.8,1.8),x,y:.9,z,color:0x9a9a92});
   P.push({geo:ICO(.6,1),x,y:1.8,z,color:0x7fd0ff});
@@ -397,7 +397,6 @@ function stumpLog(x,z){
     {geo:new THREE.CylinderGeometry(.9,1.1,1.4,10),x,y:.7,z,color:0x5a3a1a},
     {geo:new THREE.CylinderGeometry(.9,.9,.15,10),x,y:1.5,z,color:0xa07040}
   ]);
-  // Axe
   const g=new THREE.Group();g.position.set(x,1.6,z);g.rotation.y=Math.random()*6.28;
   const handle=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,1.2,5),LM(0x8b5a2b));handle.rotation.z=Math.PI/2.2;handle.position.x=.5;g.add(handle);
   const blade=new THREE.Mesh(BOX(.5,.35,.1),LM(0xc0c0b8));blade.position.x=1.05;g.add(blade);
@@ -413,7 +412,6 @@ function scarecrow(x,z){
     {geo:new THREE.SphereGeometry(.5,10,8),x,y:3.4,z,color:0xd4a848},
     {geo:new THREE.ConeGeometry(.8,.8,6),x,y:4,z,color:0xa04030}
   ]);
-  // Eyes
   Mt(ICO(.08,0),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x-.15,3.4,z+.45);
   Mt(ICO(.08,0),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x+.15,3.4,z+.45);
   addCol(x,0,z,2,4,2);
@@ -426,12 +424,76 @@ function beehive(x,z){
     {geo:new THREE.CylinderGeometry(.55,.55,.65,10),x,y:2.9,z,color:0xffc020},
     {geo:new THREE.CylinderGeometry(.45,.45,.55,10),x,y:3.35,z,color:0xffd23f}
   ]);
-  // Bees flying around
   for(let i=0;i<3;i++){
     const a=i/3*6.28;
     Mt(BOX(.15,.1,.1),new THREE.MeshBasicMaterial({color:0xffd23f}),x+Math.cos(a)*1.2,3.5,z+Math.sin(a)*1.2);
   }
   addCol(x,0,z,1,3,1);
+}
+// ═══════════════ STRUKTUR TAMBAHAN ═══════════════
+function flowerArch(x,z,rot){
+  rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
+  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
+  const P=[];
+  const p1=T(-3,0),p2=T(3,0);
+  P.push({geo:BOX(.8,7,.8),x:p1[0],y:3.5,z:p1[1],color:0xe8e0d0});
+  P.push({geo:BOX(.8,7,.8),x:p2[0],y:3.5,z:p2[1],color:0xe8e0d0});
+  P.push({geo:new THREE.TorusGeometry(3.2,.5,8,20,Math.PI),x,y:7,z,color:0x3aa84a,ry:rot});
+  addMerged(P);
+  const cols=[0xff6688,0xffee55,0xffffff,0xb05dff,0xff8c1a];
+  for(let i=0;i<20;i++){
+    const a=Math.PI*(i/19);
+    const fx=x+Math.cos(a)*3.2*c, fz=z-Math.sin(a)*3.2*s;
+    Mt(ICO(.25,0),LM(cols[i%cols.length],{shininess:30}),fx,7+Math.sin(a)*3.2,fz);
+  }
+  addCol(x-3,0,z,.8,7,.8);addCol(x+3,0,z,.8,7,.8);
+}
+function wishingWell(x,z){
+  addMerged([
+    {geo:new THREE.CylinderGeometry(2,2.2,1.5,10),x,y:.75,z,color:0x8a8a82},
+    {geo:new THREE.CylinderGeometry(1.7,1.7,.6,10),x,y:.5,z,color:0x2a6a9a},
+    {geo:BOX(.3,4,.3),x:x-1.6,y:2,z:z-1.6,color:0x8b5a2b},
+    {geo:BOX(.3,4,.3),x:x+1.6,y:2,z:z-1.6,color:0x8b5a2b},
+    {geo:BOX(.3,4,.3),x:x-1.6,y:2,z:z+1.6,color:0x8b5a2b},
+    {geo:BOX(.3,4,.3),x:x+1.6,y:2,z:z+1.6,color:0x8b5a2b},
+    {geo:new THREE.ConeGeometry(3,1.8,4),x,y:5,z,color:0xa04030,ry:Math.PI/4}
+  ]);
+  Mt(ICO(.4,0),new THREE.MeshBasicMaterial({color:0xffd23f}),x,.8,z);
+  addCol(x,0,z,4.5,2.5,4.5);
+}
+function garden(x,z,r){
+  r=r||8;
+  addMerged([
+    {geo:new THREE.CylinderGeometry(r,r,.3,20),x,y:.15,z,color:0xc8b088}
+  ]);
+  for(let i=0;i<16;i++){
+    const a=i/16*6.28;
+    const px=x+Math.cos(a)*(r*.7), pz=z+Math.sin(a)*(r*.7);
+    const cols=[0xff6688,0xffee55,0xffffff,0xb05dff,0xff8c1a];
+    Mt(new THREE.CylinderGeometry(.06,.06,.6,4),LM(0x3a7a2f),px,.6,pz);
+    Mt(ICO(.22,0),LM(cols[i%5],{shininess:30}),px,.95,pz);
+  }
+  addCol(x,0,z,r*2,.4,r*2);
+}
+function statueJello(x,z){
+  addMerged([
+    {geo:BOX(2.5,.6,2.5),x,y:.3,z,color:0x8a8a8a},
+    {geo:BOX(1.8,.8,1.8),x,y:1,z,color:0x9a9a9a},
+    {geo:new THREE.SphereGeometry(1,10,8),x,y:2.4,z,color:0xffd23f},
+    {geo:new THREE.SphereGeometry(.7,8,6),x,y:3.5,z,color:0xff5d5d}
+  ]);
+  addCol(x,0,z,3,3,3);
+}
+function torch(x,z){
+  addMerged([
+    {geo:new THREE.CylinderGeometry(.15,.2,4,6),x,y:2,z,color:0x5a3a1a}
+  ]);
+  const fl=new THREE.Mesh(ICO(.4,0),new THREE.MeshBasicMaterial({color:0xff8c1a,transparent:true,opacity:.9}));
+  fl.position.set(x,4.3,z); world.add(fl);
+  const fl2=new THREE.Mesh(ICO(.25,0),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:.95}));
+  fl2.position.set(x,4.6,z); world.add(fl2);
+  FOUNTAINS.push({parts:[{m:fl,baseAng:0,t:0,isFlame:true},{m:fl2,baseAng:1,t:.5,isFlame:true}],x,z,topY:4.3});
+  addCol(x,0,z,.5,4,.5);
 }
 
 // ═══ ANIMALS ═══
@@ -482,6 +544,52 @@ function spawnAnimal(type,x,z,r,spd){
   ANIMALS.push({g,x,z,y:0,vx:0,vz:0,targetX:x,targetZ:z,wanderCd:Math.random()*2,spawnX:x,spawnZ:z,r:r||5,spd:spd||.4,t:Math.random()*6.28,type,legs:g.children.filter(c=>c.userData&&c.userData.leg)});
 }
 
+// ═══════════════ JELLOGER SPAWN & UPDATE ═══════════════
+function spawnJelloger(def){
+  const sh=Math.floor(Math.random()*7);
+  const p=mkP({n:def.n,c1:def.c1,c2:def.c2,sh,nc:def.nc||'#fff',nf:def.nf||'monospace'});
+  sc.remove(p.root); world.add(p.root);
+  p.x=def.x; p.z=def.z; p.y=0;
+  p.tx=def.x; p.tz=def.z;
+  p.tr=Math.random()*6.28; p.r=p.tr;
+  p.spawnX=def.x; p.spawnZ=def.z;
+  p.wanderR=def.r||8;
+  p.moveSpd=(def.spd!==undefined?def.spd:0.4);
+  p.spd=p.moveSpd;
+  p.wanderCd=Math.random()*3;
+  p.wanderTX=def.x; p.wanderTZ=def.z;
+  p.lines=def.lines||['...']; p.lineIdx=0;
+  p.secret=!!def.secret;
+  p.frozen=(def.spd===0);
+  p.tt=0; p.lx=def.x; p.lz=def.z; p.init=1;
+  p.isJelloger=true; p.jbLvl=0; p._jname=def.n;
+  JELLOGERS.push(p);
+  return p;
+}
+function clearJellogers(){ JELLOGERS.length=0; }
+function wanderJellogers(dt){
+  for(const j of JELLOGERS){
+    if(j.frozen){ j.tx=j.x; j.tz=j.z; continue; }
+    j.wanderCd-=dt;
+    const dxT=j.wanderTX-j.x, dzT=j.wanderTZ-j.z;
+    const distT=Math.hypot(dxT,dzT);
+    if(distT<0.8 || j.wanderCd<=0){
+      const ang=Math.random()*6.28;
+      const d=Math.random()*j.wanderR*0.8;
+      j.wanderTX=j.spawnX+Math.cos(ang)*d;
+      j.wanderTZ=j.spawnZ+Math.sin(ang)*d;
+      j.wanderCd=2.5+Math.random()*4;
+    }
+    if(distT>0.05){
+      const nx=dxT/distT, nz=dzT/distT;
+      j.x+=nx*j.moveSpd*dt*2.4;
+      j.z+=nz*j.moveSpd*dt*2.4;
+      j.tx=j.x; j.tz=j.z;
+      j.tr=Math.atan2(nx,nz);
+    } else { j.tx=j.x; j.tz=j.z; }
+  }
+}
+
 function waterfall(x,z,h,w){addMerged([{geo:BOX(w+4,h,w+4),x,y:h/2,z,color:0x5a5a52},{geo:BOX(w+5,1,w+5),x,y:h,z,color:0x6a6a62},{geo:new THREE.ConeGeometry(w*0.7,1.5,6),x,y:h+.7,z,color:0x4a4a42}]);addCol(x,0,z,w+4,h,w+4);Mt(new THREE.CircleGeometry(w*0.5,24).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x3aa0d0,transparent:true,opacity:.85,shininess:90}),x,h+.05,z);const cvs=document.createElement('canvas');cvs.width=32;cvs.height=32;const c2=cvs.getContext('2d');c2.fillStyle='rgba(120,200,240,.6)';c2.fillRect(0,0,32,32);for(let i=0;i<12;i++){c2.fillStyle='rgba(255,255,255,.85)';c2.fillRect(0,Math.random()*32,32,1+Math.random()*2)}const tex=new THREE.CanvasTexture(cvs);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(1,6);tex.magFilter=tex.minFilter=THREE.LinearFilter;const sheet=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide,opacity:.9}));sheet.position.set(x,h/2,z+w/2+2.05);world.add(sheet);const poolR=w*1.3;Mt(new THREE.CircleGeometry(poolR,32).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x3aa0d0,transparent:true,opacity:.85,shininess:90}),x,.08,z+w/2+2+poolR*0.5);Mt(new THREE.TorusGeometry(poolR,.5,4,32).rotateX(1.5708),LM(0x7a7a6a),x,.2,z+w/2+2+poolR*0.5);WATERFALLS.push({tex})}
 
 function addSwing(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const p1=T(-2.5,0),p2=T(2.5,0);addMerged([{geo:BOX(.4,8,.4),x:p1[0],y:4,z:p1[1],color:0x8b5a2b},{geo:BOX(.4,8,.4),x:p2[0],y:4,z:p2[1],color:0x8b5a2b},{geo:BOX(5.4,.4,.4),x,y:8,z,color:0x5a3a1a,ry:rot}]);const pivot=new THREE.Group();pivot.position.set(x,7.8,z);pivot.rotation.y=rot;const c1=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,6,5),LM(0x2a2a2a));if(R.shadowMap.enabled)c1.castShadow=true;c1.position.set(-1.1,-3,0);const c2=c1.clone();c2.position.x=1.1;const seat=new THREE.Mesh(BOX(2.4,.2,1),LM(0x8b5a2b));if(R.shadowMap.enabled)seat.castShadow=true;seat.position.y=-6.1;const back=new THREE.Mesh(BOX(2.4,1.2,.15),LM(0x8b5a2b));if(R.shadowMap.enabled)back.castShadow=true;back.position.y=-5.4;back.position.z=-.4;pivot.add(c1,c2,seat,back);world.add(pivot);swings.push({pivot,x,z,rot,angle:0,vel:0});addCol(x-2.5,0,z,.6,8,.6);addCol(x+2.5,0,z,.6,8,.6)}
@@ -498,34 +606,27 @@ const PARKOUR=[
 
 // ═══════════════ ORGANIZED SAFE STRUCTS ═══════════════
 const SAFE_STRUCTS=[
-  // ── Farm zone (E, ~60-100 / 0-60) ──
   ['windmill',120,50],['barn',85,45],['haystack',100,30],['haystack',105,38],
   ['scarecrow',70,50],['beehive',75,42],['beehive',95,55],
   ['fence',60,25,60,65],['fence',60,25,110,25],['fence',110,25,110,65],
   ['crates',68,68],['crates',90,68],
   ['stumplog',115,70],['logpile',125,30],
-  // ── Market zone (SE, ~85-120 / -20 to -55) ──
   ['marketstall',95,-15,.5],['marketstall',105,-25,-.3],['marketstall',110,-40,.8],
   ['barrels',115,-15],['barrels',85,-35],
   ['crates',90,-50],['potshelf',100,-55],
   ['lanternpost',90,-25],['lanternpost',108,-30],
-  // ── Ancient zone (SW, ~-90 to -140 / -50 to -100) ──
   ['stonecircle',-110,-90],['ruinpillar',-95,-70],['ruinpillar',-125,-75],
   ['ruinpillar',-100,-105],['obelisk',-105,-5,0xa89868],
   ['statuegarden',-100,-55],['totem',-100,100],
-  // ── Water zone (S) ──
   ['boat',30,-180,Math.PI/6],['boat',-20,-185,-Math.PI/4],
   ['beachhut',50,-160,Math.PI/3],['beachhut',-40,-160,-Math.PI/3],
   ['beachumbrella',20,-165],['beachumbrella',-25,-170],['beachumbrella',60,-140],
-  // ── East decorative ──
   ['waterwheel',135,60],['woodenbridge',140,75,Math.PI/2],
   ['belltower',145,25],['stonewall',130,20,130,55],
   ['picnictable',115,-90],['picnictable',100,-95],
-  // ── West decorative ──
   ['windmill',-120,-50],['watertower',-140,25],
   ['stonewall',-130,-30,-130,-70],['belltower',-145,60],
   ['picnictable',-115,90],['picnictable',-125,80],
-  // ── Scattered ──
   ['flagpole',120,-60],['flagpole',-120,-60],
   ['pond',55,120,6],['pond',-55,120,6],['pond',130,-100,5],
   ['rockformation',55,-120],['rockformation',-55,-120],
@@ -538,7 +639,13 @@ const SAFE_STRUCTS=[
   ['archway',105,60,0],['archway',-105,60,0],
   ['giantmushroom',-90,60,.8],['giantmushroom',-85,65,.6],['giantmushroom',-95,65,.7],
   ['logpile',150,110],['logpile',-150,110],
-  ['stumplog',-80,-30],['stumplog',155,-30]
+  ['stumplog',-80,-30],['stumplog',155,-30],
+  // ── tambahan baru ──
+  ['flowerarch',128,-45,0],['flowerarch',-128,-45,0],
+  ['wishingwell',40,-60],['wishingwell',-40,-60],
+  ['garden',60,60,7],['garden',-60,60,7],['garden',60,-60,7],['garden',-60,-60,7],
+  ['statuejello',-40,40],['statuejello',40,-40],
+  ['torch',25,0],['torch',-25,0],['torch',0,25],['torch',0,-25]
 ];
 
 const LAYOUTS={
@@ -637,6 +744,122 @@ const LAYOUTS={
   }
 };
 
+// ═══════════════ JELLOGER DEFINITIONS ═══════════════
+const JELLOGER_DEFS={
+  island:[
+    {n:'Petani Jelloger',      c1:'#8b5a2b', c2:'#d4a848', x:120,z:50,   r:10,spd:.35,lines:['Hewan ni bikin kesal, soalnya dia tak mau makan, padahal udah di belikan makan 200 kilo']},
+    {n:'Peternak Jelloger',    c1:'#c8a878', c2:'#8b5a2b', x:95, z:40,   r:8, spd:.4, lines:['Ayam-ayamku bertelur 30 butir hari ini!']},
+    {n:'Pedagang Jelloger',    c1:'#ff8c1a', c2:'#d05000', x:100,z:-20,  r:8, spd:.35,lines:['Beli barang murah-murah! Beli banyak lebih murah!']},
+    {n:'Nelayan Jelloger',     c1:'#3a8dff', c2:'#1a4a9a', x:30, z:-170, r:12,spd:.3, lines:['Ikan hari ini banyak sekali, tapi badai akan datang']},
+    {n:'Petualang Jelloger',   c1:'#3fbf5f', c2:'#1a6a2a', x:-100,z:-80, r:15,spd:.55,lines:['Kudengar ada harta karun di puncak gunung!']},
+    {n:'Pendeta Jelloger',     c1:'#ffffff', c2:'#c0c0c0', x:-95,z:75,   r:6, spd:.2, lines:['Semoga harimu menyenangkan, anakku']},
+    {n:'Prajurit Jelloger',    c1:'#8a8a82', c2:'#3a3a32', x:75, z:75,   r:10,spd:.4, lines:['Aku berjaga di sini dari pagi sampai pagi lagi']},
+    {n:'Koki Jelloger',        c1:'#ff5d5d', c2:'#8b1a1a', x:-60,z:30,   r:8, spd:.3, lines:['Makanan di sini paling enak seantero pulau!']},
+    {n:'Penjaga Api Jelloger', c1:'#ff5d1a', c2:'#8b1a00', x:50, z:-50,  r:6, spd:.25,lines:['Jangan biarkan api unggun ini padam ya']},
+    {n:'Seniman Jelloger',     c1:'#b05dff', c2:'#5a1a8b', x:-50,z:50,   r:8, spd:.35,lines:['Aku sedang melukis matahari terbit, indah sekali']},
+    {n:'Pengembara Jelloger',  c1:'#ffb84a', c2:'#8b6010', x:150,z:150,  r:20,spd:.6, lines:['Aku sudah keliling dunia, tapi pulau ini yang terindah']},
+    {n:'Penjaga Hutan J.',     c1:'#2f6b3a', c2:'#1a3a20', x:-100,z:120,r:15,spd:.3, lines:['Pohon-pohon ini umurnya lebih tua dari kakekku']},
+    {n:'Pemusik Jelloger',     c1:'#ffd23f', c2:'#8b6a10', x:20, z:20,   r:6, spd:.25,lines:['Dengarkan lagu baruku, judulnya "Jello Bahagia"']},
+    {n:'Penari Jelloger',      c1:'#ff90b8', c2:'#8b3060', x:-20,z:20,   r:6, spd:.55,lines:['Ayo menari bersama! Goyangkan badanmu!']},
+    {n:'Pelaut Jelloger',      c1:'#4a6a8a', c2:'#1a2a4a', x:-30,z:-170,r:12,spd:.4, lines:['Kapalku siap berlayar ke pulau seberang']},
+    {n:'Pemandu Jelloger',     c1:'#7fd0ff', c2:'#3a80b0', x:0,  z:100,  r:10,spd:.4, lines:['Ikuti aku, aku tunjukkan tempat terbaik di pulau ini']},
+    {n:'Pedagang Buah',        c1:'#ffe27a', c2:'#b08b20', x:110,z:-40,  r:7, spd:.3, lines:['Buah-buahan segar! Baru dipetik pagi ini!']},
+    {n:'Penjaga Mercusuar',    c1:'#f4f4f4', c2:'#8a8a8a', x:0,  z:165,  r:8, spd:.2, lines:['Aku menjaga cahaya ini agar kapal tidak tersesat']},
+    {n:'Guru Jelloger',        c1:'#3aa8d0', c2:'#1a6080', x:-20,z:60,   r:8, spd:.3, lines:['Belajar itu penting, tapi bermain juga perlu']},
+    {n:'Dokter Jelloger',      c1:'#ffffff', c2:'#ff5d5d', x:20, z:60,   r:8, spd:.3, lines:['Kalau kamu sakit, minum ramuan dari aku']},
+    {n:'Tukang Kayu J.',       c1:'#8b5a2b', c2:'#5a3a1b', x:-130,z:20,  r:8, spd:.3, lines:['Kayu dari pohon ini kuat sekali, tahan air']},
+    {n:'Penambang Jelloger',   c1:'#5a5a52', c2:'#2a2a22', x:130,z:20,   r:8, spd:.3, lines:['Aku mencari emas di dalam tanah, belum ketemu']},
+    {n:'@@) JEl00G335',        c1:'#00ff00', c2:'#003300', x:180,z:180,  r:3, spd:0, secret:true, lines:['QUFYWDIwMTE=']},
+    {n:'DANIS Jelloger',       c1:'#ff00ff', c2:'#660066', x:-180,z:-180,r:3, spd:0, secret:true, lines:['Halo saya danis, ini game buatanku']},
+    {n:'Cepu Jelloger',        c1:'#ffff00', c2:'#666600', x:180,z:-180, r:3, spd:0, secret:true, lines:['ada 3 jelloger rahasia di sini selain saya']},
+    {n:'Weird Jelloger',       c1:'#ff0000', c2:'#330000', x:-180,z:180, r:3, spd:0, secret:true, lines:['jangan']}
+  ],
+  desert:[
+    {n:'Pedagang Permadani',   c1:'#c0501a', c2:'#7a2a00', x:100,z:20,   r:8, spd:.35,lines:['Permadani ini ditenun oleh nenekku, kualitasnya terbaik!']},
+    {n:'Penunggang Unta',      c1:'#d4a848', c2:'#8b6010', x:-80,z:40,   r:12,spd:.55,lines:['Untaku bernama Jelly, dia suka meludah ke orang asing']},
+    {n:'Penjaga Oasis',        c1:'#3aa0d0', c2:'#1a6080', x:105,z:0,    r:8, spd:.3, lines:['Oasis ini adalah sumber kehidupan kami']},
+    {n:'Penggali Sumur',       c1:'#8b5a2b', c2:'#5a3a1b', x:40, z:20,   r:5, spd:.25,lines:['Aku menggali 30 meter, belum ketemu air juga']},
+    {n:'Pemburu Harta',        c1:'#ffd23f', c2:'#8b6a10', x:-100,z:-60, r:14,spd:.6, lines:['Aku dengar ada emas di piramida tua itu']},
+    {n:'Penjaga Piramida',     c1:'#c8a878', c2:'#7a5a30', x:0,  z:105,  r:6, spd:.2, lines:['Jangan masuk! Kutukan akan menimpamu']},
+    {n:'Penjual Air',          c1:'#7fd0ff', c2:'#3a80b0', x:70, z:-30,  r:8, spd:.4, lines:['Air! Air segar! Hanya 5 koin!']},
+    {n:'Penenun Jelloger',     c1:'#b05dff', c2:'#5a1a8b', x:-100,z:20,  r:6, spd:.25,lines:['Kain ini dibuat dari bulu unta asli']},
+    {n:'Pembuat Tembikar',     c1:'#a07040', c2:'#5a3a1b', x:80, z:-50,  r:6, spd:.25,lines:['Hati-hati, tembikar ini mudah pecah']},
+    {n:'Ahli Bintang',         c1:'#3a3a8a', c2:'#101040', x:-20,z:60,   r:5, spd:.2, lines:['Bintang-bintang di gurun lebih terang dari di kota']},
+    {n:'Pengembara Pasir',     c1:'#d4a848', c2:'#8b6010', x:140,z:60,   r:18,spd:.55,lines:['Aku sudah 3 hari berjalan tanpa air, tolong...']},
+    {n:'Penjaga Kuil',         c1:'#c8a878', c2:'#7a5a30', x:-90,z:80,   r:6, spd:.2, lines:['Kuil ini berumur 5000 tahun']},
+    {n:'Kurir Jelloger',       c1:'#ff5d5d', c2:'#8b1a1a', x:20, z:-60,  r:10,spd:.8, lines:['Permisi! Aku sedang buru-buru!']},
+    {n:'Prajurit Firaun',      c1:'#ffd23f', c2:'#8b6010', x:-70,z:80,   r:6, spd:.3, lines:['Firaun memerintahkan aku berjaga di sini']},
+    {n:'Penari Perut',         c1:'#ff90b8', c2:'#8b3060', x:60, z:35,   r:6, spd:.55,lines:['Ayo lihat tarianku! Hanya 10 koin!']},
+    {n:'Pembuat Roti',         c1:'#d4a848', c2:'#8b6010', x:-40,z:-20,  r:5, spd:.25,lines:['Roti baru keluar dari oven!']},
+    {n:'Penggembala Kambing',  c1:'#c8a878', c2:'#7a5a30', x:120,z:50,   r:12,spd:.4, lines:['Kambing-kambingku suka kabur kalau tidak dijaga']},
+    {n:'Penambang Emas',       c1:'#ffd23f', c2:'#8b6010', x:-140,z:0,   r:8, spd:.3, lines:['Aku cari emas di tambang itu, sumpah!']},
+    {n:'Penjaga Gerbang',      c1:'#8a8a82', c2:'#3a3a32', x:0,  z:20,   r:4, spd:.2, lines:['Selamat datang di kota gurun!']},
+    {n:'Penyanyi Jelloger',    c1:'#ff8c1a', c2:'#d05000', x:-60,z:50,   r:6, spd:.3, lines:['Dengarkan suaraku! Aku penyanyi terbaik!']},
+    {n:'Pelukis Pasir',        c1:'#ffb84a', c2:'#8b6010', x:90, z:70,   r:6, spd:.3, lines:['Aku melukis dengan pasir, seni unik bukan?']},
+    {n:'Penjaga Harta',        c1:'#ffd23f', c2:'#8b6010', x:-150,z:-50, r:6, spd:.25,lines:['Harta ini tidak boleh disentuh siapapun!']},
+    {n:'Firaun Jelloger',      c1:'#ffd700', c2:'#8b6010', x:180,z:180,  r:3, spd:0, secret:true, lines:['Piramida itu bukan milikku, tapi aku yang membuatnya']},
+    {n:'Pedagang Unta J.',     c1:'#c0501a', c2:'#5a1a00', x:-180,z:-180,r:3, spd:0, secret:true, lines:['Untaku bernama Jelly, dia suka meludah ke orang']},
+    {n:'Mumi Jelloger',        c1:'#e0d8b0', c2:'#8a8050', x:180,z:-180, r:3, spd:0, secret:true, lines:['Aku sudah tidur 3000 tahun, jangan bangunkan aku']},
+    {n:'Fatamorgana J.',       c1:'#ffffff', c2:'#ffd23f', x:-180,z:180, r:3, spd:0, secret:true, lines:['Aku tidak ada di sini, kamu hanya berhalusinasi']}
+  ],
+  jungle:[
+    {n:'Penjaga Hutan',        c1:'#1a5a2a', c2:'#0a2a10', x:60, z:60,   r:12,spd:.35,lines:['Hutan ini adalah rumah bagi ribuan makhluk']},
+    {n:'Pemburu Jelloger',     c1:'#5a3a1b', c2:'#2a1a00', x:-60,z:60,   r:10,spd:.5, lines:['Aku melihat jejak jaguar tadi malam']},
+    {n:'Penebang Kayu',        c1:'#8b5a2b', c2:'#5a3a1b', x:100,z:50,   r:8, spd:.4, lines:['Kayu jati dari hutan ini paling kuat']},
+    {n:'Pengumpul Buah',       c1:'#ffe27a', c2:'#b08b20', x:-90,z:-30,  r:10,spd:.4, lines:['Buah durian di pohon itu sudah matang!']},
+    {n:'Pawang Ular',          c1:'#3fbf5f', c2:'#1a6a2a', x:70, z:-50,  r:8, spd:.35,lines:['Ular-ular di sini jinak, tenang saja']},
+    {n:'Penjaga Candi',        c1:'#8a8a82', c2:'#3a3a32', x:0,  z:105,  r:5, spd:.2, lines:['Candi ini dibangun oleh jello kuno 10000 tahun lalu']},
+    {n:'Penari Hutan',         c1:'#ff90b8', c2:'#8b3060', x:-30,z:30,   r:6, spd:.55,lines:['Aku menari untuk roh hutan']},
+    {n:'Dukun Jelloger',       c1:'#b05dff', c2:'#5a1a8b', x:-50,z:80,   r:6, spd:.25,lines:['Ramuan ini bisa menyembuhkan segala penyakit']},
+    {n:'Penjaga Sungai',       c1:'#3aa0d0', c2:'#1a6080', x:40, z:-80,  r:8, spd:.3, lines:['Jangan buang sampah ke sungai!']},
+    {n:'Pengrajin Anyaman',    c1:'#d4a848', c2:'#8b6010', x:-100,z:0,   r:6, spd:.3, lines:['Anyaman bambu ini tahan air loh']},
+    {n:'Pemanjat Pohon',       c1:'#5a3a1b', c2:'#2a1a00', x:80, z:80,   r:5, spd:.4, lines:['Aku bisa memanjat pohon tertinggi dalam 10 detik']},
+    {n:'Penjaga Mata Air',     c1:'#7fd0ff', c2:'#3a80b0', x:20, z:60,   r:6, spd:.3, lines:['Mata air ini suci, jangan dikotori']},
+    {n:'Pengembara Rimba',     c1:'#3fbf5f', c2:'#1a6a2a', x:130,z:80,   r:20,spd:.6, lines:['Aku tersesat 3 hari di hutan ini']},
+    {n:'Ahli Herbal',          c1:'#4fa040', c2:'#1a3a10', x:-80,z:40,   r:6, spd:.3, lines:['Daun ini bisa jadi obat, daun itu racun']},
+    {n:'Penjaga Satwa',        c1:'#ff8c1a', c2:'#d05000', x:60, z:-80,  r:10,spd:.4, lines:['Jangan ganggu hewan-hewan di sini!']},
+    {n:'Pembuat Perahu',       c1:'#8b5a2b', c2:'#5a3a1b', x:-110,z:-70, r:8, spd:.3, lines:['Perahu ini akan kupakai menyusuri sungai']},
+    {n:'Penjaga Api Unggun',   c1:'#ff5d1a', c2:'#8b1a00', x:0,  z:-60,  r:6, spd:.25,lines:['Api ini tidak boleh padam, ini penjaga malam']},
+    {n:'Pemusik Tradisional',  c1:'#ffd23f', c2:'#8b6a10', x:-20,z:60,   r:6, spd:.3, lines:['Aku mainkan alat musik dari bambu']},
+    {n:'Penjaga Goa',          c1:'#5a5a52', c2:'#2a2a22', x:140,z:-60,  r:6, spd:.25,lines:['Di dalam goa itu ada kelelawar raksasa']},
+    {n:'Pemandu Air Terjun',   c1:'#3aa0d0', c2:'#1a6080', x:-150,z:-40, r:8, spd:.35,lines:['Air terjun di utara sangat indah!']},
+    {n:'Pengrajin Bambu',      c1:'#4fa040', c2:'#1a3a10', x:90, z:-40,  r:6, spd:.3, lines:['Bambu ini bisa jadi apa saja!']},
+    {n:'Petani Karet',         c1:'#c8a878', c2:'#7a5a30', x:-100,z:-70, r:8, spd:.35,lines:['Getah karet ini bisa jadi ban mobil']},
+    {n:'Dewa Rimba',           c1:'#3fbf5f', c2:'#0a2a10', x:180,z:180,  r:3, spd:0, secret:true, lines:['Hutan ini menyimpan rahasia yang tidak boleh kau ketahui']},
+    {n:'Orang Utan J.',        c1:'#c0501a', c2:'#5a1a00', x:-180,z:-180,r:3, spd:0, secret:true, lines:['Ugh ugh ugh, aku bukan monyet, aku jello']},
+    {n:'Penjaga Candi Kuno',   c1:'#c8a878', c2:'#7a5a30', x:180,z:-180, r:3, spd:0, secret:true, lines:['Candi ini menyimpan kekuatan jello purba']},
+    {n:'Ratu Lebah',           c1:'#ffd23f', c2:'#8b6a10', x:-180,z:180, r:3, spd:0, secret:true, lines:['Lebah-lebahku membuat madu terbaik di dunia']}
+  ],
+  snow:[
+    {n:'Penjaga Igloo',        c1:'#f0f8ff', c2:'#a8b8c8', x:50, z:55,   r:8, spd:.3, lines:['Igloo ini hangat di dalam, percaya deh']},
+    {n:'Nelayan Es',           c1:'#7fd0ff', c2:'#3a80b0', x:0,  z:-115, r:10,spd:.35,lines:['Aku memancing di bawah es, dingin sekali']},
+    {n:'Pemburu Anjing Laut',  c1:'#5a5a52', c2:'#2a2a22', x:-60,z:-60,  r:10,spd:.5, lines:['Anjing laut di sini sangat lincah']},
+    {n:'Pembuat Salju',        c1:'#ffffff', c2:'#c0c0c0', x:-50,z:50,   r:6, spd:.25,lines:['Aku membuat boneka salju setiap hari']},
+    {n:'Penjaga Api',          c1:'#ff5d1a', c2:'#8b1a00', x:50, z:-50,  r:6, spd:.3, lines:['Api ini tidak boleh padam, ini nyawa kami']},
+    {n:'Penggembala Rusa',     c1:'#8b5a2b', c2:'#5a3a1b', x:130,z:-20,  r:14,spd:.4, lines:['Rusa-rusa ini suka makan wortel']},
+    {n:'Pemanjat Gunung',      c1:'#3a3a8a', c2:'#101040', x:-100,z:0,   r:12,spd:.55,lines:['Aku sudah mendaki 3 gunung tertinggi!']},
+    {n:'Pembuat Pakaian',      c1:'#b05dff', c2:'#5a1a8b', x:100,z:0,    r:6, spd:.3, lines:['Mantel bulu ini hangat sekali']},
+    {n:'Penjaga Mercusuar Es', c1:'#f4f4f4', c2:'#8a8a8a', x:0,  z:140,  r:6, spd:.2, lines:['Cahaya ini menuntun kapal di badai salju']},
+    {n:'Pengukir Es',          c1:'#aee0ff', c2:'#5a90b0', x:75, z:80,   r:6, spd:.25,lines:['Ukiran es ini akan bertahan sampai musim panas']},
+    {n:'Penjaga Danau',        c1:'#aee0ff', c2:'#5a90b0', x:-20,z:-115, r:6, spd:.25,lines:['Danau ini membeku sepanjang tahun']},
+    {n:'Pemancing Es',         c1:'#7fd0ff', c2:'#3a80b0', x:20, z:-100, r:6, spd:.3, lines:['Ikan di bawah es sangat besar']},
+    {n:'Pengembara Salju',     c1:'#dcecff', c2:'#8aa8c8', x:-150,z:80,  r:20,spd:.6, lines:['Aku berjalan 100 km untuk sampai sini']},
+    {n:'Ahli Cuaca',           c1:'#3aa0d0', c2:'#1a6080', x:-20,z:60,   r:5, spd:.2, lines:['Besok akan turun salju lebih lebat']},
+    {n:'Penjaga Hutan Pinus',  c1:'#2f6b3a', c2:'#1a3a20', x:60, z:60,   r:10,spd:.35,lines:['Pohon pinus ini berumur 200 tahun']},
+    {n:'Pembuat Sepatu Salju', c1:'#8b5a2b', c2:'#5a3a1b', x:-130,z:20,  r:6, spd:.3, lines:['Sepatu ini bisa dipakai di salju tebal']},
+    {n:'Penjaga Goa Es',       c1:'#aee0ff', c2:'#5a90b0', x:140,z:60,   r:6, spd:.25,lines:['Di dalam goa itu suhunya -40 derajat']},
+    {n:'Pemusik Es',           c1:'#7fd0ff', c2:'#3a80b0', x:-30,z:30,   r:6, spd:.3, lines:['Aku main seruling dari tulang']},
+    {n:'Penjual Coklat',       c1:'#8b5a2b', c2:'#5a3a1b', x:30, z:30,   r:5, spd:.25,lines:['Coklat panas! Coklat panas!']},
+    {n:'Kurir Salju',          c1:'#ff5d5d', c2:'#8b1a1a', x:20, z:-60,  r:12,spd:.8, lines:['Permisi! Aku antar paket!']},
+    {n:'Penjaga Ski',          c1:'#3a8dff', c2:'#1a4a9a', x:100,z:-90,  r:10,spd:.5, lines:['Jalur ski di sini paling menantang']},
+    {n:'Penjaga Perbatasan',   c1:'#8a8a82', c2:'#3a3a32', x:0,  z:100,  r:5, spd:.2, lines:['Berhenti! Siapa kau?']},
+    {n:'Yeti Jelloger',        c1:'#f0f8ff', c2:'#7fa0c0', x:180,z:180,  r:3, spd:0, secret:true, lines:['Aku bukan monster, aku hanya kesepian']},
+    {n:'Santa Jelloger',       c1:'#ff0000', c2:'#8b0000', x:-180,z:-180,r:3, spd:0, secret:true, lines:['Ho ho ho, apa kamu sudah jadi anak baik tahun ini?']},
+    {n:'Penguin Jelloger',     c1:'#1a1a2a', c2:'#ffffff', x:180,z:-180, r:3, spd:0, secret:true, lines:['Aku bisa berenang lebih cepat dari kamu']},
+    {n:'Ratu Es Jelloger',     c1:'#aee0ff', c2:'#5a90b0', x:-180,z:180, r:3, spd:0, secret:true, lines:['Sentuh aku dan kau akan membeku']}
+  ]
+};
+
 function makeBoostBubble(x,y,z){const g=new THREE.Group();g.position.set(x,y,z);const inner=new THREE.Mesh(new THREE.SphereGeometry(0.7,10,8),new THREE.MeshBasicMaterial({color:0xffb84a}));const outer=new THREE.Mesh(new THREE.SphereGeometry(1.1,10,8),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:.3,side:THREE.DoubleSide}));const ring=new THREE.Mesh(new THREE.TorusGeometry(1.3,0.08,4,16),new THREE.MeshBasicMaterial({color:0xff5d5d}));ring.rotation.x=Math.PI/2;g.add(inner,outer,ring);world.add(g);return{m:g,inner,outer,ring,x,y,z,baseY:y,t:Math.random()*6.28,ph:Math.random()*6.28,act:true,respawn:0}}
 
 function build(n){
@@ -644,7 +867,7 @@ function build(n){
   cols=[];plats=[];hillGrass=[];
   jbs.forEach(j=>sc.remove(j.m));jbs=[];
   boostBubbles.forEach(b=>sc.remove(b.m));boostBubbles=[];
-  swings=[];rings=[];WINDMILLS=[];FLAGPOLES=[];ANIMALS=[];FOUNTAINS=[];WATERFALLS=[];BALLOONS=[];WATERWHEELS=[];BELLS=[];LANTERNS=[];BEACONS.length=0;
+  swings=[];rings=[];WINDMILLS=[];FLAGPOLES=[];ANIMALS=[];FOUNTAINS=[];WATERFALLS=[];BALLOONS=[];WATERWHEELS=[];BELLS=[];LANTERNS=[];BEACONS.length=0;clearJellogers();
   removeSky();clearAmb();
   curMap=n;
   LIM=(n=='parkour')?240:n=='speedrace'?160:200;
@@ -732,7 +955,7 @@ function build(n){
   if(L.swings)for(const[x,z]of L.swings)buildingZones.push({x,z,r:6});
   if(L.structures)for(const st of L.structures){
     const t=st[0];
-    if(t=='windmill'||t=='watertower'||t=='flagpole'||t=='pond'||t=='rockformation'||t=='flowerbed'||t=='crates'||t=='barn'||t=='haystack'||t=='cart'||t=='barrels'||t=='signpost'||t=='totem'||t=='marketstall'||t=='archway'||t=='belltower'||t=='picnictable'||t=='stonecircle'||t=='statuegarden'||t=='waterwheel'||t=='giantmushroom'||t=='stumplog'||t=='scarecrow'||t=='beehive'||t=='logpile'||t=='ruinpillar'||t=='beachhut'||t=='boat'||t=='beachumbrella'||t=='potshelf'||t=='lanternpost')buildingZones.push({x:st[1],z:st[2],r:t=='watertower'||t=='windmill'||t=='barn'||t=='belltower'?12:t=='stonecircle'?14:t=='pond'?st[3]+3:7});
+    if(t=='windmill'||t=='watertower'||t=='flagpole'||t=='pond'||t=='rockformation'||t=='flowerbed'||t=='crates'||t=='barn'||t=='haystack'||t=='cart'||t=='barrels'||t=='signpost'||t=='totem'||t=='marketstall'||t=='archway'||t=='belltower'||t=='picnictable'||t=='stonecircle'||t=='statuegarden'||t=='waterwheel'||t=='giantmushroom'||t=='stumplog'||t=='scarecrow'||t=='beehive'||t=='logpile'||t=='ruinpillar'||t=='beachhut'||t=='boat'||t=='beachumbrella'||t=='potshelf'||t=='lanternpost'||t=='flowerarch'||t=='wishingwell'||t=='garden'||t=='statuejello'||t=='torch')buildingZones.push({x:st[1],z:st[2],r:t=='watertower'||t=='windmill'||t=='barn'||t=='belltower'?12:t=='stonecircle'?14:t=='pond'?st[3]+3:t=='garden'?(st[3]||7)+2:7});
     if(t=='fence')buildingZones.push({x:(st[1]+st[3])/2,z:(st[2]+st[4])/2,r:Math.hypot(st[3]-st[1],st[4]-st[2])/2+2});
     if(t=='stonewall')buildingZones.push({x:(st[1]+st[3])/2,z:(st[2]+st[4])/2,r:Math.hypot(st[3]-st[1],st[4]-st[2])/2+2});
     if(t=='woodenbridge')buildingZones.push({x:st[1],z:st[2],r:8});
@@ -744,6 +967,10 @@ function build(n){
   const hitsHill=(x,z,margin=0)=>{for(const h of hillData){if(Math.hypot(x-h.x,z-h.z)<h.r+margin)return true}return false};
 
   if(L.hills)for(const h of L.hills)hill(h.x,h.z,h.r,h.h,L.edge,gr);
+
+  // ═══ Gfx multiplier untuk efek melimpah ═══
+  const GFX_MULT = cfg.gfx==='highest'?3.0 : cfg.gfx==='high'?1.8 : 1.0;
+  const AMB_MULT_GFX = cfg.gfx==='highest'?2.5 : cfg.gfx==='high'?1.6 : 1.0;
 
   const roadData=[];
   for(const r of L.roads){const safePts=r.pts.filter(([px,pz])=>!hitsHill(px,pz,-4));if(safePts.length<2)continue;roadData.push(road(safePts,r.w,L.roadFill,L.roadTrim))}
@@ -758,10 +985,11 @@ function build(n){
   const trees={};
   const addTree=(type,x,z,s)=>{if(!trees[type])trees[type]=[];trees[type].push({x,y:0,z,s:s||1,r:Math.random()*6.28})};
   for(const tz of L.treeZones){
-    for(let i=0;i<tz.count;i++){
-      const sectorAngle=(i/tz.count)*6.28;let ok=false,tries=0;
+    const tCount=Math.round(tz.count*GFX_MULT);
+    for(let i=0;i<tCount;i++){
+      const sectorAngle=(i/tCount)*6.28;let ok=false,tries=0;
       while(!ok&&tries<8){tries++;
-        const a=sectorAngle+(Math.random()-.5)*(6.28/tz.count)*0.7;
+        const a=sectorAngle+(Math.random()-.5)*(6.28/tCount)*0.7;
         const d=tz.r*0.3+Math.random()*tz.r*0.55;
         const x=tz.cx+Math.cos(a)*d,z=tz.cz+Math.sin(a)*d;
         if(Math.hypot(x,z)>LIM-8)continue;if(Math.hypot(x,z)<L.plaza+5)continue;if(tooClose(x,z,4))continue;if(distToRoad(x,z)<1.5)continue;if(hitsHill(x,z,-3))continue;
@@ -782,9 +1010,9 @@ function build(n){
       arr.push({x,y:0,z,s:.8+Math.random()*.5,r:Math.random()*6.28});
     }
   };
-  spreadGrass(grasses,L.grassCount);spreadGrass(flowers,L.flowerCount);
+  spreadGrass(grasses,Math.round(L.grassCount*GFX_MULT));spreadGrass(flowers,Math.round(L.flowerCount*GFX_MULT));
   for(const hg of hillGrass)grasses.push(hg);
-  for(let i=0;i<L.rockCount;i++){
+  for(let i=0;i<Math.round(L.rockCount*GFX_MULT);i++){
     const a=Math.random()*6.28,d=70+Math.random()*(LIM-80);const x=Math.cos(a)*d,z=Math.sin(a)*d;
     if(tooClose(x,z,4))continue;if(distToRoad(x,z)<3)continue;if(hitsHill(x,z,-5))continue;
     rocks.push({x,y:0,z,s:.7+Math.random()*.7,r:Math.random()*6.28});
@@ -846,6 +1074,11 @@ function build(n){
     else if(t=='stumplog')stumpLog(st[1],st[2]);
     else if(t=='scarecrow')scarecrow(st[1],st[2]);
     else if(t=='beehive')beehive(st[1],st[2]);
+    else if(t=='flowerarch')flowerArch(st[1],st[2],st[3]||0);
+    else if(t=='wishingwell')wishingWell(st[1],st[2]);
+    else if(t=='garden')garden(st[1],st[2],st[3]||7);
+    else if(t=='statuejello')statueJello(st[1],st[2]);
+    else if(t=='torch')torch(st[1],st[2]);
   }
   if(L.extras)for(const ex of L.extras){
     const t=ex[0];
@@ -861,18 +1094,22 @@ function build(n){
   if(flowers.length)instance(treeGeo('flower'),flowers);
 
   for(const amb of L.ambient){
-    if(amb==='butterflies')for(let i=0;i<25;i++){const a=Math.random()*6.28,d=30+Math.random()*180;spawnAmb('butterflies',{x:Math.cos(a)*d,y:1.5+Math.random()*2,z:Math.sin(a)*d,ph:Math.random()*6.28,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:2+Math.random()*4,spd:.6+Math.random()*.5})}
-    if(amb==='birds')for(let i=0;i<10;i++)spawnAmb('birds',{x:(Math.random()-.5)*300,y:25+Math.random()*15,z:(Math.random()-.5)*300,a:Math.random()*6.28,r:60+Math.random()*60,spd:.3+Math.random()*.2,y0:25+Math.random()*15})
-    if(amb==='clouds')for(let i=0;i<14;i++)spawnAmb('clouds',{x:(Math.random()-.5)*400,y:40+Math.random()*20,z:(Math.random()-.5)*400,spd:.5+Math.random()*1,sx:1+Math.random()*1.2,sy:1+Math.random()*.4,sz:.8+Math.random()*.8})
-    if(amb==='leaves')for(let i=0;i<20;i++)spawnAmb('leaves',{x:(Math.random()-.5)*200,y:8+Math.random()*10,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*2,vz:(Math.random()-.5)*2,ph:Math.random()*6.28})
-    if(amb==='petals')for(let i=0;i<25;i++)spawnAmb('petals',{x:(Math.random()-.5)*200,y:8+Math.random()*8,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*1.5,vz:(Math.random()-.5)*1.5,ph:Math.random()*6.28})
-    if(amb==='snow')for(let i=0;i<90;i++)spawnAmb('snow',{x:(Math.random()-.5)*200,y:Math.random()*30+5,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*.8,vy:-1.5-Math.random()*2,vz:(Math.random()-.5)*.8})
-    if(amb==='fireflies')for(let i=0;i<30;i++){const a=Math.random()*6.28,d=20+Math.random()*150;spawnAmb('fireflies',{x:Math.cos(a)*d,y:.5+Math.random()*3,z:Math.sin(a)*d,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:1+Math.random()*2,ph:Math.random()*6.28,spd:.3+Math.random()*.4})}
-    if(amb==='bubbles')for(let i=0;i<18;i++){const a=Math.random()*6.28,d=20+Math.random()*100;spawnAmb('bubbles',{x:Math.cos(a)*d,y:Math.random()*2,z:Math.sin(a)*d,vy:.6+Math.random()*.8})}
-    if(amb==='dust')for(let i=0;i<25;i++){const a=Math.random()*6.28,d=15+Math.random()*120;spawnAmb('dust',{x:Math.cos(a)*d,y:1+Math.random()*8,z:Math.sin(a)*d,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.3,vz:(Math.random()-.5)*.4})}
+    if(amb==='butterflies')for(let i=0;i<Math.round(25*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=30+Math.random()*180;spawnAmb('butterflies',{x:Math.cos(a)*d,y:1.5+Math.random()*2,z:Math.sin(a)*d,ph:Math.random()*6.28,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:2+Math.random()*4,spd:.6+Math.random()*.5})}
+    if(amb==='birds')for(let i=0;i<Math.round(10*AMB_MULT_GFX);i++)spawnAmb('birds',{x:(Math.random()-.5)*300,y:25+Math.random()*15,z:(Math.random()-.5)*300,a:Math.random()*6.28,r:60+Math.random()*60,spd:.3+Math.random()*.2,y0:25+Math.random()*15})
+    if(amb==='clouds')for(let i=0;i<Math.round(14*AMB_MULT_GFX);i++)spawnAmb('clouds',{x:(Math.random()-.5)*400,y:40+Math.random()*20,z:(Math.random()-.5)*400,spd:.5+Math.random()*1,sx:1+Math.random()*1.2,sy:1+Math.random()*.4,sz:.8+Math.random()*.8})
+    if(amb==='leaves')for(let i=0;i<Math.round(20*AMB_MULT_GFX);i++)spawnAmb('leaves',{x:(Math.random()-.5)*200,y:8+Math.random()*10,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*2,vz:(Math.random()-.5)*2,ph:Math.random()*6.28})
+    if(amb==='petals')for(let i=0;i<Math.round(25*AMB_MULT_GFX);i++)spawnAmb('petals',{x:(Math.random()-.5)*200,y:8+Math.random()*8,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*1.5,vz:(Math.random()-.5)*1.5,ph:Math.random()*6.28})
+    if(amb==='snow')for(let i=0;i<Math.round(90*AMB_MULT_GFX);i++)spawnAmb('snow',{x:(Math.random()-.5)*200,y:Math.random()*30+5,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*.8,vy:-1.5-Math.random()*2,vz:(Math.random()-.5)*.8})
+    if(amb==='fireflies')for(let i=0;i<Math.round(30*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=20+Math.random()*150;spawnAmb('fireflies',{x:Math.cos(a)*d,y:.5+Math.random()*3,z:Math.sin(a)*d,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:1+Math.random()*2,ph:Math.random()*6.28,spd:.3+Math.random()*.4})}
+    if(amb==='bubbles')for(let i=0;i<Math.round(18*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=20+Math.random()*100;spawnAmb('bubbles',{x:Math.cos(a)*d,y:Math.random()*2,z:Math.sin(a)*d,vy:.6+Math.random()*.8})}
+    if(amb==='dust')for(let i=0;i<Math.round(25*AMB_MULT_GFX);i++){const a=Math.random()*6.28,d=15+Math.random()*120;spawnAmb('dust',{x:Math.cos(a)*d,y:1+Math.random()*8,z:Math.sin(a)*d,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.3,vz:(Math.random()-.5)*.4})}
   }
 
   spawnJBs();
+
+  // spawn jellogers untuk map ini
+  const jd=JELLOGER_DEFS[n];
+  if(jd){for(const d of jd) spawnJelloger(d)}
 }
 
 const jbGeo=new THREE.SphereGeometry(.45,8,6);
@@ -1027,7 +1264,7 @@ async function join(id,map,h){const er=await ready;if(er&&er!='timeout'&&er!='ne
 async function join2(id,map,h){rid=id;host=h;roomMap=map;base=db.ref('rooms/'+id);me=base.child('players/'+uid);me.onDisconnect().remove();await me.set({n:cfg.name,c1:cfg.c1,c2:cfg.c2,sh:cfg.sh,nc:cfg.nc,nf:cfg.nf,x:0,z:0,y:0,r:0,e:-1,et:0,ct:0,ch:' ',jb:cfg.jb,lastSeen:TS});pl.x=pl.z=pl.y=0;joined=true;base.child('players').on('value',onPl);if(pl._hb)clearInterval(pl._hb);pl._hb=setInterval(()=>{if(me)me.update({lastSeen:TS}).catch(()=>{})},20000);if(id[0]!='g'){base.child('meta').on('value',s=>{const m=s.val();if(m&&m.started&&!playing)start(m.map)})}return 1}
 function onPl(s){const v=s.val()||{};if(joined&&!v[uid]){leave();alert('Kamu keluar dari room');return}$('ll').innerHTML='';for(const id in v){const r=document.createElement('div');r.className='row';r.innerHTML=`<i style="background:${v[id].c1}"></i><b></b>`;r.lastChild.textContent=v[id].n+(id==uid?' (kamu)':'');if(host&&id!=uid){const x=document.createElement('button');x.className='kick';x.textContent=KX;x.onclick=()=>base.child('players/'+id).remove();r.append(x)}$('ll').append(r)}for(const id in v){if(id==uid)continue;const d=v[id];let p=P[id];if(!p){p=P[id]=mkP(d);p.x=d.x;p.z=d.z;p.y=d.y||0;if((d.jb||0)>=500)toast('🎉 '+d.n+' punya '+d.jb+' JB!')}p.tx=d.x;p.tz=d.z;p.tr=d.r;p.ty=d.y||0;p.jbLvl=jbLvlOf(d.jb||0);if(d.et!==p.lEt){if(p.init&&d.e>=0)setE(p,d.e);p.lEt=d.et}if(d.ct!==p.lCt){if(p.init&&d.ch.trim())say(p,d.ch);p.lCt=d.ct}p.init=1}for(const id in P)if(!v[id]){sc.remove(P[id].root);delete P[id]}}
 function start(map){build(map);world.visible=true;menuG.visible=false;sc.add(pl.root);playing=true;pl.boostMul=1;pl.boostTime=0;pl.boostCooldown=0;pl.sitting=null;pl.balloon=null;pl.hp=pl.maxHp;pl.inRing=false;pl.koTimer=0;pl.invuln=0;pl._prevJump=false;if(map=='speedrace'){pl.x=0;pl.z=-5;pl.y=0}else if(map=='parkour'){pl.x=0;pl.z=0;pl.y=1}else{pl.x=6;pl.z=-8;pl.y=0}pl.vx=pl.vz=pl.vy=0;pl.r=0;raceTimer=0;raceRunning=false;raceFinished=false;raceArmed=true;['menu','playpick','lobby'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');zd=12}
-async function leave(){joined=false;playing=false;if(pl&&pl._hb){clearInterval(pl._hb);pl._hb=null}if(pl&&pl.balloon){pl.balloon.rider=null;pl.balloon=null}if(base){base.child('players').off();base.child('meta').off();try{if(host&&rid[0]!='g')await base.remove();else await me.remove()}catch(e){}}for(const id in P)sc.remove(P[id].root);P={};base=me=null;$('hud').classList.add('hide');$('pause').classList.add('hide');$('hpbar').classList.add('hide');menuMode();show('menu')}
+async function leave(){joined=false;playing=false;if(pl&&pl._hb){clearInterval(pl._hb);pl._hb=null}if(pl&&pl.balloon){pl.balloon.rider=null;pl.balloon=null}if(base){base.child('players').off();base.child('meta').off();try{if(host&&rid[0]!='g')await base.remove();else await me.remove()}catch(e){}}for(const id in P)sc.remove(P[id].root);P={};base=me=null;$('hud').classList.add('hide');$('pause').classList.add('hide');$('hpbar').classList.add('hide');if(dlgBtnEl)dlgBtnEl.classList.remove('show');currentDlgTarget=null;menuMode();show('menu')}
 const code=()=>Math.random().toString(36).slice(2,7).toUpperCase();
 $('rc').onclick=async()=>{const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){return toast(ERR[er])}const m=selMap,c=code();try{await db.ref('rooms/'+c+'/meta').set({host:uid,map:m,started:false})}catch(e){return toast('Gagal buat room: '+e.code)}if(await join(c,m,true)){$('lc').textContent=c;$('lg').classList.remove('hide');show('lobby')}};
 $('rj').onclick=async()=>{const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){return toast(ERR[er])}const c=$('ri').value.trim().toUpperCase();let r;try{r=await db.ref('rooms/'+c+'/meta').once('value')}catch(e){return toast('Gagal: '+e.code)}if(!r.exists())return toast('Room tidak ditemukan');const m=r.val().map;if(await join(c,m,false)){$('lc').textContent=c;$('lg').classList.add('hide');show('lobby')}};
@@ -1109,6 +1346,17 @@ function frame(now){
     for(const fo of FOUNTAINS){for(const p of fo.parts){if(p.isFlame){p.t=(p.t+dt*3)%1;const s=1-p.t*.7;p.m.scale.set(s,s,s);p.m.material.opacity=.75-Math.abs(p.t-.5)*.8;continue}p.t=(p.t+dt*1.3)%1;const a=p.baseAng+p.t*2;const r=Math.abs(Math.sin(p.t*Math.PI));const xr=Math.cos(a)*r*1.5;const zr=Math.sin(a)*r*1.5;p.m.position.set(fo.x+xr,fo.topY+p.t*2-r*0.5,fo.z+zr);p.m.material.opacity=1-p.t*.7;p.m.scale.setScalar(1-p.t*.5)}}
     for(const b of BALLOONS){b.t+=dt;if(b.flame){b.flame.scale.set(1,.8+Math.sin(b.t*20)*.4,1);b.flame.material.opacity=.7+Math.sin(b.t*15)*.2}if(!b.rider){b.y=Math.max(0,b.y);b.g.position.y=b.y+Math.sin(b.t*1.5)*0.15}}
     for(const a of ANIMALS){a.t+=dt;a.wanderCd-=dt;const dxT=a.targetX-a.x,dzT=a.targetZ-a.z;const distT=Math.hypot(dxT,dzT);if(distT<0.6 || a.wanderCd<=0){const ang=Math.random()*6.28;const d=Math.random()*a.r*0.7+a.r*0.3;a.targetX=a.spawnX+Math.cos(ang)*d;a.targetZ=a.spawnZ+Math.sin(ang)*d;a.wanderCd=2.5+Math.random()*3}if(distT>0.1){const nx=dxT/distT, nz=dzT/distT;const desiredVx=nx*a.spd, desiredVz=nz*a.spd;a.vx+=(desiredVx-a.vx)*Math.min(1,dt*2.5);a.vz+=(desiredVz-a.vz)*Math.min(1,dt*2.5)}else{a.vx*=Math.pow(0.2,dt);a.vz*=Math.pow(0.2,dt)}a.x+=a.vx*dt;a.z+=a.vz*dt;const speed=Math.hypot(a.vx,a.vz);if(speed>0.05){const targetRot=Math.atan2(a.vx,a.vz);let dr=targetRot-a.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));a.g.rotation.y+=dr*Math.min(1,dt*6)}const y=groundYSafeAt(a.x,a.z);a.g.position.set(a.x,y,a.z);for(let i=0;i<a.legs.length;i++){const leg=a.legs[i];const phase=(i%2)*Math.PI;const amp=Math.min(0.4,speed*0.8);leg.rotation.x=Math.sin(a.t*10+phase)*amp}const bob=Math.abs(Math.sin(a.t*10))*0.05*Math.min(1,speed*3);a.g.position.y+=bob}
+    // ── Jellogers ──
+    wanderJellogers(dt);
+    let nearestJ=null, ndJ=3.5;
+    for(const j of JELLOGERS){const dj=Math.hypot(pl.x-j.x,pl.z-j.z);if(dj<ndJ){ndJ=dj;nearestJ=j}}
+    currentDlgTarget=nearestJ;
+    if(dlgBtnEl){
+      if(currentDlgTarget){
+        dlgBtnEl.classList.add('show');
+        dlgBtnEl.textContent='💬 Bicara dengan '+currentDlgTarget._jname+(currentDlgTarget.secret?' ⭐':'');
+      } else dlgBtnEl.classList.remove('show');
+    }
     for(const q of AMB.butterflies){if(!q.act)continue;q.t+=dt;const a=q.t*q.spd+q.ph;q.m.position.set(q.cx+Math.cos(a)*q.r,q.y+Math.sin(q.t*3)*.4,q.cz+Math.sin(a)*q.r);q.m.rotation.y=-a;q.m.rotation.z=Math.sin(q.t*8)*.4}
     for(const q of AMB.fireflies){if(!q.act)continue;q.t+=dt;const a=q.t*q.spd+q.ph;q.m.position.set(q.cx+Math.cos(a)*q.r,q.y+Math.sin(q.t*2)*.5,q.cz+Math.sin(a)*q.r);q.m.material.opacity=.5+Math.sin(q.t*3+q.ph)*.5}
     for(const q of AMB.birds){if(!q.act)continue;q.t+=dt;const a=q.t*q.spd+q.ph;q.m.position.set(Math.cos(a)*q.r,q.y0+Math.sin(q.t*2)*1.5,Math.sin(a)*q.r);q.m.rotation.y=-a+Math.PI/2}
@@ -1121,9 +1369,13 @@ function frame(now){
     for(const q of AMB.orbs){if(!q.act)continue;q.t+=dt;q.m.position.y+=Math.sin(q.t*1.5+q.ph)*dt*1.5;q.m.position.x+=Math.cos(q.t*.7+q.ph)*dt;q.m.position.z+=Math.sin(q.t*.7+q.ph)*dt}
     for(const q of AMB.bubbles){if(!q.act)continue;q.t+=dt;q.m.position.y+=q.vy*dt;q.m.material.opacity=Math.max(0,.6-q.t*.3);if(q.m.position.y>8||q.t>2){q.act=false;q.m.visible=false;const a=Math.random()*6.28,d=20+Math.random()*100;spawnAmb('bubbles',{x:Math.cos(a)*d,y:0.1,z:Math.sin(a)*d,vy:.6+Math.random()*.8})}}
     for(const q of AMB.dust){if(!q.act)continue;q.t+=dt;q.m.position.x+=q.vx*dt;q.m.position.y+=Math.sin(q.t*2+q.ph)*.3*dt;q.m.position.z+=q.vz*dt;q.m.material.opacity=.4+Math.sin(q.t*2)*.3;if(q.t>6){q.act=false;q.m.visible=false}}
-  } else {pl.r=0;pl.vx=pl.vz=0;$('prompt').classList.add('hide')}
+  } else {
+    pl.r=0;pl.vx=pl.vz=0;$('prompt').classList.add('hide');
+    currentDlgTarget=null;
+    if(dlgBtnEl)dlgBtnEl.classList.remove('show');
+  }
 
-  const all=[pl,...Object.values(P)];
+  const all=[pl,...Object.values(P),...JELLOGERS];
   for(const p of all){
     if(p!==pl)p.root.visible=playing;
     if(p!==pl){p.x+=(p.tx-p.x)*Math.min(1,dt*10);p.z+=(p.tz-p.z)*Math.min(1,dt*10);p.y+=((p.ty||0)-p.y)*Math.min(1,dt*14);let d=p.tr-p.r;d=Math.atan2(Math.sin(d),Math.cos(d));p.r+=d*Math.min(1,dt*10)}
@@ -1161,6 +1413,7 @@ function frame(now){
     for(const bb of boostBubbles){if(bb.act){x.fillStyle='#ff8c1a';x.fillRect(f(bb.x)-2,f(bb.z)-2,4,4)}}
     for(const b of BALLOONS){x.fillStyle='#ff5d5d';x.fillRect(f(b.x)-3,f(b.z)-3,6,6)}
     for(const a of ANIMALS){x.fillStyle='#ffffff';x.fillRect(f(a.x)-1,f(a.z)-1,3,3)}
+    for(const j of JELLOGERS){x.fillStyle=j.secret?'#ffe27a':'#8fd08f';x.fillRect(f(j.x)-1,f(j.z)-1,3,3)}
     for(const id in P){x.fillStyle='#e22';x.fillRect(f(P[id].x)-2,f(P[id].z)-2,4,4)}
     x.fillStyle='#ffd23f';x.fillRect(f(pl.x)-2,f(pl.z)-2,4,4);
     x.strokeStyle='#0e1a3a';x.lineWidth=1;x.strokeRect(f(pl.x)-3.5,f(pl.z)-3.5,7,7);

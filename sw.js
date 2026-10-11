@@ -1,4 +1,4 @@
-const V='mu6';
+const V='mu7';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(k=>Promise.all(k.filter(x=>x!=V).map(x=>caches.delete(x))))

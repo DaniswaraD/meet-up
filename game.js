@@ -63,7 +63,7 @@ const M=(g,c,x,y,z,par)=>Mt(g,LM(c),x,y,z,par);
 const BOX=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
 const addCol=(x,y,z,w,h,d,opt)=>cols.push(Object.assign({x,y,z,w,h,d,enabled:true,slip:0},opt||{}));
 
-// SPAWNERS — positions cleared of structures (checked manually each map)
+// SPAWNERS
 const SPAWNERS={
   island:[[52,0,22,'truck'],[-80,0,-30,'super'],[0,0,-130,'monster']],
   desert:[[52,0,22,'truck'],[-80,0,-30,'super'],[0,0,-130,'monster']],
@@ -72,7 +72,8 @@ const SPAWNERS={
   parkour:[],
   speedrace:[[-10,0,4,'super'],[-5,0,4,'super'],[0,0,4,'super'],[5,0,4,'super'],[10,0,4,'super']]
 };
-function nearSpawner(x,z,r){if(!curSpawners)return false;for(const s of curSpawners){if(Math.hypot(x-s[0],z-s[2])<r)return true}return false}
+// Renamed function to avoid conflict with state variable `nearSpawner`
+function isNearSp(x,z,r){if(!curSpawners)return false;for(const s of curSpawners){if(Math.hypot(x-s[0],z-s[2])<r)return true}return false}
 
 // ============================== STRUCTURES ==============================
 function house(hx,hz,wood,roof,opt){
@@ -91,7 +92,6 @@ function house(hx,hz,wood,roof,opt){
   Mt(BOX(doorW,h-6,t),wm,0,6+(h-6)/2,d/2,g);addCol(hx,6,hz+d/2,doorW,h-6,t);
   const wm2=LM(0x8fd0ff,{shininess:60});
   [1,-1].forEach(s=>Mt(BOX(2.4,2.8,t+.1),wm2,s*4.2,6.5,d/2+.05,g));
-  // porch
   if(porch){
     Mt(BOX(doorW+1,.15,3),LM(0x8b6a4b),0,.1,d/2+1.5,g);
     addCol(hx,0,hz+d/2+1.5,doorW+1,.15,3);
@@ -99,11 +99,8 @@ function house(hx,hz,wood,roof,opt){
     Mt(BOX(.3,3,.3),LM(0x5a3a1a),doorW/2+.5,1.5,d/2+3,g);
     Mt(BOX(doorW+2,.2,3),LM(roof),0,3,d/2+1.5,g);
   }
-  // chimney
   Mt(BOX(1.2,3,1.2),LM(0x6a5a4a),w/2-2,h+4,-d/2+2.5,g);
-  // roof
   const r=Mt(new THREE.ConeGeometry(w*.9,6,4),LM(roof),0,h+3,0,g);r.rotation.y=Math.PI/4;
-  // === interior ===
   Mt(BOX(4,.9,1.4),soft,-3.5,.55,-3.6,g);addCol(hx-3.5,.1,hz-3.6,4,.9,1.4);
   Mt(BOX(4,.9,.4),soft,-3.5,1,-4.2,g);addCol(hx-3.5,.1,hz-4.2,4,.9,.4);
   Mt(BOX(1.6,.2,1.2),cushion,-4.3,1.05,-3.6,g);Mt(BOX(1.6,.2,1.2),cushion,-2.5,1.05,-3.6,g);
@@ -119,7 +116,6 @@ function house(hx,hz,wood,roof,opt){
   Mt(new THREE.SphereGeometry(.4,6,4),new THREE.MeshBasicMaterial({color:0xffe27a}),5.5,4.2,4,g);
   world.add(g);
 }
-
 function village(cx,cz,houses,opt){
   opt=opt||{};
   for(const[xo,zo,wood,roof]of houses)house(cx+xo,cz+zo,wood,roof);
@@ -133,7 +129,6 @@ function village(cx,cz,houses,opt){
     }
   }
 }
-
 function camp(x,z){
   const g=new THREE.Group();g.position.set(x,0,z);
   for(let i=0;i<8;i++){const a=i/8*6.28;Mt(new THREE.DodecahedronGeometry(.8),LM(0x8a8a8a),Math.cos(a)*3.2,.4,Math.sin(a)*3.2,g)}
@@ -141,7 +136,6 @@ function camp(x,z){
   Mt(new THREE.SphereGeometry(.6,6,4),new THREE.MeshBasicMaterial({color:0xff8c1a}),0,.5,0,g);
   Mt(new THREE.SphereGeometry(.35,6,4),new THREE.MeshBasicMaterial({color:0xffd23f}),0,.8,0,g);
   addCol(x,0,z,2,1.2,2);
-  // logs to sit on
   [[4.5,3.5],[-4.5,3.5],[4.5,-3.5]].forEach(([lx,lz])=>{
     const m=Mt(new THREE.CylinderGeometry(.6,.6,2.4,6),LM(0x6b4a2b),lx,.6,lz,g);m.rotation.z=Math.PI/2;
     addCol(x+lx,.3,z+lz,2.4,.7,1.2);
@@ -152,7 +146,6 @@ function camp(x,z){
   addCol(x-7,0,z+2,5,3.5,5);
   world.add(g);
 }
-
 function bench(x,z){
   const g=new THREE.Group();g.position.set(x,.9,z);
   const wood=LM(0x8b5a2b),legs=LM(0x5a3a1a);
@@ -166,13 +159,10 @@ function bench(x,z){
 function well(x,z){
   const g=new THREE.Group();g.position.set(x,0,z);
   Mt(new THREE.CylinderGeometry(2.2,2.4,2,8),LM(0x8a8a8a),0,1,0,g);
-  // water inside
   Mt(new THREE.CircleGeometry(1.7,20).rotateX(-1.5708),new THREE.MeshPhongMaterial({color:0x2a6a9a,shininess:90,transparent:true,opacity:.9}),0,1.9,0,g);
   [[-1.6,-1.6],[1.6,-1.6],[-1.6,1.6],[1.6,1.6]].forEach(p=>Mt(BOX(.35,4.5,.35),LM(0x8b5a2b),p[0],2.5,p[1],g));
   const r=Mt(new THREE.ConeGeometry(3.5,2,4),LM(0xa04030),0,5.8,0,g);r.rotation.y=Math.PI/4;
-  // rope
   Mt(new THREE.CylinderGeometry(.08,.08,3,4),LM(0x6b4a2b),0,3.5,0,g);
-  // bucket
   Mt(new THREE.CylinderGeometry(.45,.55,.8,8),LM(0x8b5a2b),0,1.9,0,g);
   world.add(g);addCol(x,0,z,4.8,3,4.8);
 }
@@ -181,7 +171,6 @@ function lamp(x,z){
   Mt(new THREE.CylinderGeometry(.25,.35,10,6),LM(0x2a2a2a),0,5,0,g);
   Mt(BOX(1.8,.4,1.8),LM(0x2a2a2a),0,10.2,0,g);
   Mt(new THREE.SphereGeometry(.7,6,4),new THREE.MeshBasicMaterial({color:0xffe27a}),0,10,0,g);
-  // light halo
   const halo=new THREE.Mesh(new THREE.SphereGeometry(1.6,8,6),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.15}));
   halo.position.y=10;g.add(halo);
   world.add(g);addCol(x,0,z,.8,10,.8);
@@ -191,13 +180,12 @@ function igloo(x,z){
   Mt(new THREE.SphereGeometry(5.5,10,6,0,6.28,0,1.57),LM(0xf0f8ff),0,0,0,g);
   Mt(BOX(1.8,2.6,.7),LM(0x5a7a9a),0,1.3,5.4,g);
   Mt(new THREE.SphereGeometry(5.6,10,6,0,6.28,0,.5),LM(0xffffff),0,.1,0,g);
-  // ice block inside as furniture
   Mt(BOX(3,.6,1.6),LM(0xdfeaff),0,.3,0,g);
   addCol(x,.1,z,3,.6,1.6);
   world.add(g);addCol(x,0,z,10,5,10);
 }
 function bigTree(x,z,c){
-  if(nearSpawner(x,z,14))return;
+  if(isNearSp(x,z,14))return;
   const k=.85+Math.random()*.5,tr=1.1*k;
   Mt(new THREE.CylinderGeometry(1.1*k,1.5*k,6*k,7),LM(0x5a3a1a),x,3*k,z);
   Mt(new THREE.CylinderGeometry(.75*k,1*k,4*k,7),LM(0x6b4a2b),x,6*k+2*k,z);
@@ -207,7 +195,7 @@ function bigTree(x,z,c){
   addCol(x,0,z,tr*2,5*k,tr*2);
 }
 function roundTree(x,z,c){
-  if(nearSpawner(x,z,14))return;
+  if(isNearSp(x,z,14))return;
   const k=.9+Math.random()*.4;
   Mt(new THREE.CylinderGeometry(1*k,1.4*k,5*k,6),LM(0x5a3a1a),x,2.5*k,z);
   const fm=LM(c,{flatShading:false,shininess:15});
@@ -218,7 +206,7 @@ function roundTree(x,z,c){
   addCol(x,0,z,2*k,4*k,2*k);
 }
 function pineTree(x,z){
-  if(nearSpawner(x,z,14))return;
+  if(isNearSp(x,z,14))return;
   const k=.85+Math.random()*.5,tr=.9*k;
   Mt(new THREE.CylinderGeometry(.9*k,1.2*k,5*k,6),LM(0x4a2a1a),x,2.5*k,z);
   Mt(new THREE.ConeGeometry(4*k,7*k,7),LM(0x1a5a2a),x,5*k+3.5*k,z);
@@ -227,13 +215,13 @@ function pineTree(x,z){
   addCol(x,0,z,tr*2,4*k,tr*2);
 }
 function rock(x,z,col){
-  if(nearSpawner(x,z,12))return;
+  if(isNearSp(x,z,12))return;
   const s=1.5+Math.random()*1.8;
   Mt(new THREE.DodecahedronGeometry(s),LM(col||(curMap=='snow'?0xcfd8e0:0x8a8a8a)),x,s*.55,z);
   addCol(x,0,z,s*1.4,s*1.2,s*1.4);
 }
 function cactus(x,z){
-  if(nearSpawner(x,z,14))return;
+  if(isNearSp(x,z,14))return;
   const g=new THREE.Group();g.position.set(x,0,z);
   const c=LM(0x3c8f4a);
   Mt(new THREE.CylinderGeometry(.8,.9,7,7),c,0,3.5,0,g);
@@ -251,7 +239,6 @@ function temple(x,z){
   [[-6,-6],[6,-6],[-6,6],[6,6]].forEach(p=>{Mt(BOX(1.5,10,1.5),stone,p[0],9,p[1],g);Mt(BOX(1.5,1,1.5),moss,p[0],14.5,p[1],g);addCol(x+p[0],5,z+p[1],1.5,10,1.5)});
   const r=Mt(new THREE.ConeGeometry(12,7,4),stone,0,17.5,0,g);r.rotation.y=Math.PI/4;
   for(let i=0;i<4;i++)Mt(BOX(3-i*.5,.6,2),stone,0,i*.6,9.5,g);
-  // altar
   Mt(BOX(2.5,1.5,2.5),LM(0x6a5a4a),0,5.5,0,g);addCol(x,3.5,z,2.5,1.5,2.5);
   Mt(new THREE.IcosahedronGeometry(.5,0),new THREE.MeshBasicMaterial({color:0xffd23f}),0,6.5,0,g);
   world.add(g);
@@ -282,7 +269,6 @@ function dock(x,z,len,wid){
     Mt(BOX(.4,3,.4),wood,wid/2-.4,.5,i,g);
     Mt(BOX(.4,3,.4),wood,-wid/2+.4,.5,i,g);
   }
-  // railing at end
   Mt(BOX(wid,.3,.4),wood,0,2.5,len,g);
   Mt(BOX(.3,1.8,.3),wood,-wid/2+.4,1.6,len,g);
   Mt(BOX(.3,1.8,.3),wood,wid/2-.4,1.6,len,g);
@@ -294,7 +280,6 @@ function river(z,wid){
   const bm=LM(0xe8d8a0);
   Mt(BOX(500,.15,1.5),bm,0,.04,z-wid/2-.8);
   Mt(BOX(500,.15,1.5),bm,0,.04,z+wid/2+.8);
-  // rocks along bank
   for(let i=0;i<40;i++){
     const rx=-240+Math.random()*480;
     const side=Math.random()<.5?-1:1;
@@ -305,7 +290,6 @@ function river(z,wid){
 function frozenLake(x,z,r){
   const wm=new THREE.MeshPhongMaterial({color:0xaee0ff,transparent:true,opacity:.85,shininess:90});
   Mt(new THREE.CircleGeometry(r,32).rotateX(-1.5708),wm,x,.08,z);
-  // cracks
   for(let i=0;i<10;i++){
     const a=Math.random()*6.28,rr=Math.random()*r*.85;
     const cx2=x+Math.cos(a)*rr,cz2=z+Math.sin(a)*rr;
@@ -361,7 +345,6 @@ function makeCar(type){
     [-d.wid/2+.35,d.wid/2-.35].forEach(xx=>Mt(BOX(.45,.28,.1),new THREE.MeshBasicMaterial({color:0xffffff}),xx,d.h*.35,d.len/2+.02,g));
     [-d.wid/2+.35,d.wid/2-.35].forEach(xx=>Mt(BOX(.4,.22,.1),new THREE.MeshBasicMaterial({color:0xff3030}),xx,d.h*.4,-d.len/2-.02,g));
     [-.3,.3].forEach(xx=>Mt(new THREE.CylinderGeometry(.12,.12,.4,6),chrome,xx,d.h*.15,-d.len/2-.05,g));
-    // stripe
     Mt(BOX(d.wid*.1,.01,d.len*.9),new THREE.MeshBasicMaterial({color:0xffffff}),0,d.h*.62,0,g);
   } else {
     Mt(BOX(d.wid,.55,d.len),dark,0,d.h*.55,0,g);
@@ -438,27 +421,23 @@ function build(n){
     Mt(BOX(.8,.05,trackLen),LM(0xffffff),-trackW/2+.4,.06,startZ+trackLen/2);
     Mt(BOX(.8,.05,trackLen),LM(0xffffff),trackW/2-.4,.06,startZ+trackLen/2);
     for(let z=5;z<trackLen;z+=12)Mt(BOX(.6,.05,6),new THREE.MeshBasicMaterial({color:0xffd23f}),0,.06,startZ+z);
-    // guardrails
     [-trackW/2-1,trackW/2+1].forEach(xx=>{
       Mt(BOX(.5,1.4,trackLen),LM(0xd0d0d0),xx,.7,startZ+trackLen/2);
       for(let z=0;z<trackLen;z+=4){const c=((z/4)|0)%2?0xff3030:0xffffff;Mt(BOX(.52,.3,2),new THREE.MeshBasicMaterial({color:c}),xx,.7,startZ+z+1)}
       addCol(xx,.2,startZ+trackLen/2,.5,1.4,trackLen);
     });
-    // tire barriers every 30m alternating side
     for(let z=15;z<trackLen;z+=30){
       const side=((z/30)|0)%2?-1:1;
       const bx=side*(trackW/2+2.2);
       for(let i=0;i<3;i++)Mt(new THREE.CylinderGeometry(.55,.55,1,10).rotateZ(Math.PI/2),LM(0x1a1a1a),bx,.55,startZ+z+i*1.3);
       for(let i=0;i<2;i++)Mt(new THREE.CylinderGeometry(.55,.55,1,10).rotateZ(Math.PI/2),LM(0x1a1a1a),bx,.55,startZ+z+.65+i*1.3);
     }
-    // sponsor banners (colored rectangles)
     for(let z=60;z<trackLen;z+=120){
       const col1=[0xff3030,0x3d8bff,0xffd23f,0x3fbf5f][(z/120|0)%4];
       Mt(BOX(.3,3,10),new THREE.MeshBasicMaterial({color:col1}),-trackW/2-2,2,startZ+z);
       const col2=[0x3fbf5f,0xffd23f,0x3d8bff,0xff3030][(z/120|0)%4];
       Mt(BOX(.3,3,10),new THREE.MeshBasicMaterial({color:col2}),trackW/2+2,2,startZ+z);
     }
-    // grandstand at start
     for(let row=0;row<4;row++){
       for(let col2=-3;col2<3;col2++){
         const gx=trackW/2+8+row*1.5,gz=startZ+5+col2*2.2;
@@ -466,14 +445,12 @@ function build(n){
         addCol(gx,(1+row*.6)/2,gz,1.4,1+row*.6,2);
       }
     }
-    // race poles with lights
     for(let z=20;z<trackLen;z+=80){
       for(const xx of[-trackW/2-4,trackW/2+4]){
         Mt(new THREE.CylinderGeometry(.25,.25,10,6),LM(0x333),xx,5,startZ+z);
         Mt(new THREE.SphereGeometry(.7,6,4),new THREE.MeshBasicMaterial({color:0xffe27a}),xx,10.4,startZ+z);
       }
     }
-    // distance markers
     for(let z=100;z<trackLen;z+=100){
       Mt(BOX(2,4,.2),LM(0x3d8bff),-trackW/2-5,2,startZ+z);
       const c=document.createElement('canvas');c.width=96;c.height=32;const cx=c.getContext('2d');
@@ -484,17 +461,14 @@ function build(n){
       const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex}));
       sp.position.set(-trackW/2-5,5,startZ+z);sp.scale.set(2.4,.8,1);world.add(sp);
     }
-    // start lights
     Mt(BOX(1.2,10,1.2),LM(0x404040),-trackW/2-1,5,startZ-1);
     Mt(BOX(1.2,10,1.2),LM(0x404040),trackW/2+1,5,startZ-1);
     Mt(BOX(trackW+2.4,2,1.2),LM(0x404040),0,10,startZ-1);
     [0x1a1a1a,0x1a1a1a,0x1a1a1a,0x3fbf5f].forEach((c,i)=>Mt(new THREE.SphereGeometry(.5,8,6),new THREE.MeshBasicMaterial({color:c}),-2+i*1.4,10,startZ-1.6));
-    // start arch
     Mt(BOX(1.2,10,1.2),LM(0xffd23f),-trackW/2-1,5,startZ+1);
     Mt(BOX(1.2,10,1.2),LM(0xffd23f),trackW/2+1,5,startZ+1);
     Mt(BOX(trackW+2.4,1.2,1.2),LM(0xffd23f),0,10,startZ+1);
     for(let i=-10;i<10;i++){const c=((i+10)%2)?0xffffff:0x000000;Mt(BOX(1,.05,2),new THREE.MeshBasicMaterial({color:c}),i+.5,.07,startZ+2)}
-    // finish
     const finishZ=startZ+1000;
     Mt(BOX(1.5,14,1.5),LM(0xffd23f),-trackW/2-1,7,finishZ);
     Mt(BOX(1.5,14,1.5),LM(0xffd23f),trackW/2+1,7,finishZ);
@@ -507,15 +481,12 @@ function build(n){
     const tex2=new THREE.CanvasTexture(c2);tex2.magFilter=tex2.minFilter=THREE.NearestFilter;
     const sp2=new THREE.Sprite(new THREE.SpriteMaterial({map:tex2}));
     sp2.position.set(0,8,finishZ+.9);sp2.scale.set(8,2,1);world.add(sp2);
-    // scenery
     for(let i=0;i<50;i++){const z=Math.random()*1050,side=Math.random()<.5?-1:1,x=side*(20+Math.random()*50);
       if(Math.random()<.5)pineTree(x,z);else rock(x,z,0x4a4a4a)}
-    // pit stop
     Mt(BOX(10,.4,14),LM(0x3d8bff),22,6,10);
     for(const[x2,z2]of[[18,4],[26,4],[18,16],[26,16]])Mt(BOX(.5,6,.5),LM(0xd0d0d0),x2,3,z2);
     Mt(BOX(2,2,2),LM(0x404040),22,1,8);
   } else {
-    // ========== MAIN MAPS ==========
     if(n=='island'){disc(320,0x2a7fd0,0);disc(210,gr,.02)}
     else disc(210,gr,0);
     const gg=new THREE.CylinderGeometry(215,225,12,48,1,true),pp=gg.attributes.position;
@@ -525,43 +496,36 @@ function build(n){
 
     if(n=='island'){
       river(90,22);bridge(0,90,60,14);
-      // Trees outside river zone and villages
       for(let i=0;i<70;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*195,x=Math.cos(a)*d,z=Math.sin(a)*d;
         if(Math.hypot(x,z)<25||Math.abs(z-90)<16)continue;
-        if(Math.hypot(x-72,z-50)<40)continue; // village 1
-        if(Math.hypot(x+72,z+40)<30)continue; // village 2
+        if(Math.hypot(x-72,z-50)<40)continue;
+        if(Math.hypot(x+72,z+40)<30)continue;
         if(Math.random()<.5)bigTree(x,z,0x2e8b3a);else roundTree(x,z,0x3aa84a)}
-      // rocks scattered
       for(let i=0;i<40;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*190,x=Math.cos(a)*d,z=Math.sin(a)*d;
         if(Math.hypot(x,z)<25||Math.abs(z-90)<16)continue;rock(x,z)}
-      // flowers/butterflies
       for(let i=0;i<250;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*200,x=Math.cos(a)*d,z=Math.sin(a)*d;
         if(Math.hypot(x,z)<15||Math.abs(z-90)<16)continue;
         Mt(new THREE.SphereGeometry(.25,4,3),new THREE.MeshBasicMaterial({color:[0xff6688,0xffee55,0xffffff][rnd()*3|0]}),x,.2,z)}
-      // VILLAGE 1 (main, 3 houses)
       village(72,50,[
         [-18,0,0x8b5a2b,0xa04030],
         [18,0,0xa07850,0x8b3030],
         [0,25,0x9b6a3b,0x6a2a2a]
       ],{pathTo:[0,0],wellX:0,wellZ:12});
-      // VILLAGE 2 (small, 2 houses)
       village(-72,-40,[
         [-15,0,0xa07850,0x8b3030],
         [15,0,0x8b5a2b,0x704020]
       ],{pathTo:[0,0],wellX:0,wellZ:15});
-      // Camps (away from water)
       camp(20,-70);camp(-90,-60);camp(120,-60);camp(-30,-130);
-      // Bench plaza around spawn
       for(let i=0;i<8;i++){const a=i/8*6.28;bench(Math.cos(a)*40,Math.sin(a)*40)}
-      // Lamps (away from river z=90)
       lamp(0,-40);lamp(40,0);lamp(-40,0);lamp(0,40);
       lamp(150,40);lamp(-150,40);lamp(60,180);lamp(-60,180);
-      // Dock extends from island edge into water
       dock(0,200,30,10);
     }
     if(n=='desert'){
       for(let i=0;i<50;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*195,x=Math.cos(a)*d,z=Math.sin(a)*d;
-        if(Math.hypot(x,z)<25)continue;if(Math.hypot(x-72,z-50)<40)continue;if(Math.hypot(x+72,z+40)<30)continue;cactus(x,z)}
+        if(Math.hypot(x,z)<25)continue;
+        if(Math.hypot(x-72,z-50)<40)continue;
+        if(Math.hypot(x+72,z+40)<30)continue;cactus(x,z)}
       for(let i=0;i<35;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*195,x=Math.cos(a)*d,z=Math.sin(a)*d;
         if(Math.hypot(x,z)<25)continue;rock(x,z,0xb8a888)}
       for(let i=0;i<15;i++){const a=rnd()*6.28,d=50+rnd()*150,x=Math.cos(a)*d,z=Math.sin(a)*d;
@@ -582,7 +546,9 @@ function build(n){
     }
     if(n=='jungle'){
       for(let i=0;i<170;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*195,x=Math.cos(a)*d,z=Math.sin(a)*d;
-        if(Math.hypot(x,z)<20)continue;if(Math.hypot(x-72,z-50)<40)continue;if(Math.hypot(x+72,z+40)<30)continue;pineTree(x,z)}
+        if(Math.hypot(x,z)<20)continue;
+        if(Math.hypot(x-72,z-50)<40)continue;
+        if(Math.hypot(x+72,z+40)<30)continue;pineTree(x,z)}
       for(let i=0;i<60;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*200,x=Math.cos(a)*d,z=Math.sin(a)*d;
         if(Math.hypot(x,z)<15)continue;Mt(new THREE.SphereGeometry(1.8+rnd()*1.2,5,4),LM(0x4f8f3f),x,.8,z)}
       for(let i=0;i<40;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*195,x=Math.cos(a)*d,z=Math.sin(a)*d;
@@ -608,11 +574,11 @@ function build(n){
       frozenLake(0,-100,45);
       for(let i=0;i<80;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*195,x=Math.cos(a)*d,z=Math.sin(a)*d;
         if(Math.hypot(x,z)<25||Math.hypot(x,z+100)<50)continue;
-        if(Math.hypot(x-72,z-50)<40)continue;if(Math.hypot(x+72,z+40)<30)continue;
+        if(Math.hypot(x-72,z-50)<40)continue;
+        if(Math.hypot(x+72,z+40)<30)continue;
         pineTree(x,z)}
       for(let i=0;i<30;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*195,x=Math.cos(a)*d,z=Math.sin(a)*d;
         if(Math.hypot(x,z)<25||Math.hypot(x,z+100)<50)continue;rock(x,z,0xcfd8e0)}
-      // igloos — away from frozen lake
       igloo(60,50);igloo(-70,60);igloo(90,90);igloo(-40,110);igloo(120,-60);
       village(-72,-40,[
         [-15,0,0x6b4a2b,0x5a3050],
@@ -921,9 +887,7 @@ function resolveH(){
   for(const c of cols){
     if(!c.enabled)continue;
     const top=c.y+c.h;
-    // Skip if player is above platform top (walking on top or jumping over)
     if(pl.y>=top-0.1)continue;
-    // Skip if platform top is within step height (step-up)
     if(top-pl.y<=STEP)continue;
     if(pl.y+PH<=c.y)continue;
     const dx=pl.x-c.x,dz=pl.z-c.z;

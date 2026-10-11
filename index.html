@@ -38,6 +38,10 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 #joy{left:26px;bottom:90px;width:120px;height:120px;background:#ffffff66;box-shadow:var(--bd)}
 #kn{position:absolute;left:40px;top:40px;width:40px;height:40px;background:#3d8bff;box-shadow:var(--bd)}
 #jb,#rb{padding:0;font-size:9px}#jb{right:26px;bottom:100px;width:72px;height:72px}#rb{right:34px;bottom:190px;width:56px;height:56px}
+#useBtn{right:100px;bottom:100px;width:64px;height:64px;padding:0;margin:0;font-size:10px;background:#ffe27a;color:#17306b;--lo:#d4b23a;--hi:#fff8d0}
+#spawnBtn{right:34px;bottom:260px;width:56px;height:56px;padding:0;margin:0;font-size:9px;background:#4ea8ff}
+#prompt{position:fixed;bottom:230px;left:50%;transform:translateX(-50%);background:rgba(23,48,107,.92);color:#fff;padding:8px 14px;font-size:10px;pointer-events:none;z-index:8;box-shadow:0 4px 0 #0005;white-space:nowrap}
+#raceTimer{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#17306b;color:#fff;padding:10px 18px;font-size:16px;pointer-events:none;z-index:8;box-shadow:0 0 0 3px #7fd0ff,0 4px 0 #0005}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .grid button{margin:0;padding:10px 2px;font-size:8px;background:#e8f2ff;color:var(--k);--lo:#c3d6f3;--hi:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .grid button.on{background:#3d8bff;color:#fff;--lo:#1f56c4;--hi:#7ab8ff}
@@ -73,6 +77,10 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 <div id="hud" class="hide"><canvas id="mm" width="96" height="96"></canvas>
 <button id="pb" class="ib"><svg viewBox="0 0 8 8"><rect x="1" y="1" width="2" height="6"/><rect x="5" y="1" width="2" height="6"/></svg></button><button id="cb" class="ib"><svg viewBox="0 0 8 8"><rect x="0" y="1" width="8" height="5"/><rect x="1" y="6" width="2" height="2"/></svg></button><div id="bar"></div>
 <div id="jbhud"><i></i><span id="jbn">0 JB</span></div>
+<div id="prompt" class="hide"></div>
+<div id="raceTimer" class="hide">0.00s</div>
+<button id="spawnBtn" class="hide">CAR</button>
+<button id="useBtn" class="hide">USE</button>
 <div id="mob" class="hide"><div id="joy"><i id="kn"></i></div><button id="jb">JUMP</button><button id="rb" class="s">RUN</button></div>
 <div id="chat" class="hide"><input id="ci" maxlength="60" placeholder="Pesan"><button id="cs">Kirim</button></div></div>
 <script src="three.min.js"></script>

@@ -28,9 +28,16 @@ const ready=Promise.race([
     try{
       uid=await Promise.race([
         firebase.auth().signInAnonymously().then(r=>r.user.uid),
-        new Promise((_,rej)=>setTimeout(()=>rej(new Error('auth-timeout')),4000))
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('auth-timeout')),10000))
       ]);
-    }catch(e){return'auth'}
+    }catch(e){
+      console.error('[Meet-UP] Auth error:',e.code||e.message,e);
+      if(e.code==='auth/operation-not-allowed'){toast('⚠ Anonymous Auth belum ON di Firebase');return'auth'}
+      if(e.code==='auth/unauthorized-domain'){toast('⚠ Domain belum didaftarkan di Firebase');return'auth'}
+      if(e.message==='auth-timeout'){toast('⚠ Login timeout 10s');return'auth'}
+      toast('⚠ Auth gagal: '+(e.code||e.message));
+      return'auth';
+    }
     for(const u of URLS){
       const d=firebase.app().database(u);
       const ok=await Promise.race([
@@ -42,9 +49,9 @@ const ready=Promise.race([
     }
     return'db';
   })(),
-  new Promise(r=>setTimeout(()=>r('timeout'),8000))
+  new Promise(r=>setTimeout(()=>r('timeout'),12000))
 ]);
-const ERR={net:'Tidak ada internet',auth:'Firebase Auth gagal',db:'Database tidak terhubung',timeout:'Koneksi timeout'};
+const ERR={net:'Tidak ada internet',auth:'Firebase Auth gagal — cek Console (F12)',db:'Database tidak terhubung',timeout:'Koneksi timeout'};
 const G={M:'10001 11011 10101 10001 10001 10001 10001',e:'00000 00000 01110 10001 11111 10000 01110',t:'00100 00100 01110 00100 00100 00100 00011','-':'00000 00000 00000 01110 00000 00000 00000',U:'000000100 000001110 000011111 001000100 001000100 001000100 000111000',P:'11110 10001 10001 11110 10000 10000 10000'};
 document.querySelectorAll('.ttl').forEach(c=>{c.width=50;c.height=10;const x=c.getContext('2d');let ox=2;for(const ch of'Meet-UP'){const rw=G[ch].split(' ');[[1,1,'#17306b'],[0,0,ch=='U'?'#ffd23f':'#fff']].forEach(([dx,dy,col])=>{x.fillStyle=col;rw.forEach((r,j)=>[...r].forEach((v,i)=>v=='1'&&x.fillRect(ox+i+dx,1+j+dy,1,1)))});ox+=rw[0].length+1}});
 
@@ -65,11 +72,11 @@ const addCol=(x,y,z,w,h,d,opt)=>cols.push(Object.assign({x,y,z,w,h,d,enabled:tru
 // ============================== AMBIENT POOLS ==============================
 const AMB={butterflies:[],birds:[],clouds:[],snow:[],leaves:[],fires:[],smokes:[],stars:[],orbs:[]};
 function clearAmb(){for(const k in AMB){for(const m of AMB[k])sc.remove(m.m);AMB[k]=[]}}
-function pool(kind,geo,mat,n,init){
+function pool(kind,geo,mat,n){
   for(let i=0;i<n;i++){
     const m=new THREE.Mesh(geo,mat.clone());
     m.visible=false;sc.add(m);
-    AMB[kind].push(Object.assign({m,act:false,t:0},init||{}));
+    AMB[kind].push({m,act:false,t:0});
   }
 }
 function get(kind){for(const q of AMB[kind])if(!q.act)return q;return null}
@@ -279,7 +286,7 @@ function dock(x,z,len,wid){
 }
 function river(z,wid){
   const wm=new THREE.MeshPhongMaterial({color:0x3aa0d0,transparent:true,opacity:.85,shininess:80});
-  Mt(new THREE.PlaneGeometry(500,wid,40,4).rotateX(-1.5708),wm,0,.08,z);
+  Mt(new THREE.PlaneGeometry(500,wid).rotateX(-1.5708),wm,0,.08,z);
   const bm=LM(0xe8d8a0);
   Mt(BOX(500,.15,1.5),bm,0,.04,z-wid/2-.8);
   Mt(BOX(500,.15,1.5),bm,0,.04,z+wid/2+.8);
@@ -300,8 +307,7 @@ function frozenLake(x,z,r){
   }
 }
 
-// ============================== PARKOUR (dengan bounce pad) ==============================
-// type: 0=normal 1=slip 2=vanish 3=checkpoint 4=bounce
+// ============================== PARKOUR ==============================
 const PARKOUR=[
   [0,0,0,14,14,3],[10,1,0,5,5,0],[14,2,6,5,5,0],[15,3,13,5,5,0],[12,4,19,5,5,0],
   [5,5,23,5,5,4],[-3,6,24,5,5,0],[-10,7,21,5,5,0],[-15,8,15,5,5,2],[-17,9,8,5,5,0],
@@ -322,13 +328,11 @@ function build(n){
   let s=n.length*7919;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
   const disc=(r,c,y,x=0,z=0)=>Mt(new THREE.CircleGeometry(r,32).rotateX(-1.5708),LM(c),x||0,y,z||0);
 
-  // Pre-create ambient pool (dipakai sesuai map)
   pool('clouds',new THREE.SphereGeometry(6,7,5),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.85}),18);
   pool('birds',new THREE.SphereGeometry(.5,5,4),new THREE.MeshBasicMaterial({color:0x1a1a1a}),10);
   pool('butterflies',BOX(.6,.1,.7),new THREE.MeshBasicMaterial({color:0xffe27a}),25);
   pool('snow',BOX(.25,.25,.25),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9}),80);
   pool('leaves',BOX(.5,.06,.5),new THREE.MeshBasicMaterial({color:0x4fa040}),30);
-  pool('fires',new THREE.SphereGeometry(.28,5,4),new THREE.MeshBasicMaterial({color:0xff8c1a,transparent:true}),60);
   pool('smokes',new THREE.SphereGeometry(.5,6,5),new THREE.MeshBasicMaterial({color:0xcccccc,transparent:true,opacity:.5}),30);
   pool('stars',new THREE.SphereGeometry(.15,4,3),new THREE.MeshBasicMaterial({color:0xffffff}),80);
   pool('orbs',new THREE.SphereGeometry(.5,6,5),new THREE.MeshBasicMaterial({color:0x7fd0ff,transparent:true,opacity:.7}),20);
@@ -345,31 +349,23 @@ function build(n){
       if(type===2){c.phase=rnd()*4;c.period=3.2}
       cols.push(c);plats.push(c);
     }
-    // bintang latar + orb
-    for(let i=0;i<80;i++)spawnAmb('stars',{x:(Math.random()-.5)*300,y:20+Math.random()*40,z:(Math.random()-.5)*300,spd:0});
-    for(let i=0;i<12;i++)spawnAmb('orbs',{x:(Math.random()-.5)*80,y:3+Math.random()*15,z:(Math.random()-.5)*80,ph:Math.random()*6.28,baseY:0});
+    for(let i=0;i<80;i++)spawnAmb('stars',{x:(Math.random()-.5)*300,y:20+Math.random()*40,z:(Math.random()-.5)*300});
+    for(let i=0;i<12;i++)spawnAmb('orbs',{x:(Math.random()-.5)*80,y:3+Math.random()*15,z:(Math.random()-.5)*80,ph:Math.random()*6.28});
   } else if(n=='speedrace'){
-    // Balapan lari — track lurus 1000 unit
     disc(1100,0x8fd0ff,0);
     disc(1050,0x4a7f5a,-.05);
     const trackLen=1020,trackW=12,startZ=0;
-    // track base
     Mt(BOX(trackW,.2,trackLen),LM(0x8b6a4b),0,.05,startZ+trackLen/2);
-    // edge lines
     [-trackW/2-.1,trackW/2+.1].forEach(xx=>Mt(BOX(.3,.25,trackLen),LM(0xffffff),xx,.15,startZ+trackLen/2));
-    // dashed center
     for(let z=5;z<trackLen;z+=12)Mt(BOX(.4,.22,6),new THREE.MeshBasicMaterial({color:0xffffff}),0,.16,startZ+z);
-    // start & finish
     for(let i=-6;i<6;i++){const c=((i+6)%2)?0xffffff:0x000000;Mt(BOX(1,.25,2),new THREE.MeshBasicMaterial({color:c}),i+.5,.18,startZ+2)}
     for(let i=-6;i<6;i++){const c=((i+6)%2)?0xffffff:0x000000;Mt(BOX(1,.25,2),new THREE.MeshBasicMaterial({color:c}),i+.5,.18,startZ+1000)}
-    // Start & finish arches
     Mt(BOX(1.2,10,1.2),LM(0xffd23f),-trackW/2-1,5,startZ+1);
     Mt(BOX(1.2,10,1.2),LM(0xffd23f),trackW/2+1,5,startZ+1);
     Mt(BOX(trackW+2.4,1.2,1.2),LM(0xffd23f),0,10,startZ+1);
     Mt(BOX(1.5,14,1.5),LM(0xffd23f),-trackW/2-1,7,startZ+1000);
     Mt(BOX(1.5,14,1.5),LM(0xffd23f),trackW/2+1,7,startZ+1000);
     Mt(BOX(trackW+3,1.5,1.5),LM(0xffd23f),0,14,startZ+1000);
-    // FINISH banner
     const c2=document.createElement('canvas');c2.width=256;c2.height=64;const cx2=c2.getContext('2d');
     for(let i=0;i<256;i+=16)for(let j=0;j<64;j+=16){const cc=((i/16+j/16)%2)?'#fff':'#000';cx2.fillStyle=cc;cx2.fillRect(i,j,16,16)}
     cx2.fillStyle='#ff3d3d';cx2.font='bold 28px monospace';cx2.textAlign='center';cx2.textBaseline='middle';
@@ -377,20 +373,17 @@ function build(n){
     const tex2=new THREE.CanvasTexture(c2);tex2.magFilter=tex2.minFilter=THREE.NearestFilter;
     const sp2=new THREE.Sprite(new THREE.SpriteMaterial({map:tex2}));
     sp2.position.set(0,8,startZ+1000.9);sp2.scale.set(8,2,1);world.add(sp2);
-    // Hurdles setiap 40m — harus lompat
     for(let z=40;z<1000;z+=40){
       Mt(BOX(trackW,.3,.3),LM(0xd0d0d0),0,.7,startZ+z);
       Mt(BOX(.3,1.2,.3),LM(0xd0d0d0),-trackW/2+.3,.6,startZ+z);
       Mt(BOX(.3,1.2,.3),LM(0xd0d0d0),trackW/2-.3,.6,startZ+z);
       addCol(0,.4,startZ+z,trackW,.7,.3);
     }
-    // Side scenery pohon
     for(let i=0;i<50;i++){
       const z=Math.random()*1000,side=Math.random()<.5?-1:1;
       const x=side*(14+Math.random()*30);
       if(Math.random()<.5)pineTree(x,z);else roundTree(x,z,0x3aa84a);
     }
-    // Decorative lamps along the track
     for(let z=30;z<1000;z+=60)lamp(10,z);
   } else {
     if(n=='island'){disc(320,0x2a7fd0,0);disc(210,gr,.02)}
@@ -420,14 +413,10 @@ function build(n){
       lamp(0,-40);lamp(40,0);lamp(-40,0);lamp(0,40);
       lamp(150,40);lamp(-150,40);lamp(60,180);lamp(-60,180);
       dock(0,200,30,10);
-      // Ambient: kupu-kupu, burung, awan
       for(let i=0;i<20;i++){const a=rnd()*6.28,d=30+rnd()*180;
-        spawnAmb('butterflies',{x:Math.cos(a)*d,y:1.5+Math.random()*2,z:Math.sin(a)*d,ph:Math.random()*6.28,
-          cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:2+Math.random()*4,spd:.6+Math.random()*.5})}
-      for(let i=0;i<8;i++)spawnAmb('birds',{x:(Math.random()-.5)*300,y:25+Math.random()*15,z:(Math.random()-.5)*300,
-        a:Math.random()*6.28,r:60+Math.random()*60,spd:.3+Math.random()*.2,y0:25+Math.random()*15});
-      for(let i=0;i<14;i++)spawnAmb('clouds',{x:(Math.random()-.5)*400,y:40+Math.random()*20,z:(Math.random()-.5)*400,
-        spd:.5+Math.random()*1,sx:1+Math.random()*1.2,sy:1+Math.random()*.4,sz:.8+Math.random()*.8});
+        spawnAmb('butterflies',{x:Math.cos(a)*d,y:1.5+Math.random()*2,z:Math.sin(a)*d,ph:Math.random()*6.28,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:2+Math.random()*4,spd:.6+Math.random()*.5})}
+      for(let i=0;i<8;i++)spawnAmb('birds',{x:(Math.random()-.5)*300,y:25+Math.random()*15,z:(Math.random()-.5)*300,a:Math.random()*6.28,r:60+Math.random()*60,spd:.3+Math.random()*.2,y0:25+Math.random()*15});
+      for(let i=0;i<14;i++)spawnAmb('clouds',{x:(Math.random()-.5)*400,y:40+Math.random()*20,z:(Math.random()-.5)*400,spd:.5+Math.random()*1,sx:1+Math.random()*1.2,sy:1+Math.random()*.4,sz:.8+Math.random()*.8});
     }
     if(n=='desert'){
       for(let i=0;i<50;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*195,x=Math.cos(a)*d,z=Math.sin(a)*d;
@@ -445,11 +434,8 @@ function build(n){
       for(let i=0;i<8;i++){const a=i/8*6.28;bench(Math.cos(a)*40,Math.sin(a)*40)}
       lamp(0,-40);lamp(40,0);lamp(-40,0);lamp(0,40);
       lamp(140,100);lamp(-140,100);
-      // Ambient: burung gurun, awan, debu
-      for(let i=0;i<6;i++)spawnAmb('birds',{x:(Math.random()-.5)*300,y:30+Math.random()*20,z:(Math.random()-.5)*300,
-        a:Math.random()*6.28,r:70+Math.random()*70,spd:.35+Math.random()*.2,y0:30+Math.random()*20});
-      for(let i=0;i<12;i++)spawnAmb('clouds',{x:(Math.random()-.5)*400,y:45+Math.random()*20,z:(Math.random()-.5)*400,
-        spd:.6+Math.random()*.8,sx:1.2+Math.random()*1.5,sy:1+Math.random()*.4,sz:.9+Math.random()*.7});
+      for(let i=0;i<6;i++)spawnAmb('birds',{x:(Math.random()-.5)*300,y:30+Math.random()*20,z:(Math.random()-.5)*300,a:Math.random()*6.28,r:70+Math.random()*70,spd:.35+Math.random()*.2,y0:30+Math.random()*20});
+      for(let i=0;i<12;i++)spawnAmb('clouds',{x:(Math.random()-.5)*400,y:45+Math.random()*20,z:(Math.random()-.5)*400,spd:.6+Math.random()*.8,sx:1.2+Math.random()*1.5,sy:1+Math.random()*.4,sz:.9+Math.random()*.7});
     }
     if(n=='jungle'){
       for(let i=0;i<170;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*195,x=Math.cos(a)*d,z=Math.sin(a)*d;
@@ -470,12 +456,9 @@ function build(n){
       for(let i=0;i<8;i++){const a=i/8*6.28;bench(Math.cos(a)*40,Math.sin(a)*40)}
       lamp(0,-40);lamp(40,0);lamp(-40,0);lamp(0,40);
       lamp(50,50);lamp(-50,-50);
-      // Ambient: kupu-kupu biru, kunang-kunang, daun jatuh
       for(let i=0;i<25;i++){const a=rnd()*6.28,d=30+rnd()*180;
-        spawnAmb('butterflies',{x:Math.cos(a)*d,y:1.5+Math.random()*2.5,z:Math.sin(a)*d,ph:Math.random()*6.28,
-          cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:2+Math.random()*5,spd:.5+Math.random()*.6})}
-      for(let i=0;i<15;i++)spawnAmb('leaves',{x:(Math.random()-.5)*200,y:8+Math.random()*10,z:(Math.random()-.5)*200,
-        vx:(Math.random()-.5)*2,vz:(Math.random()-.5)*2,ph:Math.random()*6.28});
+        spawnAmb('butterflies',{x:Math.cos(a)*d,y:1.5+Math.random()*2.5,z:Math.sin(a)*d,ph:Math.random()*6.28,cx:Math.cos(a)*d,cz:Math.sin(a)*d,r:2+Math.random()*5,spd:.5+Math.random()*.6})}
+      for(let i=0;i<15;i++)spawnAmb('leaves',{x:(Math.random()-.5)*200,y:8+Math.random()*10,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*2,vz:(Math.random()-.5)*2,ph:Math.random()*6.28});
     }
     if(n=='snow'){
       frozenLake(0,-100,45);
@@ -496,11 +479,8 @@ function build(n){
       lamp(-140,-140);lamp(140,140);
       for(let i=0;i<12;i++){const a=rnd()*6.28,d=90+rnd()*130,x=Math.cos(a)*d,z=Math.sin(a)*d;
         Mt(new THREE.ConeGeometry(1.2,5,4),new THREE.MeshPhongMaterial({color:0xaee0ff,flatShading:true,transparent:true,opacity:.8}),x,2.5,z)}
-      // Ambient: salju turun, awan
-      for(let i=0;i<70;i++)spawnAmb('snow',{x:(Math.random()-.5)*200,y:Math.random()*30+5,z:(Math.random()-.5)*200,
-        vx:(Math.random()-.5)*.8,vy:-1.5-Math.random()*2,vz:(Math.random()-.5)*.8});
-      for(let i=0;i<12;i++)spawnAmb('clouds',{x:(Math.random()-.5)*400,y:40+Math.random()*20,z:(Math.random()-.5)*400,
-        spd:.5+Math.random()*.7,sx:1.1+Math.random()*1.3,sy:1+Math.random()*.4,sz:.8+Math.random()*.7});
+      for(let i=0;i<70;i++)spawnAmb('snow',{x:(Math.random()-.5)*200,y:Math.random()*30+5,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*.8,vy:-1.5-Math.random()*2,vz:(Math.random()-.5)*.8});
+      for(let i=0;i<12;i++)spawnAmb('clouds',{x:(Math.random()-.5)*400,y:40+Math.random()*20,z:(Math.random()-.5)*400,spd:.5+Math.random()*.7,sx:1.1+Math.random()*1.3,sy:1+Math.random()*.4,sz:.8+Math.random()*.7});
     }
   }
   spawnJBs();
@@ -583,7 +563,7 @@ function mkP(o){
   const nm=nameS(o.n||o.name||'?',o.nc||'#fff',o.nf||'monospace');nm.position.y=2.1;root.add(nm);
   const icos={};[0,1,2,4].forEach(k=>{const s=icoS(k);s.position.y=3.4;s.visible=false;root.add(s);icos[k]=s});
   sc.add(root);
-  return{root,m,eyes,hearts,tears,icos,x:0,z:0,y:0,vx:0,vz:0,vy:0,py:0,pvy:0,air:0,js:1,jx:1,sv:0,lean:0,flip:0,spd:0,jc:0,jh:0,ty:0,r:0,tx:0,tz:0,tr:0,e:-1,et:0,lEt:-1,lCt:-1,init:0,lx:0,lz:0,tt:0,c1:o.c1,chat:null,ce:0,jbLvl:jbLvlOf(o.jb||0),blinkT:0,breath:0};
+  return{root,m,eyes,hearts,tears,icos,x:0,z:0,y:0,vx:0,vz:0,vy:0,py:0,pvy:0,air:0,js:1,jx:1,sv:0,lean:0,flip:0,spd:0,jc:0,jh:0,ty:0,r:0,tx:0,tz:0,tr:0,e:-1,et:0,lEt:-1,lCt:-1,init:0,lx:0,lz:0,tt:0,c1:o.c1,chat:null,ce:0,jbLvl:jbLvlOf(o.jb||0)};
 }
 function setE(p,e){p.e=e;p.et=performance.now()}
 function say(p,t){if(p.chat)p.root.remove(p.chat);p.chat=chatS(t,p.jbLvl||jbLvl());p.chat.position.y=3;p.root.add(p.chat);p.ce=performance.now()+6500}
@@ -593,12 +573,9 @@ function animE(p,t){
   if(e==4){sy=.75;sx=1.2}
   if(e==5&&d%2<1)y=Math.abs(Math.sin(d*14))*.5;
   if(e==6){sy=.7;sx=1.2}
-  // Breathing saat diam
   if(!p.air&&p.spd<.6){const br=1+Math.sin(t/700+p.js*10)*.03;sy*=br;sx*=1/Math.sqrt(br)}
-  // Blink lebih sering
   p.eyes.scale.y=(t%2400<120)?.08:(p.air?1.35:1);
-  // Eye drift
-  const drift=Math.sin(t/1300+p.c1.length)*.06;
+  const drift=Math.sin(t/1300)*.06;
   p.eyes.children.forEach(ch=>{ch.position.x=ch.userData.baseX+drift});
   p.hearts.visible=e==7;p.eyes.visible=e!=7;p.tears.visible=e==6;
   p.tears.children.forEach((c,i)=>c.position.y=.4-((d*1.5+i*.5)%1)*.4);
@@ -617,7 +594,6 @@ function jelly(p,dt){
     p.js=Math.max(.5,.9-impact*.45);p.sv=0;
     puff(p.x,p.z,10+Math.floor(impact*8),p.c1,2+impact*2);
     trail(p.x,p.z,p.c1);
-    // Ripple ring saat landing kuat
     if(impact>.5){for(let k=0;k<8;k++){const a=k/8*6.28;trail(p.x+Math.cos(a)*.6,p.z+Math.sin(a)*.6,p.c1)}}
   }
   if(air&&p.air&&vy-p.pvy>6&&vy>3){p.flip=.01;puff(p.x,p.z,8,'#ffe27a',5)}
@@ -851,7 +827,6 @@ function frame(now){
     pl.jh=!!jn;jmp=false;
     pl.vy-=22*dt;pl.y+=pl.vy*dt;
     if(pl.y<=GY){
-      // Bounce pad
       if(GBOUNCE&&pl.pvy<-1){
         pl.vy=16;pl.jc=0;
         puff(pl.x,pl.z,12,'#ff5db1',4);
@@ -862,12 +837,10 @@ function frame(now){
     const rr=Math.hypot(pl.x,pl.z);
     if(rr>LIM){pl.x*=LIM/rr;pl.z*=LIM/rr}
 
-    // JB dengan magnet + pulse + sparkle
     for(let i=jbs.length-1;i>=0;i--){
       const j=jbs[i];
       const dx=pl.x-j.x,dz=pl.z-j.z,dy=pl.y+1-j.m.position.y;
       const d2=dx*dx+dz*dz+dy*dy;
-      // magnet radius
       if(d2<9&&d2>2.4){
         const dd=Math.sqrt(d2)||.01;
         const pull=Math.min(1,dt*6/dd);
@@ -882,7 +855,6 @@ function frame(now){
         const oldLvl=jbLvl();
         cfg.jb++;sv();$('jbn').textContent=cfg.jb+' JB';
         jbPop(j.x,j.y+.5,j.z);
-        // sparkle ring
         for(let k=0;k<10;k++){const ang=k/10*6.28;puff(j.x+Math.cos(ang)*.6,j.z+Math.sin(ang)*.6,1,'#7fd0ff',1.5,j.m.position.y)}
         sc.remove(j.m);jbs.splice(i,1);
         pl.jbLvl=jbLvlOf(cfg.jb);me&&me.update({jb:cfg.jb});
@@ -890,7 +862,6 @@ function frame(now){
       }
     }
 
-    // Balapan lari
     if(curMap=='speedrace'){
       if(raceArmed&&!raceFinished){
         if(pl.spd>0.5||pl.z>1){raceArmed=false;raceRunning=true;raceTimer=0}
@@ -916,66 +887,55 @@ function frame(now){
       }
     } else $('raceTimer').classList.add('hide');
 
-    // === AMBIENT UPDATE ===
-    // Kupu-kupu terbang mengelilingi titik
     for(const q of AMB.butterflies){
       if(!q.act)continue;q.t+=dt;
       const a=q.t*q.spd+q.ph;
       q.m.position.set(q.cx+Math.cos(a)*q.r,q.y+Math.sin(q.t*3)*.4,q.cz+Math.sin(a)*q.r);
-      q.m.rotation.y=-a;
-      q.m.rotation.z=Math.sin(q.t*8)*.4;
+      q.m.rotation.y=-a;q.m.rotation.z=Math.sin(q.t*8)*.4;
     }
-    // Burung melingkar
     for(const q of AMB.birds){
       if(!q.act)continue;q.t+=dt;
       const a=q.t*q.spd+q.ph;
       q.m.position.set(Math.cos(a)*q.r,q.y0+Math.sin(q.t*2)*1.5,Math.sin(a)*q.r);
       q.m.rotation.y=-a+Math.PI/2;
     }
-    // Awan melayang
     for(const q of AMB.clouds){
       if(!q.act)continue;q.t+=dt;
       q.m.position.x+=q.spd*dt;
-      if(q.m.position.x>250){q.m.position.x=-250}
+      if(q.m.position.x>250)q.m.position.x=-250;
       q.m.scale.set(q.sx,q.sy,q.sz);
     }
-    // Salju turun
     for(const q of AMB.snow){
       if(!q.act)continue;q.t+=dt;
       q.m.position.x+=q.vx*dt;q.m.position.y+=q.vy*dt;q.m.position.z+=q.vz*dt;
       q.m.rotation.x+=dt*2;q.m.rotation.y+=dt*1.5;
-      if(q.m.position.y<0){spawnAmb('snow',{x:(Math.random()-.5)*200,y:28+Math.random()*4,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*.8,vy:-1.5-Math.random()*2,vz:(Math.random()-.5)*.8})}
+      if(q.m.position.y<0)spawnAmb('snow',{x:(Math.random()-.5)*200,y:28+Math.random()*4,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*.8,vy:-1.5-Math.random()*2,vz:(Math.random()-.5)*.8});
     }
-    // Daun jatuh
     for(const q of AMB.leaves){
       if(!q.act)continue;q.t+=dt;
       q.m.position.x+=(q.vx+Math.sin(q.t*2+q.ph)*1.2)*dt;
       q.m.position.y+=(-1.5-Math.sin(q.t)*.5)*dt;
       q.m.position.z+=q.vz*dt;
       q.m.rotation.x+=dt*3;q.m.rotation.z+=dt*2;
-      if(q.m.position.y<0){spawnAmb('leaves',{x:(Math.random()-.5)*200,y:12+Math.random()*8,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*2,vz:(Math.random()-.5)*2,ph:Math.random()*6.28})}
+      if(q.m.position.y<0)spawnAmb('leaves',{x:(Math.random()-.5)*200,y:12+Math.random()*8,z:(Math.random()-.5)*200,vx:(Math.random()-.5)*2,vz:(Math.random()-.5)*2,ph:Math.random()*6.28});
     }
-    // Api unggun
     for(const c of CAMPS){
       if(Math.random()<dt*8){
         const q=PT.find(o=>o.l<=0);
         if(q){q.l=.6+Math.random()*.4;q.vx=(Math.random()-.5)*.6;q.vz=(Math.random()-.5)*.6;q.vy=2.5+Math.random()*2;
           q.m.material.color.set(Math.random()<.5?'#ff8c1a':'#ffd23f');
           q.m.position.set(c.x+(Math.random()-.5)*.6,.8,c.z+(Math.random()-.5)*.6);q.m.visible=true}
-        // asap
         const s=AMB.smokes.find(o=>!o.act);
         if(s&&Math.random()<.5){s.act=true;s.t=0;s.x=c.x;s.y=1.5;s.z=c.z;s.vx=(Math.random()-.5)*.4;s.vy=1.5+Math.random();s.vz=(Math.random()-.5)*.4;s.m.visible=true;s.m.position.set(s.x,s.y,s.z)}
       }
     }
-    // Asap naik
     for(const s of AMB.smokes){
       if(!s.act)continue;s.t+=dt;
       s.m.position.x+=s.vx*dt;s.m.position.y+=s.vy*dt;s.m.position.z+=s.vz*dt;
       const k=Math.max(0,1-s.t/3);
       s.m.material.opacity=k*.5;s.m.scale.setScalar(1+(1-k)*2);
-      if(s.t>3)s.act=false,s.m.visible=false;
+      if(s.t>3){s.act=false;s.m.visible=false}
     }
-    // Asap cerobong rumah
     for(const ch of CHIMNEYS){
       if(Math.random()<dt*4){
         const s=AMB.smokes.find(o=>!o.act);
@@ -983,7 +943,6 @@ function frame(now){
           s.m.visible=true;s.m.position.set(ch.chimX,ch.chimY,ch.chimZ)}
       }
     }
-    // Bintang latar / orb
     for(const q of AMB.stars){if(!q.act)continue;q.m.material.opacity=.6+Math.sin(now/500+q.m.position.x)*.4}
     for(const q of AMB.orbs){
       if(!q.act)continue;q.t+=dt;
@@ -1044,7 +1003,10 @@ setInterval(()=>{
     await new Promise(r=>setTimeout(r,200));
     setLoad('Login & database...',0.5);
     const er=await ready;
-    if(er&&er!=''&&er!='net'){setLoad('⚠ '+(ERR[er]||er)+' — lanjut offline',0.8);await new Promise(r=>setTimeout(r,1200))}
+    if(er&&er!=''&&er!='net'){
+      setLoad('⚠ '+(ERR[er]||er)+' — lanjut offline (solo)',0.8);
+      await new Promise(r=>setTimeout(r,1800))
+    }
     else {setLoad('Login berhasil!',0.9);await new Promise(r=>setTimeout(r,250))}
     setLoad('Siap!',1);finishBoot(300);
   }catch(e){console.error('Bootstrap:',e);setLoad('⚠ Error — lanjut offline',0.8);finishBoot(500)}

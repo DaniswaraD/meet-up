@@ -1,0 +1,38 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#3a8dff"><link rel="manifest" href="manifest.json"><title>Meet-UP</title>
+<style>
+*{box-sizing:border-box;touch-action:none;user-select:none}body{margin:0;background:#8fd0ff;font:bold 15px "Courier New",monospace;overflow:hidden;color:#123}
+#c{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated}
+.ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none}.ui>*{pointer-events:auto}
+.hide{display:none!important}
+button,input,select{font:inherit;background:#fff;color:#123;border:3px solid #123;padding:8px 12px;box-shadow:4px 4px 0 #123;border-radius:0}
+input[type=color]{padding:0;width:60px;height:36px}button:active{transform:translate(3px,3px);box-shadow:1px 1px 0 #123}
+.p{background:#fffffff0;border:3px solid #123;padding:12px;display:flex;flex-direction:column;gap:8px;max-width:92vw;max-height:88vh;overflow:auto;box-shadow:6px 6px 0 #123}
+.r{display:flex;gap:8px;align-items:center;justify-content:space-between}
+#title{width:min(80vw,460px);image-rendering:pixelated}
+#hud>*{position:fixed}#mm{top:8px;right:8px;width:96px;height:96px;image-rendering:pixelated;border:3px solid #123}
+#pb{top:8px;left:8px}#cb{top:8px;left:64px}
+#bar{bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:3px}#bar button{width:min(10.5vw,46px);height:min(10.5vw,46px);padding:0;font-size:20px;box-shadow:2px 2px 0 #123}#bar .on{background:#ffe066}
+#chat{bottom:64px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+#joy{left:20px;bottom:80px;width:120px;height:120px;border-radius:50%;background:#fff6;border:3px solid #123}#kn{position:absolute;left:40px;top:40px;width:40px;height:40px;background:#123;border-radius:50%}
+#jb,#rb{right:20px;width:76px;height:76px;border-radius:50%}#jb{bottom:100px}#rb{bottom:190px}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="name" class="ui"><canvas id="t0" width="112" height="30" style="width:min(80vw,460px);image-rendering:pixelated"></canvas><div class="p"><input id="nm" maxlength="14" placeholder="Username"><button id="ng">OK</button></div></div>
+<div id="menu" class="ui hide"><canvas id="title" width="112" height="30"></canvas>
+<button id="mp">Play</button><button id="ms">Costum Skin</button><button id="mr">Costum Room</button><button id="mt">Setting</button><button id="md">Download</button></div>
+<div id="skin" class="ui hide" style="justify-content:flex-end;padding-bottom:12px"><div class="p">
+<div class="r">Warna 1<input type="color" id="c1"></div><div class="r">Warna 2 (gradient)<input type="color" id="c2"></div>
+<div class="r">Bentuk<select id="sh"><option value="0">Setengah bulat</option><option value="1">Kotak</option><option value="2">Segitiga</option></select></div>
+<div class="r">Nametag<input type="color" id="nc"></div><div class="r">Font<select id="nf"><option>monospace</option><option>serif</option><option>sans-serif</option><option>cursive</option></select></div><button class="bk">Kembali</button></div></div>
+<div id="croom" class="ui hide"><div class="p"><div class="r">Map<select id="rm"><option value="island">Pulau</option><option value="desert">Gurun</option><option value="forest">Hutan</option><option value="snow">Salju</option></select></div><button id="rc">Buat Room</button><div class="r"><input id="ri" maxlength="5" placeholder="KODE" style="width:110px"><button id="rj">Masuk</button></div><button class="bk">Kembali</button></div></div>
+<div id="lobby" class="ui hide"><div class="p"><div id="lc"></div><div id="ll"></div><button id="lg">Mulai</button><button id="lx">Keluar</button></div></div>
+<div id="set" class="ui hide"><div class="p"><div id="rl"></div><input type="range" id="rd" min="25" max="1000"><button id="sb">Kembali</button></div></div>
+<div id="pause" class="ui hide"><div class="p"><button id="pr">Lanjut</button><button id="ps">Setting</button><button id="pe">Keluar</button></div></div>
+<div id="hud" class="hide"><canvas id="mm" width="96" height="96"></canvas><button id="pb">II</button><button id="cb">Chat</button><div id="bar"></div>
+<div id="mob" class="hide"><div id="joy"><i id="kn"></i></div><button id="jb">JUMP</button><button id="rb">RUN</button></div>
+<div id="chat" class="hide"><input id="ci" maxlength="60"><button id="cs">Kirim</button></div></div>
+<script src="three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="game.js"></script></body></html>

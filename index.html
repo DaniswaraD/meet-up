@@ -15,7 +15,7 @@ button:active{transform:translateY(3px);filter:brightness(.92)}button:disabled{o
 button.s{background:#fff;color:#3d8bff;--lo:#c3d6f3;--hi:#fff}button.d{background:#ff5d5d;--lo:#b32b30;--hi:#ff9a9a}
 svg{width:20px;height:20px;fill:currentColor;shape-rendering:crispEdges}
 input,select{font:inherit;font-size:10px;color:var(--k);background:#fff;border:0;padding:12px;margin:4px;outline:0;min-width:0;box-shadow:var(--bd),inset 0 4px 0 #cfe0f7}
-input:focus,select:focus{background:#fffbe0}input[type=color]{padding:2px;width:60px;height:36px;cursor:pointer}input[type=color]::-webkit-color-swatch-wrapper{padding:0}input[type=color]::-webkit-color-swatch,input[type=color]::-moz-color-swatch{border:0}
+input:focus{background:#fffbe0}input[type=color]{padding:2px;width:60px;height:36px;cursor:pointer}input[type=color]::-webkit-color-swatch-wrapper{padding:0}input[type=color]::-webkit-color-swatch,input[type=color]::-moz-color-swatch{border:0}
 input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;background:#cfe0f7}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:28px;background:#3d8bff;box-shadow:0 0 0 4px var(--k)}input[type=range]::-moz-range-thumb{width:20px;height:28px;border:0;background:#3d8bff;box-shadow:0 0 0 4px var(--k)}
 .r{display:flex;gap:10px;align-items:center;justify-content:space-between}.lbl{font-size:8px;opacity:.6;text-transform:uppercase}
 .mb{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:min(92vw,400px)}.mb .big{grid-column:1/3;font-size:16px;padding:18px}
@@ -29,6 +29,8 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 .ib{width:44px;height:44px;padding:0;color:#3d8bff;background:#fff;--lo:#c3d6f3;--hi:#fff;margin:0}
 #pb{top:max(14px,env(safe-area-inset-top));left:14px}#cb{top:max(14px,env(safe-area-inset-top));left:70px}
 #mm{top:max(14px,env(safe-area-inset-top));right:14px;width:104px;height:104px;image-rendering:pixelated;box-shadow:var(--bd)}
+#jbhud{top:calc(max(14px,env(safe-area-inset-top)) + 116px);right:14px;background:#f4f9ff;padding:8px 12px;box-shadow:var(--bd);font-size:10px;color:#3d8bff;display:flex;align-items:center;gap:6px}
+#jbhud i{display:inline-block;width:14px;height:14px;background:radial-gradient(circle at 35% 30%,#fff,#7fd0ff 60%,#3d8bff);border-radius:50%;box-shadow:0 0 0 2px var(--k)}
 #bar{bottom:max(14px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:8px;background:#f4f9ff;box-shadow:var(--bd),inset 0 -4px 0 #cfe0f7}
 #bar button{position:relative;width:min(9vw,46px);height:min(9vw,46px);padding:5px;margin:0;background:#fff;--lo:#cfe0f7;--hi:#fff}#bar canvas{width:100%;height:100%;image-rendering:pixelated}
 #bar small{position:absolute;left:2px;top:0;font-size:7px;color:#3d8bff}#bar .on{background:#ffe27a;transform:translateY(-6px)}
@@ -36,22 +38,32 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 #joy{left:26px;bottom:90px;width:120px;height:120px;background:#ffffff66;box-shadow:var(--bd)}
 #kn{position:absolute;left:40px;top:40px;width:40px;height:40px;background:#3d8bff;box-shadow:var(--bd)}
 #jb,#rb{padding:0;font-size:9px}#jb{right:26px;bottom:100px;width:72px;height:72px}#rb{right:34px;bottom:190px;width:56px;height:56px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid button{margin:0;padding:10px 2px;font-size:8px;background:#e8f2ff;color:var(--k);--lo:#c3d6f3;--hi:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid button.on{background:#3d8bff;color:#fff;--lo:#1f56c4;--hi:#7ab8ff}
+.grid.map{grid-template-columns:1fr 1fr}
+.grid.map button{padding:14px 6px;font-size:10px}
+.grid.map button.on{background:#ffe27a;color:var(--k);--lo:#d4b23a;--hi:#fff8d0}
 @media(orientation:landscape){#skin,#set{align-items:flex-end;padding-right:28px}}
-@media(max-height:430px){.ttl{width:min(54vw,330px)}.mb .big{padding:12px;font-size:13px}button{padding:10px}.mb{gap:8px}.card{padding:14px;gap:10px}}
+@media(max-height:430px){.ttl{width:min(54vw,330px)}.mb .big{padding:12px;font-size:13px}button{padding:10px}.mb{gap:8px}.card{padding:14px;gap:10px}.grid button{padding:6px 2px}}
 </style></head><body>
 <canvas id="c"></canvas><div id="toast" class="hide"></div>
-<div id="rot"><svg viewBox="0 0 8 8"><rect x="2" y="0" width="4" height="8"/><rect x="3" y="1" width="2" height="5" fill="#17306b"/></svg>Putar HP kamu ke mode landscape</div>
+<div id="rot"><svg viewBox="0 0 8 8"><rect x="2" y="0" width="4" height="8"/><rect x="3" y="1" width="2" height="5" fill="#17306b"/></svg>Putar HP ke landscape</div>
 <div id="name" class="ui"><canvas class="ttl"></canvas><div class="card"><div class="lbl">Username</div><input id="nm" maxlength="14" placeholder="Nama Jello" autocomplete="off"><button id="ng">Lanjut</button></div></div>
 <div id="menu" class="ui hide"><canvas class="ttl"></canvas><div class="mb"><button id="mp" class="big">Play</button><button id="ms" class="s">Custom Skin</button><button id="mr" class="s">Custom Room</button><button id="mt" class="s">Setting</button><button id="md" class="s">Download</button></div></div>
 <div id="skin" class="ui hide"><div class="card"><div class="r">Warna 1<input type="color" id="c1"></div><div class="r">Warna 2<input type="color" id="c2"></div>
-<div class="r">Bentuk<select id="sh"><option value="0">Setengah bulat</option><option value="1">Kotak</option><option value="2">Segitiga</option><option value="3">Bola</option><option value="4">Silinder</option><option value="5">Piramida</option><option value="6">Permata</option></select></div>
-<div class="r">Nametag<input type="color" id="nc"></div><div class="r">Font<select id="nf"><option>monospace</option><option>serif</option><option>sans-serif</option><option>cursive</option></select></div><button class="s bk">Kembali</button></div></div>
-<div id="croom" class="ui hide"><div class="card"><div class="r">Map<select id="rm"><option value="island">Pulau</option><option value="desert">Gurun</option><option value="forest">Hutan</option><option value="snow">Salju</option></select></div><button id="rc">Buat Room</button><div class="lbl">atau masuk dengan kode</div><div class="r"><input id="ri" maxlength="5" placeholder="KODE" style="width:120px;text-transform:uppercase"><button id="rj">Masuk</button></div><button class="s bk">Kembali</button></div></div>
+<div class="lbl">Bentuk</div><div id="shapes" class="grid"></div>
+<div class="r">Nametag<input type="color" id="nc"></div>
+<div class="lbl">Font</div><div id="fonts" class="grid"></div>
+<button class="s bk">Kembali</button></div></div>
+<div id="croom" class="ui hide"><div class="card"><div class="lbl">Pilih Map</div><div id="maps" class="grid map"></div>
+<button id="rc">Buat Room</button><div class="lbl">atau masuk dengan kode</div><div class="r"><input id="ri" maxlength="5" placeholder="KODE" style="width:120px;text-transform:uppercase"><button id="rj">Masuk</button></div><button class="s bk">Kembali</button></div></div>
 <div id="lobby" class="ui hide"><div class="card"><div class="lbl">Kode room</div><div id="lc" class="code"></div><div class="lbl">Pemain</div><div id="ll"></div><button id="lg">Mulai</button><button id="lx" class="d">Keluar</button></div></div>
-<div id="set" class="ui hide"><div class="card"><div id="rl"></div><input type="range" id="rd" min="25" max="1000"><div class="lbl">Objek jauh memudar</div><button id="sb" class="s">Kembali</button></div></div>
+<div id="set" class="ui hide"><div class="card"><div id="rl"></div><input type="range" id="rd" min="60" max="400"><div class="lbl">Objek jauh memudar</div><button id="sb" class="s">Kembali</button></div></div>
 <div id="pause" class="ui hide"><div class="card"><button id="pr">Lanjut</button><button id="ps" class="s">Setting</button><button id="pe" class="d">Keluar</button></div></div>
 <div id="hud" class="hide"><canvas id="mm" width="96" height="96"></canvas>
 <button id="pb" class="ib"><svg viewBox="0 0 8 8"><rect x="1" y="1" width="2" height="6"/><rect x="5" y="1" width="2" height="6"/></svg></button><button id="cb" class="ib"><svg viewBox="0 0 8 8"><rect x="0" y="1" width="8" height="5"/><rect x="1" y="6" width="2" height="2"/></svg></button><div id="bar"></div>
+<div id="jbhud"><i></i><span id="jbn">0 JB</span></div>
 <div id="mob" class="hide"><div id="joy"><i id="kn"></i></div><button id="jb">JUMP</button><button id="rb" class="s">RUN</button></div>
 <div id="chat" class="hide"><input id="ci" maxlength="60" placeholder="Pesan"><button id="cs">Kirim</button></div></div>
 <script src="three.min.js"></script>

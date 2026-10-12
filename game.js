@@ -432,7 +432,6 @@ function beehive(x,z){
   }
   addCol(x,0,z,1,3,1);
 }
-// FIXED flowerArch — correct rotation math
 function flowerArch(x,z,rot){
   rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
   const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
@@ -613,36 +612,28 @@ if(s>=8&&(i+s)%3==1)t=6+((s+i)%4);
 PARKOUR.push(t>=6?[+x.toFixed(1),+y.toFixed(1),+z.toFixed(1),5,5,t,MA[t-6],MS[t-6],+((s*7+i*3)%6.28).toFixed(2)]:[+x.toFixed(1),+y.toFixed(1),+z.toFixed(1),t==5?3:4,t==5?3:4,t])}
 z+=9;y+=s%2?0:.5;x*=.5;const f=s==NS-1;PARKOUR.push([+x.toFixed(1),+y.toFixed(1),z,f?8:10,f?8:10,f?3:0])}})();
 
-// ═══════════════ SAFE STRUCTS — semua di luar jalan ═══════════════
 const SAFE_STRUCTS=[
-  // Farm zone E (jauh dari jalan)
   ['windmill',125,55],['barn',88,48],['haystack',108,35],['haystack',113,42],
   ['scarecrow',75,55],['beehive',80,48],['beehive',100,58],
   ['fence',65,30,65,68],['fence',65,30,115,30],['fence',115,30,115,68],
   ['crates',72,72],['crates',95,72],
   ['stumplog',118,75],['logpile',130,35],
-  // Market SE (jauh dari jalan)
   ['marketstall',100,-20,.5],['marketstall',110,-30,-.3],['marketstall',115,-45,.8],
   ['barrels',120,-20],['barrels',90,-40],
   ['crates',95,-55],['potshelf',105,-60],
   ['lanternpost',95,-30],['lanternpost',112,-35],
-  // Ancient SW
   ['stonecircle',-115,-95],['ruinpillar',-100,-75],['ruinpillar',-130,-80],
   ['ruinpillar',-105,-110],['obelisk',-110,-10,0xa89868],
   ['statuegarden',-105,-60],['totem',-105,105],
-  // Water S (jauh dari jalan S)
   ['boat',45,-180,Math.PI/6],['boat',-35,-185,-Math.PI/4],
   ['beachhut',55,-165,Math.PI/3],['beachhut',-50,-165,-Math.PI/3],
   ['beachumbrella',30,-172],['beachumbrella',-35,-175],['beachumbrella',65,-148],
-  // East decorative
   ['waterwheel',140,65],['woodenbridge',145,80,Math.PI/2],
   ['belltower',150,30],['stonewall',135,25,135,60],
   ['picnictable',120,-95],['picnictable',105,-100],
-  // West decorative
   ['windmill',-125,-55],['watertower',-145,30],
   ['stonewall',-135,-35,-135,-75],['belltower',-150,65],
   ['picnictable',-120,95],['picnictable',-130,85],
-  // Scattered
   ['flagpole',125,-65],['flagpole',-125,-65],
   ['pond',60,125,6],['pond',-60,125,6],['pond',135,-105,5],
   ['rockformation',60,-125],['rockformation',-60,-125],
@@ -656,7 +647,6 @@ const SAFE_STRUCTS=[
   ['giantmushroom',-95,65,.8],['giantmushroom',-90,70,.6],['giantmushroom',-100,70,.7],
   ['logpile',155,115],['logpile',-155,115],
   ['stumplog',-85,-35],['stumplog',160,-35],
-  // ── Struktur tambahan baru, posisi di area terpencil ──
   ['flowerarch',138,-55,0],['flowerarch',-138,-55,0],
   ['wishingwell',45,-70],['wishingwell',-45,-70],
   ['garden',90,42,5],['garden',-90,42,5],['garden',90,-48,5],['garden',-90,-48,5],
@@ -761,7 +751,6 @@ const LAYOUTS={
   }
 };
 
-// ═══════════════ JELLOGER DEFS ═══════════════
 const JELLOGER_DEFS={
   island:[
     {n:'Petani Jelloger',   c1:'#8b5a2b', c2:'#d4a848', x:92, z:52, r:5, spd:.35, lines:['Hewan ni bikin kesal, soalnya dia tak mau makan, padahal udah di belikan makan 200 kilo']},
@@ -1569,7 +1558,6 @@ function jelly(p,dt){
 const PT=[],pG=BOX(.25,.25,.25);
 function puff(x,z,n,c,up,y){for(let i=0;i<n;i++){let q=PT.find(o=>o.l<=0);if(!q){if(PT.length>=[80,140,260,420][FXL()])return;const m=Mt(pG,new THREE.MeshBasicMaterial({transparent:true}),0,0,0,sc);q={m,l:0,vx:0,vy:0,vz:0};PT.push(q)}const a=Math.random()*6.283,v=1.5+Math.random()*2;q.l=.7;q.vx=Math.cos(a)*v;q.vz=Math.sin(a)*v;q.vy=1.5+Math.random()*(up||2.5);q.m.material.color.set(i%3?c:'#ffffff');q.m.position.set(x,y!==undefined?y:.15,z);q.m.visible=true}}
 
-// ══════ TRAIL DIPERTEBAL ══════
 const TR=[],trG=new THREE.CircleGeometry(1.2,10).rotateX(-1.5708);
 function trail(x,z,c){
   let t=TR.find(q=>q.l<=0);
@@ -1577,7 +1565,6 @@ function trail(x,z,c){
   t.l=3.5;t.m.material.color.set(c);t.m.material.opacity=.9;t.m.position.set(x,.09,z);t.m.visible=true;
 }
 
-// ══════ Aura/glow saat boost ══════
 const AURA=[];
 
 let me,base,rid,host=false,playing=false,joined=false,pl=null,P={},cy=0,zd=10,pitch=.6,keys={},ix=0,iy=0,run=false,jmp=false,last=performance.now(),selMap='island',roomMap='island';
@@ -1614,7 +1601,6 @@ const ppGrid=$('playMaps');
 const countUnsubs={};
 MU.forEach(([k,l])=>{const b=document.createElement('button');b.dataset.map=k;b.innerHTML=l+'<small data-cnt>'+(k=='speedrace'?'solo':'· · ·')+'</small>';b.onclick=async()=>{selMap=k;if(k=='speedrace'){const t=await pickTrack();if(!t)return;rtrack=t}$('mp').disabled=true;await join(k=='speedrace'?'g_'+k+'_'+(uid||'x'):'g_'+k,k,false);$('mp').disabled=false;start(k,k=='speedrace')};ppGrid.append(b)});
 
-// ══════ GLOBAL COUNT — diperbaiki (5 menit threshold, hanya yang punya lastSeen valid) ══════
 async function setupGlobalCounts(){
   try{await ready}catch(e){}
   if(typeof db==='undefined'||!db)return;
@@ -1647,7 +1633,29 @@ $('rd').value=cfg.rd;$('rd').oninput=e=>{cfg.rd=+e.target.value;sv();setRD()};
 $('sb').onclick=()=>{$('set').classList.add('hide');playing?$('pause').classList.remove('hide'):show('menu')};
 $('ms').onclick=()=>show('skin');$('mr').onclick=()=>show('croom');$('mt').onclick=()=>show('set');
 $('mp').onclick=()=>show('playpick');
-let dp;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e});$('md').onclick=()=>dp?dp.prompt():alert('Menu browser > "Tambahkan ke layar utama"');
+
+// ══════ PWA INSTALL — auto install ══════
+let dp=null;
+const mdBtn=$('md');
+const setMdLabel=(t,d)=>{if(mdBtn){mdBtn.textContent=t;mdBtn.disabled=!!d}};
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;setMdLabel('Download',false);toast('Siap diinstall! Tekan Download')});
+addEventListener('appinstalled',()=>{dp=null;setMdLabel('Terinstall ✓',true);toast('Meet-UP berhasil diinstall!')});
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+if(isStandalone())setMdLabel('Terinstall ✓',true);
+if(mdBtn){
+  mdBtn.onclick=async()=>{
+    if(isStandalone()){toast('Sudah terinstall! Buka dari ikon di layar utama');return}
+    if(!dp){toast('Tunggu... browser belum siap. Coba lagi 2 detik lagi');return}
+    try{
+      dp.prompt();
+      const c=await dp.userChoice;
+      if(c.outcome==='accepted'){toast('Menginstall...');setMdLabel('Terinstall ✓',true)}
+      else toast('Install dibatalkan');
+      dp=null;
+    }catch(e){toast('Gagal install: '+e.message)}
+  }
+}
+
 $('ng').onclick=()=>{const v=$('nm').value.trim().slice(0,14);if(!v)return;cfg.name=v;sv();setSelf();show('menu')};
 
 async function join(id,map,h){const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){toast(ERR[er]);return 0}try{return await join2(id,map,h)}catch(e){toast('Gagal masuk: '+(e.code||e.message));return 0}}
@@ -1788,7 +1796,6 @@ function frame(now){
       if(freshJump){if(pl.nearBalloon>=0){const b=BALLOONS[pl.nearBalloon];b.rider=pl;pl.balloon=b;pl.vx=pl.vz=pl.vy=0;toast('Balon udara! Joystick gerak · JUMP turun · RUN/Space naik')}else if(pl.nearSwing>=0 && pl.y<1.5){pl.sitting=pl.nearSwing;pl.vx=pl.vz=pl.vy=0;pl.r=swings[pl.nearSwing].rot}else{const GY=groundYSafe();if(pl.y<=GY+.01)pl.jc=0;if(pl.jc<2){pl.vy=pl.jc?9:8;pl.jc++}}}
       if(pl.boostTime>0){pl.boostTime-=dt;if(pl.boostTime<=0){pl.boostMul=1;pl.boostTime=0}if(Math.random()<dt*20){const a=Math.random()*6.28;puff(pl.x+Math.cos(a)*.8,pl.z+Math.sin(a)*.8,1,'#ff8c1a',1.8,pl.y+.5)}if(Math.random()<dt*15){const a=Math.random()*6.28;trail(pl.x+Math.cos(a)*.9,pl.z+Math.sin(a)*.9,'#ffd23f')}}if(pl.boostCooldown>0)pl.boostCooldown-=dt;
       let a=ix+(keys.KeyD?1:0)-(keys.KeyA?1:0),b=iy+(keys.KeyW?1:0)-(keys.KeyS?1:0);const l=Math.hypot(a,b);if(l>1)a/=l,b/=l;const mx=Math.cos(cy)*a-Math.sin(cy)*b,mz=-Math.sin(cy)*a-Math.cos(cy)*b;const sp=((run||keys.ShiftLeft)?9:5)*(pl.boostMul||1);const{GY,GSLIP,GBOUNCE}=groundY();const fric=GSLIP?2.5:24;pl.vx+=(mx*sp-pl.vx)*Math.min(1,dt*fric);pl.vz+=(mz*sp-pl.vz)*Math.min(1,dt*fric);pl.x+=pl.vx*dt;pl.z+=pl.vz*dt;resolveH();if(a||b){const t=Math.atan2(mx,mz);let d=t-pl.r;d=Math.atan2(Math.sin(d),Math.cos(d));pl.r+=d*Math.min(1,dt*12)}if(pl.y<=GY+.01)pl.jc=0;pl.vy-=22*dt;pl.y+=pl.vy*dt;if(pl.y<=GY){if(GBOUNCE&&pl.pvy<-1){pl.vy=16;pl.jc=0;puff(pl.x,pl.z,12,'#ff5db1',4);for(let k=0;k<10;k++){const ang=k/10*6.28;trail(pl.x+Math.cos(ang)*.9,pl.z+Math.sin(ang)*.9,'#ff5db1')}}else{pl.y=GY;if(pl.vy<0)pl.vy=0}}
-      // ══ EFEK JEJAK KAKI (DUST) ══
       if(pl.spd>0.8 && !pl.air && pl.y<.3){
         pl.dustT=(pl.dustT||0)-dt;
         if(pl.dustT<=0){
@@ -1797,7 +1804,6 @@ function frame(now){
           if(pl.boostTime>0){puff(pl.x,pl.z,1,'#ff8c1a',1,.1)}
         }
       }
-      // ══ SPARKLE/EFEK IDLE JELLOGER (dipicu dari sini agar sinkron) ══
       for(const j of JELLOGERS){
         j.sparkleT=(j.sparkleT||Math.random()*2)-dt;
         if(j.sparkleT<=0){
@@ -1868,7 +1874,6 @@ function frame(now){
   for(const p of all){
     if(p!==pl)p.root.visible=playing;
     if(p!==pl){p.x+=(p.tx-p.x)*Math.min(1,dt*10);p.z+=(p.tz-p.z)*Math.min(1,dt*10);p.y+=((p.ty||0)-p.y)*Math.min(1,dt*14);let d=p.tr-p.r;d=Math.atan2(Math.sin(d),Math.cos(d));p.r+=d*Math.min(1,dt*10)}
-    // Trail trigger lebih sensitif
     if(Math.hypot(p.x-p.lx,p.z-p.lz)>.015&&p.y<.15&&!p.car&&(p.tt-=dt)<=0){trail(p.x,p.z,p.c1);p.tt=.06}
     p.spd=Math.hypot(p.x-p.lx,p.z-p.lz)/Math.max(dt,.001);
     p.lx=p.x;p.lz=p.z;jelly(p,dt);if(p.car)p.lean=0;
@@ -1882,7 +1887,6 @@ function frame(now){
   for(const q of AMB.streaks){if(!q.act)continue;q.t+=dt;q.m.rotation.y=q.r;q.m.material.opacity=Math.max(0,.55-q.t*1.6);if(q.t>.34){q.act=false;q.m.visible=false}}
   if(playing&&FXL()>=2){for(const sp of SPIN)sp.rotation.y+=dt*1.5;if(CROWD){CROWD.l.forEach((p,i)=>{_m4.makeTranslation(p.x,p.y+Math.abs(Math.sin(now/230+i*1.3))*.5,p.z);CROWD.im.setMatrixAt(i,_m4)});CROWD.im.instanceMatrix.needsUpdate=true}}
   PT.forEach(q=>{if(q.l>0){q.l-=dt;q.vy-=14*dt;q.m.position.x+=q.vx*dt;q.m.position.y+=q.vy*dt;q.m.position.z+=q.vz*dt;q.m.material.opacity=Math.min(1,q.l*3);q.m.scale.setScalar(Math.max(.2,q.l*1.5));if(q.l<=0)q.m.visible=false}});
-  // Trail update lebih lama & lebih opacity
   TR.forEach(t=>{if(t.l>0){t.l-=dt;t.m.material.opacity=Math.max(0,t.l/3.5)*.9;t.m.scale.setScalar(.5+.5*t.l/3.5);if(t.l<=0)t.m.visible=false}});
   for(let i=jbPops.length-1;i>=0;i--){const p=jbPops[i];p.l-=dt;p.sp.position.y+=dt*2.2;p.sp.material.opacity=Math.max(0,p.l);if(p.l<=0){sc.remove(p.sp);jbPops.splice(i,1)}}
   if(playing){
@@ -1937,4 +1941,11 @@ setInterval(()=>{
 
 }catch(e){console.error('Init error:',e);setLoad(''+e.message,1);finishBoot(500)}
 
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+// ══════ SERVICE WORKER ══════
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js',{scope:'./'})
+      .then(r=>console.log('[SW] OK:',r.scope))
+      .catch(e=>console.error('[SW] Gagal:',e));
+  });
+}

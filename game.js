@@ -1,4 +1,3 @@
-// game.js
 const $=i=>document.getElementById(i);
 const cfg=Object.assign({name:'',c1:'#3a8dff',c2:'#7fd0ff',sh:0,hat:0,nc:'#ffffff',nf:'monospace',rd:180,jb:0,gfx:'low'},JSON.parse(localStorage.mu||'{}'));
 const sv=()=>localStorage.mu=JSON.stringify(cfg);
@@ -63,6 +62,9 @@ document.querySelectorAll('.ttl').forEach(c=>{c.width=50;c.height=10;const x=c.g
 #actionMenu.show{display:grid}
 #actionMenu button{width:100%;height:44px;padding:0;font-size:9px;margin:0;background:#fff;--lo:#cfe0f7;--hi:#fff}
 #actionMenu button.on{background:#ffe27a}
+#raceMenu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:15;background:rgba(0,0,0,.5);padding:20px}
+#raceMenu .card{max-width:400px;width:100%}
+#raceMenu button{padding:18px;font-size:11px}
 `;document.head.appendChild(st)})();
 (function(){const h=document.createElement('div');h.id='hpbar';h.className='hide';h.innerHTML='<div class="fill"></div><div class="txt">10/10</div>';document.body.appendChild(h)})();
 
@@ -527,7 +529,6 @@ function giantLighthouse(x,z){
   const beam=Mt(new THREE.ConeGeometry(20,50,6).rotateX(Math.PI/2),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.12,side:THREE.DoubleSide}),x,29,z);
   BEACONS.push({beam,t:Math.random()*6.28});
   addCol(x,0,z,12,25,12);
-  // Tangga spiral
   for(let i=0;i<20;i++){
     const a=i*0.4;
     const r=5.5;
@@ -537,7 +538,6 @@ function giantLighthouse(x,z){
       Mt(BOX(1.5,.2,1),LM(0x8b5a2b),px,py,pz,world);
     }
   }
-  // Platform pandang
   Mt(new THREE.CylinderGeometry(7,7,.5,16),LM(0x8a8a82),x,25.5,z);
   addCol(x,25,z,14,.5,14);
 }
@@ -550,15 +550,12 @@ function greatPyramid(x,z){
     addCol(x,k*h,z,w,h,w);
   }
   addMerged(P);
-  // Pintu masuk
   addMerged([
     {geo:BOX(4,5,2),x,y:2.5,z:z+base/2+0.1,color:0x1a1a1a},
     {geo:BOX(5,1,3),x,y:5.5,z:z+base/2+0.1,color:0xd9b86a}
   ]);
   addCol(x,0,z+base/2,5,5,3);
-  // Ujung piramida
   Mt(ICO(1.5,1),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:.6}),x,tiers*h+1,z);
-  // Jalan naik ke puncak (tangga)
   for(let i=0;i<12;i++){
     const py=2+i*2.5;
     if(py<tiers*h){
@@ -573,9 +570,9 @@ function bigCave(x,z){
   P.push({geo:new THREE.DodecahedronGeometry(10,0),x:x+9,y:4,z:z-3,color:0x4a4a42,sx:1,sy:.9,sz:1});
   addMerged(P);
   addCol(x,0,z,30,12,24);
-  // Mulut goa
-  const caveMouth=Mt(new THREE.BoxGeometry(8,10,4),new THREE.MeshPhongMaterial({color:0x0a0a0a}),x,y:5,z:z+15);
-  // Kristal bercahaya di dalam
+  // Mulut goa — FIXED: gunakan argumen posisi biasa, bukan objek {y:5,z:z+15}
+  Mt(new THREE.BoxGeometry(8,10,4),new THREE.MeshPhongMaterial({color:0x0a0a0a}),x,5,z+15);
+  // Kristal bercahaya
   for(let i=0;i<6;i++){
     const a=Math.random()*6.28;
     const d=Math.random()*6;
@@ -586,15 +583,12 @@ function bigCave(x,z){
     Mt(new THREE.OctahedronGeometry(1+Math.random()*0.5),new THREE.MeshBasicMaterial({color:cCol,transparent:true,opacity:.9}),cx,cy,cz);
     ANIM.push(glowAt(cx,cy,cz,cCol,.5));
   }
-  // Jalan masuk
   addCol(x-4,0,z+16,8,1,4);
 }
 function icePalace(x,z){
   const P=[];
-  // Menara utama
   P.push({geo:new THREE.CylinderGeometry(8,10,30,8),x,y:15,z,color:0xaee0ff});
   P.push({geo:new THREE.ConeGeometry(9,8,8),x,y:34,z,color:0x7fd0ff});
-  // Menara samping
   for(let i=0;i<4;i++){
     const a=i/4*6.28;
     const tx=x+Math.cos(a)*12;
@@ -602,14 +596,11 @@ function icePalace(x,z){
     P.push({geo:new THREE.CylinderGeometry(3,4,18,6),x:tx,y:9,z:tz,color:0xcfeaff});
     P.push({geo:new THREE.ConeGeometry(4,5,6),x:tx,y:20.5,z:tz,color:0xaee0ff});
   }
-  // Jembatan es
   P.push({geo:BOX(4,2,12),x,y:18,z:z+18,color:0xdcecff});
   addMerged(P);
   addCol(x,0,z,20,30,20);
-  // Kristal di puncak
   Mt(new THREE.OctahedronGeometry(2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8}),x,38,z);
   ANIM.push(glowAt(x,38,z,0xffffff,1.5));
-  // Tangga
   for(let i=0;i<15;i++){
     Mt(BOX(2,.3,1),LM(0xcfeaff),x,2+i*2,z+10);
   }
@@ -725,36 +716,28 @@ const PARKOUR=[
 for(let s=0;s<8;s++){for(let i=0;i<7;i++){const t=T[(s*3+i)%T.length];z+=8.6;x=Math.max(-24,Math.min(24,x+Math.sin(s*1.7+i*1.1)*4));y+=s%2?-.9:1;PARKOUR.push([+x.toFixed(1),+y.toFixed(1),+z.toFixed(1),t==5?3:4,t==5?3:4,t])}
 z+=9;y+=s%2?0:.5;x*=.5;const f=s==7;PARKOUR.push([+x.toFixed(1),+y.toFixed(1),z,f?8:10,f?8:10,f?3:0])}})();
 
-// ═══════════════ SAFE STRUCTS — semua di luar jalan ═══════════════
 const SAFE_STRUCTS=[
-  // Farm zone E (jauh dari jalan)
   ['windmill',125,55],['barn',88,48],['haystack',108,35],['haystack',113,42],
   ['scarecrow',75,55],['beehive',80,48],['beehive',100,58],
   ['fence',65,30,65,68],['fence',65,30,115,30],['fence',115,30,115,68],
   ['crates',72,72],['crates',95,72],
   ['stumplog',118,75],['logpile',130,35],
-  // Market SE (jauh dari jalan)
   ['marketstall',100,-20,.5],['marketstall',110,-30,-.3],['marketstall',115,-45,.8],
   ['barrels',120,-20],['barrels',90,-40],
   ['crates',95,-55],['potshelf',105,-60],
   ['lanternpost',95,-30],['lanternpost',112,-35],
-  // Ancient SW
   ['stonecircle',-115,-95],['ruinpillar',-100,-75],['ruinpillar',-130,-80],
   ['ruinpillar',-105,-110],['obelisk',-110,-10,0xa89868],
   ['statuegarden',-105,-60],['totem',-105,105],
-  // Water S (jauh dari jalan S)
   ['boat',45,-180,Math.PI/6],['boat',-35,-185,-Math.PI/4],
   ['beachhut',55,-165,Math.PI/3],['beachhut',-50,-165,-Math.PI/3],
   ['beachumbrella',30,-172],['beachumbrella',-35,-175],['beachumbrella',65,-148],
-  // East decorative
   ['waterwheel',140,65],['woodenbridge',145,80,Math.PI/2],
   ['belltower',150,30],['stonewall',135,25,135,60],
   ['picnictable',120,-95],['picnictable',105,-100],
-  // West decorative
   ['windmill',-125,-55],['watertower',-145,30],
   ['stonewall',-135,-35,-135,-75],['belltower',-150,65],
   ['picnictable',-120,95],['picnictable',-130,85],
-  // Scattered
   ['flagpole',125,-65],['flagpole',-125,-65],
   ['pond',60,125,6],['pond',-60,125,6],['pond',135,-105,5],
   ['rockformation',60,-125],['rockformation',-60,-125],
@@ -768,7 +751,6 @@ const SAFE_STRUCTS=[
   ['giantmushroom',-95,65,.8],['giantmushroom',-90,70,.6],['giantmushroom',-100,70,.7],
   ['logpile',155,115],['logpile',-155,115],
   ['stumplog',-85,-35],['stumplog',160,-35],
-  // ── Struktur tambahan baru, posisi di area terpencil ──
   ['flowerarch',138,-55,0],['flowerarch',-138,-55,0],
   ['wishingwell',45,-70],['wishingwell',-45,-70],
   ['garden',90,42,5],['garden',-90,42,5],['garden',90,-48,5],['garden',-90,-48,5],
@@ -873,7 +855,6 @@ const LAYOUTS={
   }
 };
 
-// ═══════════════ JELLOGER DEFS ═══════════════
 const JELLOGER_DEFS={
   island:[
     {n:'Petani Jelloger',   c1:'#8b5a2b', c2:'#d4a848', x:92, z:52, r:5, spd:.35, lines:['Hewan ni bikin kesal, soalnya dia tak mau makan, padahal udah di belikan makan 200 kilo']},
@@ -990,7 +971,6 @@ const JELLOGER_DEFS={
   ]
 };
 
-// ═══════════════ MUSUH DEFINITIONS ═══════════════
 const ENEMY_DEFS={
   island:[
     {n:'Slime Hijau', c1:'#3fbf5f', c2:'#1a6a2a', x:60, z:-120, hp:10, jb:15, spd:.8, r:3, dmg:1},
@@ -1024,19 +1004,16 @@ function ring(x,z,c,y,min){if(FXL()<(min??2))return;let q=RG.find(o=>o.l<=0);if(
 function crowd(l){const im=new THREE.InstancedMesh(BOX(.6,1,.6),new THREE.MeshPhongMaterial({flatShading:true}),l.length),m=new THREE.Matrix4(),c=new THREE.Color();l.forEach((p,i)=>{m.makeTranslation(p.x,p.y,p.z);im.setMatrixAt(i,m);im.setColorAt(i,c.setHSL(Math.random(),.75,.55))});world.add(im);return{im,l}}
 
 function buildRace(trackType){
+  trackType=trackType||'drag';
   const T=TXS(),lv=FXL(),mat=m=>LM(0xffffff,{map:m});
-  // Base ground
   const zones=[['#4a9a4a',['pine','oak'],'grassTuft'],['#d8b878',['palm','cactus'],'grassDry'],['#eef6ff',['snowpine','snowMound'],'snowMound'],['#5ab05a',['cherry','oak'],'grassTuft']];
   zones.forEach(([c],i)=>{const len=250+(i%3?0:60),cz=i*250+125+(i==0?-30:i==3?30:0);Mt(new THREE.PlaneGeometry(900,len).rotateX(-1.5708),mat(tex(T,T,(x,w,h)=>noise(x,w,h,c,w*h/5,.35),90,len/10)),0,-.05,cz)});
-  
-  let ZL=RL+40;
+  const ZL=RL+40;
   if(trackType==='drag'){
-    // Existing straight track
     Mt(new THREE.PlaneGeometry(RW,ZL).rotateX(-1.5708),mat(tex(64,64,(x,w,h)=>{noise(x,w,h,'#3d414b',w*h/3,.3);x.fillStyle='#fff';x.fillRect(1,0,2,h);x.fillRect(w-3,0,2,h);x.fillStyle='#ffd23f';x.fillRect(w/2-1,0,2,h/2)},1,ZL/8)),0,.04,RL/2);
     const cb=tex(8,16,(x,w,h)=>{x.fillStyle='#e33';x.fillRect(0,0,w,h/2);x.fillStyle='#fff';x.fillRect(0,h/2,w,h/2)},1,ZL/2);
     [-1,1].forEach(s=>Mt(BOX(1.2,.16,ZL),mat(cb),s*(RW/2+.6),.1,RL/2));
   } else if(trackType==='rally'){
-    // Winding track
     const pts=[];
     for(let z=0;z<RL;z+=30){
       const x=Math.sin(z*0.02)*25+Math.cos(z*0.01)*15;
@@ -1065,12 +1042,10 @@ function buildRace(trackType){
     mesh.renderOrder=1;
     world.add(mesh);
   } else if(trackType==='drift'){
-    // Wide track with drifts
     Mt(new THREE.PlaneGeometry(RW*3,ZL).rotateX(-1.5708),mat(tex(128,128,(x,w,h)=>{noise(x,w,h,'#2a2a3a',w*h/4,.4);x.fillStyle='#fff';x.fillRect(1,0,2,h);x.fillRect(w-3,0,2,h);x.fillStyle='#ffd23f';x.fillRect(w/2-2,0,4,h/2)},1,ZL/16)),0,.04,RL/2);
     const cb=tex(12,24,(x,w,h)=>{x.fillStyle='#e33';x.fillRect(0,0,w,h/2);x.fillStyle='#fff';x.fillRect(0,h/2,w,h/2)},1,ZL/3);
     [-1,1].forEach(s=>Mt(BOX(1.5,.16,ZL),mat(cb),s*(RW*1.5+.8),.1,RL/2));
   }
-
   const bar=[];for(let z=-16;z<RL+20;z+=4.1)[-1,1].forEach(s=>bar.push({x:s*(RW/2+2.2),z,r:Math.PI/2}));
   instance(mergeParts([{geo:BOX(4,1.1,.8),y:.55,color:0xc9ced6},{geo:BOX(4.02,.3,.82),y:.85,color:0xdd3333}]),bar);
   const ck=tex(16,16,(x,w,h)=>{for(let i=0;i<2;i++)for(let j=0;j<2;j++){x.fillStyle=(i+j)%2?'#fff':'#111';x.fillRect(i*8,j*8,8,8)}},RW/2,1);
@@ -1133,7 +1108,7 @@ function enrich(n,tc,dr,hh){
   }
 }
 
-function build(n){
+function build(n,trackType){
   sc.remove(world);world=new THREE.Group();sc.add(world);
   cols=[];plats=[];hillGrass=[];CROWD=null;SPIN.length=0;ANIM.length=0;
   jbs.forEach(j=>sc.remove(j.m));jbs=[];
@@ -1199,7 +1174,8 @@ function build(n){
   }
 
   if(n=='speedrace'){
-    // This will be handled by the race menu
+    buildRace(trackType||'drag');
+    spawnJBs();
     return;
   }
 
@@ -1304,7 +1280,6 @@ function build(n){
   if(L.swings)for(const[x,z,r]of L.swings)addSwing(x,z,r||0);
   if(L.battleRing)addRing(L.battleRing[0],L.battleRing[1],L.battleRing[2]);
 
-  // ─── IKONIK BUILDINGS ───
   if(n=='island'){
     giantLighthouse(0, 185);
   } else if(n=='desert'){
@@ -1391,7 +1366,6 @@ function build(n){
   if(ed){for(const d of ed) spawnEnemy(d)}
 }
 
-// ═══════════════ MUSUH ═══════════════
 function spawnEnemy(def){
   const sh=Math.floor(Math.random()*7);
   const p=mkP({n:def.n,c1:def.c1,c2:def.c2,sh,nc:def.nc||'#fff',nf:def.nf||'monospace',noName:false});
@@ -1419,20 +1393,17 @@ function spawnEnemy(def){
 }
 function updateEnemies(dt){
   for(const e of ENEMIES){
-    // Simple wander/aggro logic
     const dxToPlayer=pl.x-e.x, dzToPlayer=pl.z-e.z;
     const distToPlayer=Math.hypot(dxToPlayer,dzToPlayer);
     if(distToPlayer<e.aggroRange){
       e.aggro=true;
       e.tx=pl.x; e.tz=pl.z;
-      // Move towards player
       const nx=dxToPlayer/distToPlayer, nz=dzToPlayer/distToPlayer;
       e.x+=nx*e.spd*dt*1.5;
       e.z+=nz*e.spd*dt*1.5;
       e.tr=Math.atan2(nx,nz);
     } else {
       e.aggro=false;
-      // Wander
       e.wanderCd-=dt;
       const dxT=e.wanderTX-e.x, dzT=e.wanderTZ-e.z;
       const distT=Math.hypot(dxT,dzT);
@@ -1452,7 +1423,6 @@ function updateEnemies(dt){
       }
     }
     e.tx=e.x; e.tz=e.z;
-    // Check collision with player
     const dh=Math.hypot(pl.x-e.x,pl.z-e.z);
     if(dh<2 && pl.y < e.y+3 && pl.y > e.y-0.5 && pl.invuln<=0){
       pl.hp-=e.dmg;
@@ -1466,21 +1436,18 @@ function updateEnemies(dt){
         toast('KO! Kamu dikalahkan oleh '+e.n);
       }
     }
-    // Check if player jumps on enemy
     if(dh<2.5 && pl.y > e.y+1.5 && pl.vy < 0 && e.hp>0){
       e.hp-=5;
       pl.vy=10;
       puff(e.x,e.z,20,'#ffd23f',4,e.y+1);
       for(let k=0;k<12;k++){const ang=k/12*6.28;trail(e.x+Math.cos(ang)*1.1,e.z+Math.sin(ang)*1.1,'#ffd23f')}
       if(e.hp<=0){
-        // Defeated
         cfg.jb+=e.jbReward;
         sv();
         $('jbn').textContent=cfg.jb+' JB';
         toast('Kalahkan '+e.n+'! +'+e.jbReward+' JB');
         for(let i=0;i<40;i++)puff(e.x+(Math.random()-.5)*4,e.z+(Math.random()-.5)*4,1,['#ff5d5d','#ffd23f','#3fbf5f','#3d8bff','#ff5db1'][i%5],5,e.y+1+Math.random()*3);
         ring(e.x,e.z,'#ffd23f',.2,1);
-        // Respawn after 10s
         e.hp=e.maxHp;
         e.x=e.spawnX;
         e.z=e.spawnZ;
@@ -1636,7 +1603,6 @@ function jelly(p,dt){
 const PT=[],pG=BOX(.25,.25,.25);
 function puff(x,z,n,c,up,y){for(let i=0;i<n;i++){let q=PT.find(o=>o.l<=0);if(!q){if(PT.length>=[80,140,260,420][FXL()])return;const m=Mt(pG,new THREE.MeshBasicMaterial({transparent:true}),0,0,0,sc);q={m,l:0,vx:0,vy:0,vz:0};PT.push(q)}const a=Math.random()*6.283,v=1.5+Math.random()*2;q.l=.7;q.vx=Math.cos(a)*v;q.vz=Math.sin(a)*v;q.vy=1.5+Math.random()*(up||2.5);q.m.material.color.set(i%3?c:'#ffffff');q.m.position.set(x,y!==undefined?y:.15,z);q.m.visible=true}}
 
-// ══════ TRAIL DIPERTEBAL ══════
 const TR=[],trG=new THREE.CircleGeometry(1.2,10).rotateX(-1.5708);
 function trail(x,z,c){
   let t=TR.find(q=>q.l<=0);
@@ -1644,7 +1610,6 @@ function trail(x,z,c){
   t.l=3.5;t.m.material.color.set(c);t.m.material.opacity=.9;t.m.position.set(x,.09,z);t.m.visible=true;
 }
 
-// ══════ Aura/glow saat boost ══════
 const AURA=[];
 
 let me,base,rid,host=false,playing=false,joined=false,pl=null,P={},cy=0,zd=10,pitch=.6,keys={},ix=0,iy=0,run=false,jmp=false,last=performance.now(),selMap='island',roomMap='island';
@@ -1677,7 +1642,6 @@ const ppGrid=$('playMaps');
 const countUnsubs={};
 MU.forEach(([k,l])=>{const b=document.createElement('button');b.dataset.map=k;b.innerHTML=l+'<small data-cnt>· · ·</small>';b.onclick=async()=>{selMap=k;$('mp').disabled=true;await join('g_'+k,k,false);$('mp').disabled=false;if(k==='speedrace'){showRaceMenu()}else{start(k)}};ppGrid.append(b)});
 
-// ══════ GLOBAL COUNT — diperbaiki (5 menit threshold, hanya yang punya lastSeen valid) ══════
 async function setupGlobalCounts(){
   try{await ready}catch(e){}
   if(typeof db==='undefined'||!db)return;
@@ -1714,19 +1678,18 @@ let dp;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e});$('m
 $('ng').onclick=()=>{const v=$('nm').value.trim().slice(0,14);if(!v)return;cfg.name=v;sv();setSelf();show('menu')};
 
 async function join(id,map,h){const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){toast(ERR[er]);return 0}try{return await join2(id,map,h)}catch(e){toast('Gagal masuk: '+(e.code||e.message));return 0}}
-async function join2(id,map,h){rid=id;host=h;roomMap=map;base=db.ref('rooms/'+id);me=base.child('players/'+uid);me.onDisconnect().remove();await me.set({n:cfg.name,c1:cfg.c1,c2:cfg.c2,sh:cfg.sh,hat:cfg.hat|0,nc:cfg.nc,nf:cfg.nf,x:0,z:0,y:0,r:0,e:-1,et:0,ct:0,ch:' ',jb:cfg.jb,lastSeen:TS});pl.x=pl.z=pl.y=0;joined=true;base.child('players').on('value',onPl);if(pl._hb)clearInterval(pl._hb);pl._hb=setInterval(()=>{if(me)me.update({lastSeen:TS}).catch(()=>{})},20000);if(id[0]!='g'){base.child('meta').on('value',s=>{const m=s.val();if(m&&m.started&&!playing)start(m.map)})}return 1}
+async function join2(id,map,h){rid=id;host=h;roomMap=map;base=db.ref('rooms/'+id);me=base.child('players/'+uid);me.onDisconnect().remove();await me.set({n:cfg.name,c1:cfg.c1,c2:cfg.c2,sh:cfg.sh,hat:cfg.hat|0,nc:cfg.nc,nf:cfg.nf,x:0,z:0,y:0,r:0,e:-1,et:0,ct:0,ch:' ',jb:cfg.jb,lastSeen:TS});pl.x=pl.z=pl.y=0;joined=true;base.child('players').on('value',onPl);if(pl._hb)clearInterval(pl._hb);pl._hb=setInterval(()=>{if(me)me.update({lastSeen:TS}).catch(()=>{})},20000);if(id[0]!='g'){base.child('meta').on('value',s=>{const m=s.val();if(m&&m.started&&!playing)start(m.map,'drag')})}return 1}
 function onPl(s){const v=s.val()||{};if(joined&&!v[uid]){leave();alert('Kamu keluar dari room');return}$('ll').innerHTML='';for(const id in v){const r=document.createElement('div');r.className='row';r.innerHTML=`<i style="background:${v[id].c1}"></i><b></b>`;r.lastChild.textContent=v[id].n+(id==uid?' (kamu)':'');if(host&&id!=uid){const x=document.createElement('button');x.className='kick';x.textContent=KX;x.onclick=()=>base.child('players/'+id).remove();r.append(x)}$('ll').append(r)}for(const id in v){if(id==uid)continue;const d=v[id];let p=P[id];if(!p){p=P[id]=mkP(d);p.x=d.x;p.z=d.z;p.y=d.y||0;if((d.jb||0)>=500)toast(''+d.n+' punya '+d.jb+' JB!')}p.tx=d.x;p.tz=d.z;p.tr=d.r;p.ty=d.y||0;p.jbLvl=jbLvlOf(d.jb||0);if(d.et!==p.lEt){if(p.init&&d.e>=0)setE(p,d.e);p.lEt=d.et}if(d.ct!==p.lCt){if(p.init&&d.ch.trim())say(p,d.ch);p.lCt=d.ct}p.init=1}for(const id in P)if(!v[id]){sc.remove(P[id].root);delete P[id]}}
-function start(map){build(map);world.visible=true;menuG.visible=false;sc.add(pl.root);playing=true;pl.boostMul=1;pl.boostTime=0;pl.boostCooldown=0;pl.sitting=null;pl.balloon=null;pl.hp=pl.maxHp;pl.inRing=false;pl.koTimer=0;pl.invuln=0;pl._prevJump=false;if(map=='speedrace'){pl.x=((uid||'ab').charCodeAt(1)%5-2)*3;pl.z=-6;pl.y=0}else if(map=='parkour'){pl.x=0;pl.z=0;pl.y=1}else{pl.x=6;pl.z=-8;pl.y=0}pl.vx=pl.vz=pl.vy=0;pl.r=0;raceTimer=0;raceRunning=false;raceFinished=false;raceArmed=true;['menu','playpick','lobby'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');zd=12;cp=null;pf=false;if(map=='speedrace'){cy=Math.PI;pitch=.4;zd=9;raceCd=3.99;car.sp=0;car.st=0;toast('Balapan 1000J! W gas, S rem, A/D belok')}else{cam.fov=60;cam.updateProjectionMatrix();if(map=='parkour'){cy=Math.PI;pitch=.5}}}
+function start(map,trackType){build(map,trackType);world.visible=true;menuG.visible=false;sc.add(pl.root);playing=true;pl.boostMul=1;pl.boostTime=0;pl.boostCooldown=0;pl.sitting=null;pl.balloon=null;pl.hp=pl.maxHp;pl.inRing=false;pl.koTimer=0;pl.invuln=0;pl._prevJump=false;if(map=='speedrace'){pl.x=((uid||'ab').charCodeAt(1)%5-2)*3;pl.z=-6;pl.y=0}else if(map=='parkour'){pl.x=0;pl.z=0;pl.y=1}else{pl.x=6;pl.z=-8;pl.y=0}pl.vx=pl.vz=pl.vy=0;pl.r=0;raceTimer=0;raceRunning=false;raceFinished=false;raceArmed=true;['menu','playpick','lobby'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');zd=12;cp=null;pf=false;if(map=='speedrace'){cy=Math.PI;pitch=.4;zd=9;raceCd=3.99;car.sp=0;car.st=0;toast('Balapan 1000J! W gas, S rem, A/D belok')}else{cam.fov=60;cam.updateProjectionMatrix();if(map=='parkour'){cy=Math.PI;pitch=.5}}}
 async function leave(){joined=false;playing=false;if(pl&&pl._hb){clearInterval(pl._hb);pl._hb=null}if(pl&&pl.balloon){pl.balloon.rider=null;pl.balloon=null}if(base){base.child('players').off();base.child('meta').off();try{if(host&&rid[0]!='g')await base.remove();else await me.remove()}catch(e){}}for(const id in P)sc.remove(P[id].root);P={};base=me=null;$('hud').classList.add('hide');$('pause').classList.add('hide');$('hpbar').classList.add('hide');if(dlgBtnEl)dlgBtnEl.classList.remove('show');currentDlgTarget=null;menuMode();show('menu')}
 const code=()=>Math.random().toString(36).slice(2,7).toUpperCase();
 $('rc').onclick=async()=>{const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){return toast(ERR[er])}const m=selMap,c=code();try{await db.ref('rooms/'+c+'/meta').set({host:uid,map:m,started:false})}catch(e){return toast('Gagal buat room: '+e.code)}if(await join(c,m,true)){$('lc').textContent=c;$('lg').classList.remove('hide');show('lobby')}};
 $('rj').onclick=async()=>{const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){return toast(ERR[er])}const c=$('ri').value.trim().toUpperCase();let r;try{r=await db.ref('rooms/'+c+'/meta').once('value')}catch(e){return toast('Gagal: '+e.code)}if(!r.exists())return toast('Room tidak ditemukan');const m=r.val().map;if(await join(c,m,false)){$('lc').textContent=c;$('lg').classList.add('hide');show('lobby')}};
-$('lg').onclick=async()=>{try{await base.child('meta/started').set(true)}catch(e){}start(roomMap)};
+$('lg').onclick=async()=>{try{await base.child('meta/started').set(true)}catch(e){}start(roomMap,'drag')};
 $('lx').onclick=leave;$('pe').onclick=leave;
 $('pb').onclick=()=>$('pause').classList.remove('hide');$('pr').onclick=()=>$('pause').classList.add('hide');
 $('ps').onclick=()=>{$('pause').classList.add('hide');$('set').classList.remove('hide')};
 IC.forEach((ic,i)=>{const b=document.createElement('button');b.append(icoC(i));b.insertAdjacentHTML('beforeend','<small>'+(i+1)+'</small>');b.onclick=()=>emo(i);$('bar').append(b)});
-// Action menu button
 (function addActionMenuBtn(){
   const bar=$('bar');
   const b=document.createElement('button');
@@ -1831,7 +1794,6 @@ function frame(now){
       if(freshJump){if(pl.nearBalloon>=0){const b=BALLOONS[pl.nearBalloon];b.rider=pl;pl.balloon=b;pl.vx=pl.vz=pl.vy=0;toast('Balon udara! Joystick gerak · JUMP turun · RUN/Space naik')}else if(pl.nearSwing>=0 && pl.y<1.5){pl.sitting=pl.nearSwing;pl.vx=pl.vz=pl.vy=0;pl.r=swings[pl.nearSwing].rot}else{const GY=groundYSafe();if(pl.y<=GY+.01)pl.jc=0;if(pl.jc<2){pl.vy=pl.jc?9:8;pl.jc++}}}
       if(pl.boostTime>0){pl.boostTime-=dt;if(pl.boostTime<=0){pl.boostMul=1;pl.boostTime=0}if(Math.random()<dt*20){const a=Math.random()*6.28;puff(pl.x+Math.cos(a)*.8,pl.z+Math.sin(a)*.8,1,'#ff8c1a',1.8,pl.y+.5)}if(Math.random()<dt*15){const a=Math.random()*6.28;trail(pl.x+Math.cos(a)*.9,pl.z+Math.sin(a)*.9,'#ffd23f')}}if(pl.boostCooldown>0)pl.boostCooldown-=dt;
       let a=ix+(keys.KeyD?1:0)-(keys.KeyA?1:0),b=iy+(keys.KeyW?1:0)-(keys.KeyS?1:0);const l=Math.hypot(a,b);if(l>1)a/=l,b/=l;const mx=Math.cos(cy)*a-Math.sin(cy)*b,mz=-Math.sin(cy)*a-Math.cos(cy)*b;const sp=((run||keys.ShiftLeft)?9:5)*(pl.boostMul||1);const{GY,GSLIP,GBOUNCE}=groundY();const fric=GSLIP?2.5:24;pl.vx+=(mx*sp-pl.vx)*Math.min(1,dt*fric);pl.vz+=(mz*sp-pl.vz)*Math.min(1,dt*fric);pl.x+=pl.vx*dt;pl.z+=pl.vz*dt;resolveH();if(a||b){const t=Math.atan2(mx,mz);let d=t-pl.r;d=Math.atan2(Math.sin(d),Math.cos(d));pl.r+=d*Math.min(1,dt*12)}if(pl.y<=GY+.01)pl.jc=0;pl.vy-=22*dt;pl.y+=pl.vy*dt;if(pl.y<=GY){if(GBOUNCE&&pl.pvy<-1){pl.vy=16;pl.jc=0;puff(pl.x,pl.z,12,'#ff5db1',4);for(let k=0;k<10;k++){const ang=k/10*6.28;trail(pl.x+Math.cos(ang)*.9,pl.z+Math.sin(ang)*.9,'#ff5db1')}}else{pl.y=GY;if(pl.vy<0)pl.vy=0}}
-      // ══ EFEK JEJAK KAKI (DUST) ══
       if(pl.spd>0.8 && !pl.air && pl.y<.3){
         pl.dustT=(pl.dustT||0)-dt;
         if(pl.dustT<=0){
@@ -1840,7 +1802,6 @@ function frame(now){
           if(pl.boostTime>0){puff(pl.x,pl.z,1,'#ff8c1a',1,.1)}
         }
       }
-      // ══ SPARKLE/EFEK IDLE JELLOGER (dipicu dari sini agar sinkron) ══
       for(const j of JELLOGERS){
         j.sparkleT=(j.sparkleT||Math.random()*2)-dt;
         if(j.sparkleT<=0){
@@ -1907,7 +1868,6 @@ function frame(now){
   for(const p of all){
     if(p!==pl)p.root.visible=playing;
     if(p!==pl){p.x+=(p.tx-p.x)*Math.min(1,dt*10);p.z+=(p.tz-p.z)*Math.min(1,dt*10);p.y+=((p.ty||0)-p.y)*Math.min(1,dt*14);let d=p.tr-p.r;d=Math.atan2(Math.sin(d),Math.cos(d));p.r+=d*Math.min(1,dt*10)}
-    // Trail trigger lebih sensitif
     if(Math.hypot(p.x-p.lx,p.z-p.lz)>.015&&p.y<.15&&!p.car&&(p.tt-=dt)<=0){trail(p.x,p.z,p.c1);p.tt=.06}
     p.spd=Math.hypot(p.x-p.lx,p.z-p.lz)/Math.max(dt,.001);
     p.lx=p.x;p.lz=p.z;jelly(p,dt);if(p.car)p.lean=0;
@@ -1921,7 +1881,6 @@ function frame(now){
   for(const q of AMB.streaks){if(!q.act)continue;q.t+=dt;q.m.rotation.y=q.r;q.m.material.opacity=Math.max(0,.55-q.t*1.6);if(q.t>.34){q.act=false;q.m.visible=false}}
   if(playing&&FXL()>=2){for(const sp of SPIN)sp.rotation.y+=dt*1.5;if(CROWD){CROWD.l.forEach((p,i)=>{_m4.makeTranslation(p.x,p.y+Math.abs(Math.sin(now/230+i*1.3))*.5,p.z);CROWD.im.setMatrixAt(i,_m4)});CROWD.im.instanceMatrix.needsUpdate=true}}
   PT.forEach(q=>{if(q.l>0){q.l-=dt;q.vy-=14*dt;q.m.position.x+=q.vx*dt;q.m.position.y+=q.vy*dt;q.m.position.z+=q.vz*dt;q.m.material.opacity=Math.min(1,q.l*3);q.m.scale.setScalar(Math.max(.2,q.l*1.5));if(q.l<=0)q.m.visible=false}});
-  // Trail update lebih lama & lebih opacity
   TR.forEach(t=>{if(t.l>0){t.l-=dt;t.m.material.opacity=Math.max(0,t.l/3.5)*.9;t.m.scale.setScalar(.5+.5*t.l/3.5);if(t.l<=0)t.m.visible=false}});
   for(let i=jbPops.length-1;i>=0;i--){const p=jbPops[i];p.l-=dt;p.sp.position.y+=dt*2.2;p.sp.material.opacity=Math.max(0,p.l);if(p.l<=0){sc.remove(p.sp);jbPops.splice(i,1)}}
   if(playing){
@@ -1979,20 +1938,17 @@ setInterval(()=>{
 
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 
-// ═══════════════ RACE MENU ═══════════════
 function showRaceMenu(){
   const existing=document.getElementById('raceMenu');
   if(existing)existing.remove();
   const menu=document.createElement('div');
   menu.id='raceMenu';
-  menu.className='ui';
-  menu.style.zIndex='15';
   menu.innerHTML=`
-    <div class="card" style="max-width:400px">
+    <div class="card">
       <div class="lbl">Pilih Trek Balapan</div>
-      <button id="raceDrag" style="padding:20px">🏁 Drag<br><small style="font-size:8px;opacity:.8">Lurus, kecepatan maksimal</small></button>
-      <button id="raceRally" style="padding:20px">🏎️ Rally<br><small style="font-size:8px;opacity:.8">Trek berkelok, tikungan tajam</small></button>
-      <button id="raceDrift" style="padding:20px">🏆 Drift<br><small style="font-size:8px;opacity:.8">Trek lebar, area drift</small></button>
+      <button id="raceDrag" style="padding:18px;font-size:11px">🏁 Drag<br><small style="font-size:8px;opacity:.8">Lurus, kecepatan maksimal</small></button>
+      <button id="raceRally" style="padding:18px;font-size:11px">🏎️ Rally<br><small style="font-size:8px;opacity:.8">Trek berkelok, tikungan tajam</small></button>
+      <button id="raceDrift" style="padding:18px;font-size:11px">🏆 Drift<br><small style="font-size:8px;opacity:.8">Trek lebar, area drift</small></button>
       <button class="s" id="raceBack">Kembali</button>
     </div>
   `;

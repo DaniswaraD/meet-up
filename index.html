@@ -64,10 +64,14 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 #gmsg .gmsg-row b{color:#ffd23f}
 #rankHUD{position:fixed;top:100px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#17306b,#3d8bff);color:#fff;padding:8px 20px;font-size:13px;font-weight:bold;box-shadow:0 0 0 3px #ffd23f,0 4px 0 #0005;z-index:9;pointer-events:none;letter-spacing:2px;text-shadow:1px 1px 0 #000}
 #rankHUD.hide{display:none}
-#rankHUD .p1{color:#ffd23f}
-#rankHUD .p2{color:#e0e0e0}
-#rankHUD .p3{color:#cd7f32}
-@media(max-height:420px){#bar{bottom:8px;padding:6px;gap:5px}#bar button{width:min(7.5vw,38px);height:min(7.5vw,38px)}#jbhud{top:calc(max(14px,env(safe-area-inset-top)) + 116px);padding:6px 9px;font-size:9px}#prompt{bottom:180px;font-size:9px}#gmsg{max-height:120px;font-size:7px}#rankHUD{top:80px;font-size:11px;padding:6px 14px}}
+#rankHUD .p1{color:#ffd23f}#rankHUD .p2{color:#e0e0e0}#rankHUD .p3{color:#cd7f32}
+#posList{position:fixed;top:140px;right:14px;background:rgba(23,48,107,.85);color:#fff;padding:6px 8px;font-size:7px;line-height:1.4;z-index:8;pointer-events:none;box-shadow:0 0 0 2px #7fd0ff;min-width:110px;max-width:130px}
+#posList.hide{display:none}
+#posList .pl{display:flex;justify-content:space-between;gap:6px;padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#posList .pl.self{color:#ffd23f;font-weight:bold}
+#posList .pl .p{opacity:.7}
+#posList .pl .d{opacity:.6;font-size:6px}
+@media(max-height:420px){#bar{bottom:8px;padding:6px;gap:5px}#bar button{width:min(7.5vw,38px);height:min(7.5vw,38px)}#jbhud{top:calc(max(14px,env(safe-area-inset-top)) + 116px);padding:6px 9px;font-size:9px}#prompt{bottom:180px;font-size:9px}#gmsg{max-height:120px;font-size:7px}#rankHUD{top:80px;font-size:11px;padding:6px 14px}#posList{top:110px;font-size:6px;min-width:90px}}
 #hud #bar .on{box-shadow:var(--bd),inset 0 -4px 0 #d4b23a,0 -6px 0 #ffd23f}
 </style></head><body>
 <canvas id="c"></canvas><div id="toast" class="hide"></div>
@@ -95,6 +99,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 <div id="jbhud"><i></i><span id="jbn">0 JB</span></div>
 <div id="prompt" class="hide"></div>
 <div id="rankHUD" class="hide"></div>
+<div id="posList" class="hide"></div>
 <div id="raceTimer" class="hide">0.00s</div><div id="rbar" class="hide"><i></i></div><div id="cd" class="hide"></div>
 <div id="mob" class="hide"><div id="joy"><i id="kn"></i></div><button id="jb">JUMP</button><button id="rb" class="s">RUN</button></div>
 <div id="chat" class="hide"><input id="ci" maxlength="60" placeholder="Pesan (atau /g pesan global)"><button id="cs">Kirim</button></div></div>
@@ -102,4 +107,4 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="game.js?v=19"></script></body></html>
+<script src="game.js?v=20"></script></body></html>

@@ -22,6 +22,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 .code{font-size:22px;letter-spacing:4px;text-align:center;background:#e8f2ff;padding:12px;box-shadow:inset 0 4px 0 #cfe0f7}
 #ll{display:flex;flex-direction:column;gap:10px}.row{display:flex;align-items:center;gap:10px;background:#e8f2ff;padding:8px 10px}
 .row i{width:20px;height:20px;box-shadow:0 0 0 3px var(--k)}.row b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.kick{width:34px;height:34px;padding:0;margin:0;background:#ff5d5d;--lo:#b32b30;--hi:#ff9a9a}
+.row .jb{font-size:8px;color:#3d8bff;background:#fff;padding:2px 6px;box-shadow:0 0 0 2px var(--k)}
 #toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--k);color:#fff;padding:12px 16px;z-index:9;max-width:90vw;text-align:center;line-height:1.7;box-shadow:0 4px 0 #0005}
 #rot{position:fixed;inset:0;z-index:20;background:var(--k);color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;line-height:2;padding:20px}#rot svg{width:72px;height:72px;animation:rt 2s steps(4) infinite}@keyframes rt{50%,to{transform:rotate(-90deg)}}
 @media(orientation:portrait) and (pointer:coarse){#rot{display:flex}}
@@ -57,6 +58,14 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 @media(max-height:430px){.ttl{width:min(54vw,330px)}.mb .big{padding:12px;font-size:13px}button{padding:10px}.mb{gap:8px}.card{padding:14px;gap:10px}.grid button{padding:6px 2px}}
 #raceTimer{font-size:12px;white-space:nowrap}#rbar{top:56px;left:50%;transform:translateX(-50%);width:min(60vw,360px);height:12px;background:#17306b;box-shadow:0 0 0 3px #7fd0ff;z-index:8;pointer-events:none}#rbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffd23f,#ff8c1a)}
 #cd{top:28%;left:50%;transform:translateX(-50%);font-size:min(18vw,96px);color:#ffd23f;text-shadow:0 6px 0 #17306b;z-index:9;pointer-events:none;animation:cdp .5s steps(5) infinite}@keyframes cdp{50%{transform:translateX(-50%) scale(1.15)}}
+/* ─── NEW v18: Global Chat ─── */
+#gmsg{position:fixed;top:calc(max(14px,env(safe-area-inset-top)) + 130px);left:14px;max-width:min(46vw,320px);max-height:160px;overflow:hidden;background:rgba(23,48,107,.85);color:#fff;padding:8px 10px;font-size:8px;line-height:1.6;z-index:8;pointer-events:none;box-shadow:0 0 0 2px #7fd0ff,0 4px 0 #0005;backdrop-filter:blur(2px)}
+#gmsg .gmsg-row{margin-bottom:3px;word-wrap:break-word;word-break:break-word}
+#gmsg .gmsg-row:not(:last-child){border-bottom:1px solid #ffffff18;padding-bottom:3px}
+#gmsg .gmsg-row b{color:#ffd23f}
+/* ─── NEW v18: Mobile tweaks ─── */
+@media(max-height:420px){#bar{bottom:8px;padding:6px;gap:5px}#bar button{width:min(7.5vw,38px);height:min(7.5vw,38px)}#jbhud{top:calc(max(14px,env(safe-area-inset-top)) + 116px);padding:6px 9px;font-size:9px}#prompt{bottom:180px;font-size:9px}#gmsg{max-height:120px;font-size:7px}}
+#hud #bar .on{box-shadow:var(--bd),inset 0 -4px 0 #d4b23a,0 -6px 0 #ffd23f}
 </style></head><body>
 <canvas id="c"></canvas><div id="toast" class="hide"></div>
 <div id="rot"><svg viewBox="0 0 8 8"><rect x="2" y="0" width="4" height="8"/><rect x="3" y="1" width="2" height="5" fill="#17306b"/></svg>Putar HP ke landscape</div>
@@ -75,6 +84,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 <div id="lobby" class="ui hide"><div class="card"><div class="lbl">Kode room</div><div id="lc" class="code"></div><div class="lbl">Pemain</div><div id="ll"></div><button id="lg">Mulai</button><button id="lx" class="d">Keluar</button></div></div>
 <div id="set" class="ui hide"><div class="card"><div id="rl"></div><input type="range" id="rd" min="60" max="400"><div class="lbl">Objek jauh memudar</div><button id="sb" class="s">Kembali</button></div></div>
 <div id="pause" class="ui hide"><div class="card"><button id="pr">Lanjut</button><button id="ps" class="s">Setting</button><button id="pe" class="d">Keluar</button></div></div>
+<div id="gmsg" class="hide"></div>
 <div id="hud" class="hide"><canvas id="mm" width="96" height="96"></canvas>
 <button id="pb" class="ib"><svg viewBox="0 0 8 8"><rect x="1" y="1" width="2" height="6"/><rect x="5" y="1" width="2" height="6"/></svg></button>
 <button id="cb" class="ib"><svg viewBox="0 0 8 8"><rect x="0" y="1" width="8" height="5"/><rect x="1" y="6" width="2" height="2"/></svg></button>
@@ -83,9 +93,9 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;
 <div id="prompt" class="hide"></div>
 <div id="raceTimer" class="hide">0.00s</div><div id="rbar" class="hide"><i></i></div><div id="cd" class="hide"></div>
 <div id="mob" class="hide"><div id="joy"><i id="kn"></i></div><button id="jb">JUMP</button><button id="rb" class="s">RUN</button></div>
-<div id="chat" class="hide"><input id="ci" maxlength="60" placeholder="Pesan"><button id="cs">Kirim</button></div></div>
+<div id="chat" class="hide"><input id="ci" maxlength="60" placeholder="Pesan (atau /g pesan global)"><button id="cs">Kirim</button></div></div>
 <script src="three.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="game.js?v=17"></script></body></html>
+<script src="game.js?v=18"></script></body></html>

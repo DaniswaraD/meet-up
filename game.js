@@ -1647,7 +1647,7 @@ $('rd').value=cfg.rd;$('rd').oninput=e=>{cfg.rd=+e.target.value;sv();setRD()};
 $('sb').onclick=()=>{$('set').classList.add('hide');playing?$('pause').classList.remove('hide'):show('menu')};
 $('ms').onclick=()=>show('skin');$('mr').onclick=()=>show('croom');$('mt').onclick=()=>show('set');
 $('mp').onclick=()=>show('playpick');
-let dp;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e});$('md').onclick=()=>dp?dp.prompt():alert('Menu browser > "Tambahkan ke layar utama"');
+// ══════ PWA INSTALL — auto install ══════ let dp=null; const mdBtn=$('md'); const setMdLabel=(t,d)=>{if(mdBtn){mdBtn.textContent=t;mdBtn.disabled=!!d}}; addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;setMdLabel('Download',false);toast('Siap diinstall! Tekan Download')}); addEventListener('appinstalled',()=>{dp=null;setMdLabel('Terinstall ✓',true);toast('Meet-UP berhasil diinstall!')}); const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; if(isStandalone())setMdLabel('Terinstall ✓',true); if(mdBtn){   mdBtn.onclick=async()=>{     if(isStandalone()){toast('Sudah terinstall! Buka dari ikon di layar utama');return}     if(!dp){toast('Tunggu... browser belum siap. Coba lagi 2 detik lagi');return}     try{       dp.prompt();       const c=await dp.userChoice;       if(c.outcome==='accepted'){toast('Menginstall...');setMdLabel('Terinstall ✓',true)}       else toast('Install dibatalkan');       dp=null;     }catch(e){toast('Gagal install: '+e.message)}   } }
 $('ng').onclick=()=>{const v=$('nm').value.trim().slice(0,14);if(!v)return;cfg.name=v;sv();setSelf();show('menu')};
 
 async function join(id,map,h){const er=await ready;if(er&&er!='timeout'&&er!='net'&&er!=''){toast(ERR[er]);return 0}try{return await join2(id,map,h)}catch(e){toast('Gagal masuk: '+(e.code||e.message));return 0}}
@@ -1937,4 +1937,4 @@ setInterval(()=>{
 
 }catch(e){console.error('Init error:',e);setLoad(''+e.message,1);finishBoot(500)}
 
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator){   window.addEventListener('load',()=>{     navigator.serviceWorker.register('sw.js',{scope:'./'})       .then(r=>console.log('[SW] OK:',r.scope))       .catch(e=>console.error('[SW] Gagal:',e));   }); }

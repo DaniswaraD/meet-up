@@ -1,0 +1,133 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#3a8dff"><link rel="manifest" href="manifest.json"><title>Meet-UP</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{--k:#17306b;--bd:0 -4px 0 0 var(--k),0 4px 0 0 var(--k),-4px 0 0 0 var(--k),4px 0 0 0 var(--k)}
+*{box-sizing:border-box;touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:none;border-radius:0}
+body{margin:0;background:#8fd0ff;font:10px/1.6 "Press Start 2P","Courier New",monospace;font-weight:700;color:var(--k);overflow:hidden}
+#c{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated}
+.ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:max(14px,env(safe-area-inset-top)) 14px 18px;pointer-events:none}
+.ui>*{pointer-events:auto}.hide{display:none!important}#menu{justify-content:space-between}
+.ttl{width:min(86vw,520px);image-rendering:pixelated}
+.card{background:#f4f9ff;padding:20px;margin:4px;display:flex;flex-direction:column;gap:14px;width:min(92vw,340px);max-height:84vh;overflow:auto;box-shadow:var(--bd),inset 0 -4px 0 #cfe0f7,inset 0 4px 0 #fff;filter:drop-shadow(0 8px 0 #17306b40)}
+.card,.card *{touch-action:pan-y}
+button{--lo:#1f56c4;--hi:#7ab8ff;font:inherit;font-size:10px;color:#fff;background:#3d8bff;border:0;padding:14px 12px;margin:4px;cursor:pointer;box-shadow:var(--bd),inset 0 -4px 0 var(--lo),inset 0 4px 0 var(--hi);display:flex;align-items:center;justify-content:center;gap:6px}
+button:active{transform:translateY(3px);filter:brightness(.92)}button:disabled{opacity:.6}
+button.s{background:#fff;color:#3d8bff;--lo:#c3d6f3;--hi:#fff}button.d{background:#ff5d5d;--lo:#b32b30;--hi:#ff9a9a}
+svg{width:20px;height:20px;fill:currentColor;shape-rendering:crispEdges}
+input,select{font:inherit;font-size:10px;color:var(--k);background:#fff;border:0;padding:12px;margin:4px;outline:0;min-width:0;box-shadow:var(--bd),inset 0 4px 0 #cfe0f7}
+input:focus{background:#fffbe0}input[type=color]{padding:2px;width:60px;height:36px;cursor:pointer}input[type=color]::-webkit-color-swatch-wrapper{padding:0}input[type=color]::-webkit-color-swatch,input[type=color]::-moz-color-swatch{border:0}
+input[type=range]{-webkit-appearance:none;appearance:none;height:16px;padding:0;background:#cfe0f7}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:28px;background:#3d8bff;box-shadow:0 0 0 4px var(--k)}input[type=range]::-moz-range-thumb{width:20px;height:28px;border:0;background:#3d8bff;box-shadow:0 0 0 4px var(--k)}
+.r{display:flex;gap:10px;align-items:center;justify-content:space-between}.lbl{font-size:8px;opacity:.6;text-transform:uppercase}
+.mb{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:min(92vw,400px)}.mb .big{grid-column:1/3;font-size:16px;padding:18px}
+.code{font-size:22px;letter-spacing:4px;text-align:center;background:#e8f2ff;padding:12px;box-shadow:inset 0 4px 0 #cfe0f7}
+#ll{display:flex;flex-direction:column;gap:10px}.row{display:flex;align-items:center;gap:10px;background:#e8f2ff;padding:8px 10px}
+.row i{width:20px;height:20px;box-shadow:0 0 0 3px var(--k)}.row b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.kick{width:34px;height:34px;padding:0;margin:0;background:#ff5d5d;--lo:#b32b30;--hi:#ff9a9a}
+#toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--k);color:#fff;padding:12px 16px;z-index:9;max-width:90vw;text-align:center;line-height:1.7;box-shadow:0 4px 0 #0005}
+#rot{position:fixed;inset:0;z-index:20;background:var(--k);color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;line-height:2;padding:20px}#rot svg{width:72px;height:72px;animation:rt 2s steps(4) infinite}@keyframes rt{50%,to{transform:rotate(-90deg)}}
+@media(orientation:portrait) and (pointer:coarse){#rot{display:flex}}
+#hud>*,#mob>*{position:fixed}
+.ib{width:44px;height:44px;padding:0;color:#3d8bff;background:#fff;--lo:#c3d6f3;--hi:#fff;margin:0}
+#pb{top:max(14px,env(safe-area-inset-top));left:14px}#cb{top:max(14px,env(safe-area-inset-top));left:70px}
+#mm{top:max(14px,env(safe-area-inset-top));right:14px;width:104px;height:104px;image-rendering:pixelated;box-shadow:var(--bd)}
+#jbhud{top:calc(max(14px,env(safe-area-inset-top)) + 116px);right:14px;background:#f4f9ff;padding:8px 12px;box-shadow:var(--bd);font-size:10px;color:#3d8bff;display:flex;align-items:center;gap:6px}
+#jbhud i{display:inline-block;width:14px;height:14px;background:radial-gradient(circle at 35% 30%,#fff,#7fd0ff 60%,#3d8bff);border-radius:50%;box-shadow:0 0 0 2px var(--k)}
+#bar{bottom:max(14px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:8px;background:#f4f9ff;box-shadow:var(--bd),inset 0 -4px 0 #cfe0f7}
+#bar button{position:relative;width:min(9vw,46px);height:min(9vw,46px);padding:5px;margin:0;background:#fff;--lo:#cfe0f7;--hi:#fff}#bar canvas{width:100%;height:100%;image-rendering:pixelated}
+#bar small{position:absolute;left:2px;top:0;font-size:7px;color:#3d8bff}#bar .on{background:#ffe27a;transform:translateY(-6px)}
+#chat{bottom:calc(max(14px,env(safe-area-inset-bottom)) + 76px);left:50%;transform:translateX(-50%);display:flex;gap:8px;width:min(92vw,440px);padding:8px;background:#f4f9ff;box-shadow:var(--bd)}#ci{flex:1}
+#joy{left:26px;bottom:90px;width:120px;height:120px;background:#ffffff66;box-shadow:var(--bd)}
+#kn{position:absolute;left:40px;top:40px;width:40px;height:40px;background:#3d8bff;box-shadow:var(--bd)}
+#jb,#rb{padding:0;font-size:9px}#jb{right:26px;bottom:100px;width:72px;height:72px}#rb{right:34px;bottom:190px;width:56px;height:56px}
+#prompt{position:fixed;bottom:230px;left:50%;transform:translateX(-50%);background:rgba(23,48,107,.92);color:#fff;padding:8px 14px;font-size:10px;pointer-events:none;z-index:8;box-shadow:0 4px 0 #0005;white-space:nowrap}
+#raceTimer{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#17306b;color:#fff;padding:10px 18px;font-size:16px;pointer-events:none;z-index:8;box-shadow:0 0 0 3px #7fd0ff,0 4px 0 #0005}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid button{margin:0;padding:10px 2px;font-size:8px;background:#e8f2ff;color:var(--k);--lo:#c3d6f3;--hi:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid button.on{background:#3d8bff;color:#fff;--lo:#1f56c4;--hi:#7ab8ff}
+.grid.map{grid-template-columns:1fr 1fr}
+.grid.map button{padding:14px 6px;font-size:10px}
+.grid.map button.on{background:#ffe27a;color:var(--k);--lo:#d4b23a;--hi:#fff8d0}
+#load{background:#8fd0ff}
+.loadwrap{background:#f4f9ff;padding:24px 28px;box-shadow:var(--bd),inset 0 -4px 0 #cfe0f7,inset 0 4px 0 #fff;display:flex;flex-direction:column;gap:16px;align-items:center;min-width:min(80vw,340px)}
+#loadSpinner{width:40px;height:40px;border:4px solid #cfe0f7;border-top-color:#3d8bff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loadbar{width:100%;height:18px;background:#cfe0f7;box-shadow:inset 0 3px 0 #a8b8d8;overflow:hidden}
+.loadbar i{display:block;height:100%;width:0;background:#3d8bff;transition:width .3s}
+#loadMsg{font-size:9px;text-align:center;line-height:1.8;color:#17306b;max-width:100%;word-break:break-word;min-height:14px}
+@media(orientation:landscape){#skin,#set{align-items:flex-end;padding-right:28px}}
+@media(max-height:430px){.ttl{width:min(54vw,330px)}.mb .big{padding:12px;font-size:13px}button{padding:10px}.mb{gap:8px}.card{padding:14px;gap:10px}.grid button{padding:6px 2px}}
+#raceTimer{font-size:12px;white-space:nowrap}#rbar{top:56px;left:50%;transform:translateX(-50%);width:min(60vw,360px);height:12px;background:#17306b;box-shadow:0 0 0 3px #7fd0ff;z-index:8;pointer-events:none}#rbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffd23f,#ff8c1a)}
+#cd{top:28%;left:50%;transform:translateX(-50%);font-size:min(18vw,96px);color:#ffd23f;text-shadow:0 6px 0 #17306b;z-index:9;pointer-events:none;animation:cdp .5s steps(5) infinite}@keyframes cdp{50%{transform:translateX(-50%) scale(1.15)}}
+#ab{right:108px;bottom:112px;width:60px;height:60px;padding:0;font-size:9px}
+
+/* ===== UI/UX v2 ===== */
+body{font-size:11px}
+.lbl{font-size:10px;opacity:.9;letter-spacing:1px}
+.card button,.mb button{font-size:12px;min-height:44px}
+.card .kick{min-height:34px}
+.grid button{font-size:10px;white-space:normal;line-height:1.3;min-height:38px;padding:8px 3px}
+.grid.map button{flex-direction:column;gap:4px;font-size:11px;padding:6px;min-height:66px}
+.grid.map button small{font-size:9px;opacity:.8}
+svg.mi{width:30px;height:30px;fill:none}
+.ttl{filter:drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff)}
+.tkc{width:min(94vw,600px)}
+.tkg{grid-template-columns:1fr 1fr;gap:10px}
+.tkg button.tk{justify-content:flex-start;text-align:left;gap:10px;padding:8px;margin:0;min-height:68px;background:#e8f2ff;color:var(--k);--lo:#c3d6f3;--hi:#fff;border-left:6px solid var(--c)}
+.tkg canvas{width:52px;height:52px;flex:none;image-rendering:pixelated;box-shadow:0 0 0 3px var(--k)}
+.tkg .tt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tkg .tt b{font-size:11px}
+.tkg .tt small{font-size:8px;line-height:1.4;opacity:.8;white-space:normal}
+.dif{display:flex;gap:3px;font-style:normal}
+.dif i{width:8px;height:8px;background:#cfe0f7}
+.dif i.on{background:var(--c);box-shadow:0 0 0 1px var(--k)}
+/* HUD balapan */
+#rpos{top:calc(max(14px,env(safe-area-inset-top)) + 60px);left:14px;background:#17306b;color:#fff;padding:8px 12px;box-shadow:0 0 0 3px #7fd0ff,0 4px 0 #0005;display:flex;align-items:baseline;gap:4px;z-index:8;pointer-events:none}
+#rpos b{font-size:26px;color:#ffd23f;line-height:1}
+#rpos small{font-size:11px;opacity:.9}
+#spd{right:16px;bottom:max(16px,env(safe-area-inset-bottom));width:132px;background:#17306b;color:#fff;padding:8px 10px 10px;box-shadow:0 0 0 3px #7fd0ff,0 4px 0 #0005;z-index:8;pointer-events:none}
+#spd .sv{display:flex;align-items:baseline;justify-content:flex-end;gap:5px}
+#spd b{font-size:24px;line-height:1.1}
+#spd small{font-size:9px;opacity:.85}
+#spd .sb{height:10px;background:#0b1a44;margin-top:6px}
+#spd .sb i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3fbf5f,#ffd23f 70%,#ff5d5d)}
+#spd .sl{font-size:9px;margin-top:6px;color:#5a6a9a;text-align:center}
+#spd.bo .sl{color:#ffd23f;animation:bl .3s steps(2) infinite}
+#spd.bo .sb i{background:#ff8c1a}
+@keyframes bl{50%{opacity:.3}}
+#rbar u{position:absolute;top:-5px;width:10px;height:22px;margin-left:-5px;background:#fff;box-shadow:0 0 0 2px #17306b}
+#rbar u.me{top:-8px;width:14px;height:28px;margin-left:-7px;box-shadow:0 0 0 3px #fff;z-index:2}
+#win .card{max-height:94vh;overflow:auto}
+body.racing #toast{top:78px}
+body.racing #jb,body.racing #rb,body.racing #ab{display:none}
+body.racing #bar{transform:translateX(-50%) scale(.7);transform-origin:bottom center;opacity:.92}
+</style></head><body>
+<canvas id="c"></canvas><div id="toast" class="hide"></div>
+<div id="rot"><svg viewBox="0 0 8 8"><rect x="2" y="0" width="4" height="8"/><rect x="3" y="1" width="2" height="5" fill="#17306b"/></svg>Putar HP ke landscape</div>
+<div id="load" class="ui"><div class="loadwrap"><div id="loadSpinner"></div><div id="loadMsg">Memuat...</div><div class="loadbar"><i id="loadBar"></i></div></div></div>
+<div id="name" class="ui hide"><canvas class="ttl"></canvas><div class="card"><div class="lbl">Username</div><input id="nm" maxlength="14" placeholder="Nama Jello" autocomplete="off"><button id="ng">Lanjut</button></div></div>
+<div id="menu" class="ui hide"><canvas class="ttl"></canvas><div class="mb"><button id="mp" class="big">Play</button><button id="ms" class="s">Custom Skin</button><button id="mr" class="s">Custom Room</button><button id="mt" class="s">Setting</button><button id="md" class="s">Download</button></div></div>
+<div id="playpick" class="ui hide"><div class="card"><div class="lbl">Pilih Map</div><div id="playMaps" class="grid map"></div><button class="s" id="ppbk">Kembali</button></div></div>
+<div id="skin" class="ui hide"><div class="card"><div class="r">Warna 1<input type="color" id="c1"></div><div class="r">Warna 2<input type="color" id="c2"></div>
+<div class="lbl">Bentuk</div><div id="shapes" class="grid"></div>
+<div class="lbl">Aksesori</div><div id="hats" class="grid"></div>
+<div class="r">Nametag<input type="color" id="nc"></div>
+<div class="lbl">Font</div><div id="fonts" class="grid"></div>
+<button class="s bk">Kembali</button></div></div>
+<div id="croom" class="ui hide"><div class="card"><div class="lbl">Pilih Map</div><div id="maps" class="grid map"></div>
+<button id="rc">Buat Room</button><div class="lbl">atau masuk dengan kode</div><div class="r"><input id="ri" maxlength="5" placeholder="KODE" style="width:120px;text-transform:uppercase"><button id="rj">Masuk</button></div><button class="s bk">Kembali</button></div></div>
+<div id="lobby" class="ui hide"><div class="card"><div class="lbl">Kode room</div><div id="lc" class="code"></div><div class="lbl">Pemain</div><div id="ll"></div><button id="lg">Mulai</button><button id="lx" class="d">Keluar</button></div></div>
+<div id="set" class="ui hide"><div class="card"><div id="rl"></div><input type="range" id="rd" min="60" max="400"><div class="lbl">Objek jauh memudar</div><button id="sb" class="s">Kembali</button></div></div>
+<div id="pause" class="ui hide"><div class="card"><button id="pr">Lanjut</button><button id="ps" class="s">Setting</button><button id="pe" class="d">Keluar</button></div></div>
+<div id="hud" class="hide"><canvas id="mm" width="96" height="96"></canvas>
+<button id="pb" class="ib"><svg viewBox="0 0 8 8"><rect x="1" y="1" width="2" height="6"/><rect x="5" y="1" width="2" height="6"/></svg></button>
+<button id="cb" class="ib"><svg viewBox="0 0 8 8"><rect x="0" y="1" width="8" height="5"/><rect x="1" y="6" width="2" height="2"/></svg></button>
+<div id="bar"></div>
+<div id="jbhud"><i></i><span id="jbn">0 JB</span></div>
+<div id="prompt" class="hide"></div>
+<div id="raceTimer" class="hide">0.00s</div><div id="rbar" class="hide"><i></i></div><div id="cd" class="hide"></div><div id="rpos" class="hide"><b>1</b><small>/3</small></div><div id="spd" class="hide"><div class="sv"><b>0</b><small>km/j</small></div><div class="sb"><i></i></div><div class="sl">BOOST</div></div>
+<div id="mob" class="hide"><div id="joy"><i id="kn"></i></div><button id="jb">JUMP</button><button id="rb" class="s">RUN</button><button id="ab" class="d">HIT</button></div>
+<div id="chat" class="hide"><input id="ci" maxlength="60" placeholder="Pesan"><button id="cs">Kirim</button></div></div>
+<script src="three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="game.js?v=24"></script></body></html>

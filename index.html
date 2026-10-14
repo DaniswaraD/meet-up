@@ -79,7 +79,6 @@ svg.mi{width:30px;height:30px;fill:none}
 .dif{display:flex;gap:3px;font-style:normal}
 .dif i{width:8px;height:8px;background:#cfe0f7}
 .dif i.on{background:var(--c);box-shadow:0 0 0 1px var(--k)}
-/* HUD balapan */
 #rpos{top:calc(max(14px,env(safe-area-inset-top)) + 60px);left:14px;background:#17306b;color:#fff;padding:8px 12px;box-shadow:0 0 0 3px #7fd0ff,0 4px 0 #0005;display:flex;align-items:baseline;gap:4px;z-index:8;pointer-events:none}
 #rpos b{font-size:26px;color:#ffd23f;line-height:1}
 #rpos small{font-size:11px;opacity:.9}
@@ -99,7 +98,6 @@ svg.mi{width:30px;height:30px;fill:none}
 body.racing #toast{top:78px}
 body.racing #jb,body.racing #rb,body.racing #ab{display:none}
 body.racing #bar{transform:translateX(-50%) scale(.7);transform-origin:bottom center;opacity:.92}
-/* ===== Kontrol balapan: arrow pad (kiri = gas/rem, kanan = belok) ===== */
 #rpad{display:none}
 @media(pointer:coarse){body.racing #rpad{display:block}body.racing #joy{display:none}body.racing #spd{bottom:128px}}
 #rpad .rp{position:fixed;bottom:max(22px,env(safe-area-inset-bottom));display:flex;gap:14px;z-index:8}
@@ -109,8 +107,6 @@ body.racing #bar{transform:translateX(-50%) scale(.7);transform-origin:bottom ce
 #rpad .pad svg{width:34px;height:34px}
 #rpad .pad.on{transform:translateY(3px);background:#ffe27a;color:#17306b;--lo:#d4b23a;--hi:#fff8d0}
 #rpad .k-d svg{transform:rotate(180deg)}#rpad .k-l svg{transform:rotate(-90deg)}#rpad .k-r svg{transform:rotate(90deg)}
-
-/* ===== Mode Boxing: HUD ===== */
 #hud .bxo{display:none}
 body.bxm #hud .bxo{display:flex}
 body.bxm #toast{top:84px}
@@ -152,6 +148,26 @@ body.bxm #toast{top:84px}
 body.bxm #ab{width:86px;height:86px;right:116px;bottom:92px;font-size:12px}
 #flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:15;background:#fff}
 @media(max-height:430px){#bxlb{padding:6px 8px;gap:4px}#bxlb li{font-size:7px}#bxhp{height:26px}}
+
+/* ===== Kendaraan ===== */
+#cars{grid-template-columns:repeat(2,1fr);gap:10px}
+#cars button.car{flex-direction:column;gap:5px;padding:6px 4px 8px;margin:0;min-height:112px;font-size:9px;
+  background:linear-gradient(#e8f2ff,#dbe9ff);color:var(--k);--lo:#c3d6f3;--hi:#fff;
+  box-shadow:var(--bd),inset 0 -4px 0 #c3d6f3,inset 0 4px 0 #fff;
+  white-space:normal;line-height:1.15;text-align:center;overflow:hidden;position:relative}
+#cars button.car.on{background:linear-gradient(#fff6b0,#ffe27a);--lo:#d4b23a;--hi:#fff8d0;
+  box-shadow:var(--bd),0 0 0 3px #ffd23f,0 0 0 6px #fff,inset 0 -4px 0 #d4b23a,inset 0 4px 0 #fff8d0;transform:translateY(-2px)}
+#cars button.car.on::after{content:'DIPAKAI';position:absolute;top:6px;left:6px;background:#17306b;color:#ffd23f;
+  font-size:7px;letter-spacing:1px;padding:3px 5px;z-index:2;box-shadow:0 2px 0 #0005}
+#cars button.car canvas{width:100%;height:auto;max-height:58px;image-rendering:pixelated;
+  box-shadow:0 0 0 2px var(--k),0 3px 0 0 #0005;display:block}
+#cars button.car .cn{font-size:9px;font-weight:bold;line-height:1.15;letter-spacing:.5px;min-height:20px;
+  display:flex;align-items:center;justify-content:center;padding:0 2px}
+#cars button.car .cp{font-size:8px;letter-spacing:1px;padding:2px 6px;background:#17306b;color:#7fd0ff;
+  display:inline-block;align-self:center;box-shadow:0 2px 0 #0005}
+#cars button.car .cp.lock{background:#d8342a;color:#fff}
+#cars button.car .cp.owned{background:#2a8a4a;color:#fff}
+#cars button.car.on .cp{background:#17306b;color:#ffd23f}
 </style></head><body>
 <canvas id="c"></canvas><div id="toast" class="hide"></div>
 <div id="rot"><svg viewBox="0 0 8 8"><rect x="2" y="0" width="4" height="8"/><rect x="3" y="1" width="2" height="5" fill="#17306b"/></svg>Putar HP ke landscape</div>
@@ -164,6 +180,7 @@ body.bxm #ab{width:86px;height:86px;right:116px;bottom:92px;font-size:12px}
 <div class="lbl">Aksesori</div><div id="hats" class="grid"></div>
 <div class="r">Nametag<input type="color" id="nc"></div>
 <div class="lbl">Font</div><div id="fonts" class="grid"></div>
+<div class="lbl">Kendaraan</div><div id="cars" class="grid"></div>
 <button class="s bk">Kembali</button></div></div>
 <div id="croom" class="ui hide"><div class="card"><div class="lbl">Pilih Map</div><div id="maps" class="grid map"></div>
 <button id="rc">Buat Room</button><div class="lbl">atau masuk dengan kode</div><div class="r"><input id="ri" maxlength="5" placeholder="KODE" style="width:120px;text-transform:uppercase"><button id="rj">Masuk</button></div><button class="s bk">Kembali</button></div></div>
@@ -191,5 +208,5 @@ body.bxm #ab{width:86px;height:86px;right:116px;bottom:92px;font-size:12px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="game.js?v=28"></script>
-<link rel="stylesheet" href="ui.css?v=1"><script src="ui.js?v=1"></script></body></html>
+<script src="game.js?v=29"></script>
+<link rel="stylesheet" href="ui.css?v=2"><script src="ui.js?v=1"></script></body></html>

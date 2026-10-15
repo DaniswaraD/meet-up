@@ -213,3 +213,12 @@ body.bxm #toast{top:104px}body.racing #toast{top:92px}
 }
 @media(max-width:560px){.grid.map{grid-template-columns:repeat(2,1fr)}}
 @media(prefers-reduced-motion:reduce){#deco i,.jc,.ttl,button::after,.mb .big::before,#mmfx::before,#bxking::before,#loadSpinner,.mchip .ph i{animation:none!important}}
+
+/* ---- transisi voucher (pixel wipe) + title ---- */
+.ttl{touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#vtr{position:fixed;inset:0;z-index:90;display:grid;grid-template-columns:repeat(var(--c),1fr);grid-template-rows:repeat(var(--r),1fr);pointer-events:auto;overflow:hidden}
+#vtr i{background:#17306b;transform:scale(0);animation:vtIn .26s steps(4) forwards}
+#vtr i.a{background:#3d8bff}
+#vtr.out i{animation-name:vtOut}
+@keyframes vtIn{to{transform:scale(1.05)}}
+@keyframes vtOut{from{transform:scale(1.05)}to{transform:scale(0)}}

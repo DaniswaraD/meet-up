@@ -1,9 +1,10 @@
-/* ═══ builds.js — Mode Bangun-Bangunan (v2) ═══
+/* ═══ builds.js — Mode Bangun-Bangunan (v3) ═══
    Map, Tools, Parts (49 desain 3D), kamera bebas, mode Play, Save/Load, UI.
+   Material lebih halus, thumbnail lebih terang, panel lebih rapi.
    Dimuat setelah world.js. ═══ */
 
-const BUILD_GRID = 2;      // snap grid
-const BUILD_LIMIT = 490;   // batas map (±)
+const BUILD_GRID = 2;
+const BUILD_LIMIT = 490;
 let buildGroup, buildGhost, buildRay, buildFloor, selBox;
 let placedObjects = [], selectedObject = null, undoStack = [];
 let currentTool = 'add', currentPartCat = 'bentuk', currentPartType = 'wall';
@@ -12,13 +13,26 @@ let buildCamera = { target: new THREE.Vector3(0, 0, 0) };
 const buildPtr = { x: 0, y: 0 };
 const inBuild = () => playing && curMap === 'builds';
 
+/* ───────────── Material Builder ─────────────
+   Menggunakan MeshPhongMaterial dengan shininess & emissive yang lebih halus
+   supaya terlihat lebih bagus tanpa perlu MeshStandardMaterial (kompatibel). */
+function buildMat(color, opts) {
+    return new THREE.MeshPhongMaterial(Object.assign({
+        color: color,
+        flatShading: true,
+        shininess: 22,
+        specular: 0x333333,
+        emissive: 0x000000,
+        emissiveIntensity: 0
+    }, opts || {}));
+}
+
 /* ───────────── Perpustakaan Part ───────────── */
 const BUILD_PARTS = (() => {
-    const Bx = (w, h, d, x, y, z, c, o) => Object.assign({ geo: new THREE.BoxGeometry(w, h, d), x, y, z, color: c }, o);
-    const Cy = (rt, rb, h, s, x, y, z, c, o) => Object.assign({ geo: new THREE.CylinderGeometry(rt, rb, h, s), x, y, z, color: c }, o);
-    const Ic = (r, x, y, z, c, o) => Object.assign({ geo: new THREE.IcosahedronGeometry(r, 1), x, y, z, color: c }, o);
-    const Co = (r, h, s, x, y, z, c, o) => Object.assign({ geo: new THREE.ConeGeometry(r, h, s), x, y, z, color: c }, o);
-    // prisma segitiga: profil (z,y) di-extrude sepanjang x
+    const Bx = (w, h, d, x, y, z, c, o) => Object.assign({ geo: new THREE.BoxGeometry(w, h, d), x, y, z, color: c }, o || {});
+    const Cy = (rt, rb, h, s, x, y, z, c, o) => Object.assign({ geo: new THREE.CylinderGeometry(rt, rb, h, s), x, y, z, color: c }, o || {});
+    const Ic = (r, x, y, z, c, o) => Object.assign({ geo: new THREE.IcosahedronGeometry(r, 1), x, y, z, color: c }, o || {});
+    const Co = (r, h, s, x, y, z, c, o) => Object.assign({ geo: new THREE.ConeGeometry(r, h, s), x, y, z, color: c }, o || {});
     const prism = (w, pts) => {
         const [a, b, c] = pts, v = [], x0 = -w / 2, x1 = w / 2;
         const tri = (p, q, r) => v.push(...p, ...q, ...r);
@@ -29,16 +43,13 @@ const BUILD_PARTS = (() => {
         g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals(); return g;
     };
     const solidGeo = ps => mergeParts(ps.map(p => Object.assign({}, p, { color: 0xffffff })));
-    const mesh = ps => {
-        const m = new THREE.Mesh(mergeParts(ps), new THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true }));
-        return m;
-    };
+    const mesh = ps => new THREE.Mesh(mergeParts(ps), buildMat(0xffffff, { vertexColors: true }));
     const grp = (ps, extra) => { const g = new THREE.Group(); g.add(mesh(ps)); if (extra) extra(g); return g; };
     const glow = (geo, c, x, y, z) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); return m; };
     const WOOD = 0x8b5a2b, DWOOD = 0x5a3a1a, STONE = 0x8a8a82, LSTONE = 0xb4b4aa;
     const steps = (n, w, h, d) => { const ps = []; for (let i = 0; i < n; i++) { const hh = h * (i + 1) / n; ps.push(Bx(w, hh, d / n, 0, hh / 2, -d / 2 + (i + .5) * d / n, 0xffffff)); } return solidGeo(ps); };
 
-    const S = { // ── BENTUK (bisa diubah ukuran & warna) ──
+    const S = {
         wall:   { name: 'Dinding', col: 0xd9d4c7, geo: () => solidGeo([Bx(4, 4, .5, 0, 2, 0)]) },
         wwall:  { name: 'Dinding Jendela', col: 0xd9d4c7, geo: () => solidGeo([Bx(1, 4, .5, -1.5, 2, 0), Bx(1, 4, .5, 1.5, 2, 0), Bx(2, 1, .5, 0, .5, 0), Bx(2, 1, .5, 0, 3.5, 0)]) },
         dwall:  { name: 'Dinding Pintu', col: 0xd9d4c7, geo: () => solidGeo([Bx(1, 4, .5, -1.5, 2, 0), Bx(1, 4, .5, 1.5, 2, 0), Bx(2, 1.2, .5, 0, 3.4, 0)]) },
@@ -47,54 +58,54 @@ const BUILD_PARTS = (() => {
         stairs: { name: 'Tangga', col: 0xc9bfae, geo: () => steps(4, 4, 4, 4), steps: 4 },
         ramp:   { name: 'Ramp', col: 0xbbbbbb, geo: () => prism(4, [[-2, 0], [2, 0], [2, 4]]), steps: 8 },
         box:    { name: 'Kotak', col: 0x9aa8b8, geo: () => solidGeo([Bx(4, 4, 4, 0, 2, 0)]) },
-        sphere: { name: 'Bola', col: 0xe07a5f, geo: () => new THREE.SphereGeometry(2, 16, 12).translate(0, 2, 0), solid: [{ w: 3, h: 4, d: 3, x: 0, y: 0, z: 0 }] },
-        cone:   { name: 'Kerucut', col: 0x81b29a, geo: () => new THREE.ConeGeometry(2, 4, 12).translate(0, 2, 0), solid: [{ w: 3, h: 2, d: 3, x: 0, y: 0, z: 0 }] },
-        cylinder: { name: 'Tabung', col: 0xf2cc8f, geo: () => new THREE.CylinderGeometry(2, 2, 4, 16).translate(0, 2, 0) },
-        dome:   { name: 'Kubah', col: 0x8ecae6, geo: () => new THREE.SphereGeometry(2, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), solid: [{ w: 3, h: 1.6, d: 3, x: 0, y: 0, z: 0 }] },
+        sphere: { name: 'Bola', col: 0xe07a5f, geo: () => new THREE.SphereGeometry(2, 20, 14).translate(0, 2, 0), solid: [{ w: 3, h: 4, d: 3, x: 0, y: 0, z: 0 }] },
+        cone:   { name: 'Kerucut', col: 0x81b29a, geo: () => new THREE.ConeGeometry(2, 4, 16).translate(0, 2, 0), solid: [{ w: 3, h: 2, d: 3, x: 0, y: 0, z: 0 }] },
+        cylinder: { name: 'Tabung', col: 0xf2cc8f, geo: () => new THREE.CylinderGeometry(2, 2, 4, 20).translate(0, 2, 0) },
+        dome:   { name: 'Kubah', col: 0x8ecae6, geo: () => new THREE.SphereGeometry(2, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), solid: [{ w: 3, h: 1.6, d: 3, x: 0, y: 0, z: 0 }] },
         roof:   { name: 'Atap', col: 0xb5483a, geo: () => prism(4.4, [[-2.4, 0], [2.4, 0], [0, 2.2]]), solid: [{ w: 4.4, h: 1, d: 4.8, x: 0, y: 0, z: 0 }] }
     };
     Object.values(S).forEach(p => p.sc = true);
 
-    const N = { // ── ALAM ──
-        tree: { name: 'Pohon', build: () => mesh([Cy(.6, 1, 4, 7, 0, 2, 0, 0x5a3a1a), Ic(2.2, 0, 5.2, 0, 0x3aa84a), Ic(1.6, 1.4, 6.2, .5, 0x2f8a3a), Ic(1.4, -1.2, 6.5, -.4, 0x4ac05a), Ic(1.2, .2, 7.4, -.6, 0x56c968)]), solid: [{ w: 1.2, h: 5, d: 1.2, x: 0, y: 0, z: 0 }] },
-        pine: { name: 'Pinus', build: () => mesh([Cy(.4, .6, 2, 6, 0, 1, 0, 0x5a3a1a), Co(2.6, 3, 8, 0, 3.4, 0, 0x1f6b3a), Co(2.1, 2.8, 8, 0, 5.2, 0, 0x2a8a48), Co(1.5, 2.6, 8, 0, 7, 0, 0x37a85a), Co(.9, 1.6, 8, 0, 8.6, 0, 0xeaf6ff)]), solid: [{ w: 1, h: 5, d: 1, x: 0, y: 0, z: 0 }] },
-        palm: { name: 'Palem', build: () => { const ps = [Cy(.35, .55, 5, 6, 0, 2.5, 0, 0xb08a58, { rx: .12 })]; for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283; ps.push(Co(.5, 3.2, 3, Math.cos(a) * 1.3, 5.2, Math.sin(a) * 1.3, 0x3fae4a, { rz: -Math.cos(a) * 1.25, rx: Math.sin(a) * 1.25, sy: 1 })); } ps.push(Ic(.35, .3, 4.8, 0, 0x6a4a2a), Ic(.35, -.2, 4.7, .3, 0x6a4a2a)); return mesh(ps); }, solid: [{ w: .9, h: 5, d: .9, x: 0, y: 0, z: 0 }] },
+    const N = {
+        tree: { name: 'Pohon', build: () => mesh([Cy(.6, 1, 4, 8, 0, 2, 0, 0x5a3a1a), Cy(.5, .7, 1.5, 6, 0, 3.5, 0, 0x6b4a2b), Ic(2.2, 0, 5.2, 0, 0x3aa84a), Ic(1.6, 1.4, 6.2, .5, 0x2f8a3a), Ic(1.4, -1.2, 6.5, -.4, 0x4ac05a), Ic(1.2, .2, 7.4, -.6, 0x56c968)]), solid: [{ w: 1.2, h: 5, d: 1.2, x: 0, y: 0, z: 0 }] },
+        pine: { name: 'Pinus', build: () => mesh([Cy(.4, .6, 2, 6, 0, 1, 0, 0x5a3a1a), Co(2.6, 3, 9, 0, 3.4, 0, 0x1f6b3a), Co(2.1, 2.8, 9, 0, 5.2, 0, 0x2a8a48), Co(1.5, 2.6, 9, 0, 7, 0, 0x37a85a), Co(.9, 1.6, 9, 0, 8.6, 0, 0xeaf6ff)]), solid: [{ w: 1, h: 5, d: 1, x: 0, y: 0, z: 0 }] },
+        palm: { name: 'Palem', build: () => { const ps = [Cy(.35, .55, 5, 7, 0, 2.5, 0, 0xb08a58, { rx: .12 })]; for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283; ps.push(Co(.5, 3.2, 3, Math.cos(a) * 1.3, 5.2, Math.sin(a) * 1.3, 0x3fae4a, { rz: -Math.cos(a) * 1.25, rx: Math.sin(a) * 1.25, sy: 1 })); } ps.push(Ic(.35, .3, 4.8, 0, 0x6a4a2a), Ic(.35, -.2, 4.7, .3, 0x6a4a2a)); return mesh(ps); }, solid: [{ w: .9, h: 5, d: .9, x: 0, y: 0, z: 0 }] },
         bush: { name: 'Semak', build: () => mesh([Ic(1, 0, .8, 0, 0x3f9d4a), Ic(.8, .9, .6, .3, 0x4fb85a), Ic(.7, -.8, .55, -.2, 0x2f8a3a), Ic(.18, .5, 1.3, .6, 0xff6688), Ic(.18, -.4, 1.2, .7, 0xffd23f)]), solid: 'none' },
         flower: { name: 'Bunga', build: () => { const ps = []; [[0, 0, 0xff6688], [.5, .3, 0xffd23f], [-.4, .4, 0xb07aff]].forEach(([x, z, c], i) => { ps.push(Cy(.04, .04, .6 + i * .15, 4, x, .3 + i * .07, z, 0x3a7a2f), Ic(.2, x, .65 + i * .15, z, c), Ic(.09, x, .8 + i * .15, z, 0xffe27a)); }); return mesh(ps); }, solid: 'none' },
         grass: { name: 'Rumput', build: () => { const ps = []; for (let i = 0; i < 9; i++) { const a = i * 2.4, r = .15 + (i % 3) * .12; ps.push(Co(.12, .6 + (i % 4) * .18, 3, Math.cos(a) * r, .35 + (i % 4) * .09, Math.sin(a) * r, i % 2 ? 0x4fa040 : 0x62b84f, { rz: Math.cos(a) * .25, rx: Math.sin(a) * .25 })); } return mesh(ps); }, solid: 'none' },
         rock: { name: 'Batu', build: () => mesh([Ic(1.2, 0, .7, 0, 0x8d8d86, { sy: .75 }), Ic(.6, 1, .35, .5, 0x9c9c94, { sy: .8 })]), solid: [{ w: 2, h: 1.2, d: 2, x: 0, y: 0, z: 0 }] },
         rocks: { name: 'Tumpukan Batu', build: () => mesh([Ic(1.5, 0, .9, 0, 0x7d7d76, { sy: .8 }), Ic(1.1, 1.8, .6, .4, 0x8d8d86, { sy: .8 }), Ic(.9, -1.4, .5, .8, 0x9c9c94, { sy: .8 }), Ic(.7, .4, 1.9, -.2, 0xa8a8a0, { sy: .8 })]), solid: [{ w: 3.4, h: 1.6, d: 2.4, x: 0, y: 0, z: 0 }] },
-        mushroom: { name: 'Jamur', build: () => mesh([Cy(.25, .3, .8, 6, 0, .4, 0, 0xf4ecd8), { geo: new THREE.SphereGeometry(.7, 10, 6, 0, 6.283, 0, 1.6), y: .75, color: 0xe63946 }, Ic(.1, .3, 1.3, .2, 0xffffff), Ic(.1, -.3, 1.2, -.2, 0xffffff), Ic(.08, -.1, 1.4, .4, 0xffffff)]), solid: 'none' },
-        cactus: { name: 'Kaktus', build: () => mesh([Cy(.45, .5, 3.2, 8, 0, 1.6, 0, 0x3f9d5a), Ic(.45, 0, 3.2, 0, 0x3f9d5a), Cy(.22, .22, 1, 6, .8, 1.8, 0, 0x3f9d5a, { rz: 0 }), Cy(.22, .22, .8, 6, .55, 1.4, 0, 0x3f9d5a, { rz: 1.57 }), Cy(.22, .22, .9, 6, -.8, 2.2, 0, 0x3f9d5a), Cy(.22, .22, .8, 6, -.55, 1.8, 0, 0x3f9d5a, { rz: 1.57 }), Ic(.14, 0, 3.8, 0, 0xff7aa8)]), solid: [{ w: 1, h: 3.4, d: 1, x: 0, y: 0, z: 0 }] },
-        stump: { name: 'Tunggul', build: () => mesh([Cy(.8, 1, 1, 9, 0, .5, 0, 0x7a4a22), Cy(.7, .7, .06, 9, 0, 1, 0, 0xd9b27a), Cy(.4, .4, .08, 9, 0, 1.01, 0, 0xc89a60)]) }
+        mushroom: { name: 'Jamur', build: () => mesh([Cy(.25, .3, .8, 7, 0, .4, 0, 0xf4ecd8), { geo: new THREE.SphereGeometry(.7, 12, 8, 0, 6.283, 0, 1.6), y: .75, color: 0xe63946 }, Ic(.1, .3, 1.3, .2, 0xffffff), Ic(.1, -.3, 1.2, -.2, 0xffffff), Ic(.08, -.1, 1.4, .4, 0xffffff)]), solid: 'none' },
+        cactus: { name: 'Kaktus', build: () => mesh([Cy(.45, .5, 3.2, 9, 0, 1.6, 0, 0x3f9d5a), Ic(.45, 0, 3.2, 0, 0x3f9d5a), Cy(.22, .22, 1, 7, .8, 1.8, 0, 0x3f9d5a, { rz: 0 }), Cy(.22, .22, .8, 7, .55, 1.4, 0, 0x3f9d5a, { rz: 1.57 }), Cy(.22, .22, .9, 7, -.8, 2.2, 0, 0x3f9d5a), Cy(.22, .22, .8, 7, -.55, 1.8, 0, 0x3f9d5a, { rz: 1.57 }), Ic(.14, 0, 3.8, 0, 0xff7aa8)]), solid: [{ w: 1, h: 3.4, d: 1, x: 0, y: 0, z: 0 }] },
+        stump: { name: 'Tunggul', build: () => mesh([Cy(.8, 1, 1, 10, 0, .5, 0, 0x7a4a22), Cy(.7, .7, .06, 10, 0, 1, 0, 0xd9b27a), Cy(.4, .4, .08, 10, 0, 1.01, 0, 0xc89a60)]) }
     };
-    const F = { // ── PERABOT ──
-        lamp: { name: 'Lampu Jalan', build: () => grp([Cy(.14, .2, 4.4, 6, 0, 2.2, 0, 0x2f343b), Cy(.35, .35, .3, 6, 0, .15, 0, 0x2f343b), Bx(1, .12, .12, .35, 4.45, 0, 0x2f343b), Bx(.8, .3, .8, .8, 4.2, 0, 0x2f343b), Co(.6, .4, 4, .8, 4.65, 0, 0x2f343b, { ry: .785 })], g => { const b = glow(new THREE.IcosahedronGeometry(.28, 1), 0xffe27a, .8, 4.05, 0); g.add(b); g.userData.tick = t => { b.scale.setScalar(1 + Math.sin(t * 5) * .04); }; }), solid: [{ w: .6, h: 4.5, d: .6, x: 0, y: 0, z: 0 }] },
-        lantern: { name: 'Lentera Batu', build: () => grp([Bx(1.2, .3, 1.2, 0, .15, 0, STONE), Cy(.2, .25, 1.2, 6, 0, .9, 0, LSTONE), Bx(1, .2, 1, 0, 1.6, 0, STONE), Bx(.9, .05, .9, 0, 2.1, 0, LSTONE), Co(.95, .6, 4, 0, 2.5, 0, STONE, { ry: .785 }), Ic(.15, 0, 2.9, 0, LSTONE)], g => g.add(glow(new THREE.BoxGeometry(.6, .6, .6), 0xffd88a, 0, 1.85, 0))), solid: [{ w: 1.2, h: 3, d: 1.2, x: 0, y: 0, z: 0 }] },
+    const F = {
+        lamp: { name: 'Lampu Jalan', build: () => grp([Cy(.14, .2, 4.4, 7, 0, 2.2, 0, 0x2f343b), Cy(.35, .35, .3, 7, 0, .15, 0, 0x2f343b), Bx(1, .12, .12, .35, 4.45, 0, 0x2f343b), Bx(.8, .3, .8, .8, 4.2, 0, 0x2f343b), Co(.6, .4, 4, .8, 4.65, 0, 0x2f343b, { ry: .785 })], g => { const b = glow(new THREE.IcosahedronGeometry(.28, 1), 0xffe27a, .8, 4.05, 0); g.add(b); g.userData.tick = t => { b.scale.setScalar(1 + Math.sin(t * 5) * .04); }; }), solid: [{ w: .6, h: 4.5, d: .6, x: 0, y: 0, z: 0 }] },
+        lantern: { name: 'Lentera Batu', build: () => grp([Bx(1.2, .3, 1.2, 0, .15, 0, STONE), Cy(.2, .25, 1.2, 7, 0, .9, 0, LSTONE), Bx(1, .2, 1, 0, 1.6, 0, STONE), Bx(.9, .05, .9, 0, 2.1, 0, LSTONE), Co(.95, .6, 4, 0, 2.5, 0, STONE, { ry: .785 }), Ic(.15, 0, 2.9, 0, LSTONE)], g => g.add(glow(new THREE.BoxGeometry(.6, .6, .6), 0xffd88a, 0, 1.85, 0))), solid: [{ w: 1.2, h: 3, d: 1.2, x: 0, y: 0, z: 0 }] },
         bench: { name: 'Bangku', build: () => mesh([Bx(3, .25, 1, 0, .85, 0, 0xa06a35), Bx(3, .9, .18, 0, 1.45, -.45, 0xa06a35, { rx: -.12 }), Bx(.25, .85, .9, -1.3, .42, 0, 0x2f343b), Bx(.25, .85, .9, 1.3, .42, 0, 0x2f343b), Bx(.25, .5, .15, -1.3, 1.15, -.4, 0x2f343b), Bx(.25, .5, .15, 1.3, 1.15, -.4, 0x2f343b)]), solid: [{ w: 3, h: 1, d: 1, x: 0, y: 0, z: 0 }] },
         table: { name: 'Meja', build: () => { const ps = [Bx(3, .2, 2, 0, 1.4, 0, 0xb27a3f)]; [[-1.3, -.8], [1.3, -.8], [-1.3, .8], [1.3, .8]].forEach(([x, z]) => ps.push(Bx(.2, 1.3, .2, x, .65, z, DWOOD))); ps.push(Bx(2.8, .1, 1.8, 0, 1.2, 0, DWOOD)); return mesh(ps); }, solid: [{ w: 3, h: 1.5, d: 2, x: 0, y: 0, z: 0 }] },
         chair: { name: 'Kursi', build: () => { const ps = [Bx(1, .15, 1, 0, .9, 0, 0xc0884a), Bx(1, 1.1, .12, 0, 1.5, -.44, 0xc0884a)]; [[-.4, -.4], [.4, -.4], [-.4, .4], [.4, .4]].forEach(([x, z]) => ps.push(Bx(.12, .85, .12, x, .42, z, DWOOD))); return mesh(ps); }, solid: [{ w: 1, h: 1, d: 1, x: 0, y: 0, z: 0 }] },
         crate: { name: 'Peti', build: () => { const ps = [Bx(1.6, 1.6, 1.6, 0, .8, 0, 0xb98a50)]; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([x, z]) => ps.push(Bx(.2, 1.7, .2, x * .78, .85, z * .78, DWOOD))); [.05, 1.6].forEach(y => ps.push(Bx(1.7, .18, 1.7, 0, y + .08, 0, DWOOD))); ps.push(Bx(.12, 2.1, .06, 0, .8, .82, DWOOD, { rz: .78 })); return mesh(ps); } },
-        barrel: { name: 'Barel', build: () => mesh([Cy(.65, .7, .5, 12, 0, .25, 0, 0x8b5a2b), Cy(.8, .65, .5, 12, 0, .75, 0, 0x9a6632), Cy(.8, .8, .4, 12, 0, 1.2, 0, 0x8b5a2b), Cy(.7, .8, .5, 12, 0, 1.65, 0, 0x9a6632), Cy(.72, .72, .12, 12, 0, .45, 0, 0x2f343b), Cy(.82, .82, .12, 12, 0, 1.0, 0, 0x2f343b), Cy(.72, .72, .12, 12, 0, 1.85, 0, 0x2f343b), Cy(.62, .62, .06, 12, 0, 1.92, 0, 0xc89a60)]), solid: [{ w: 1.5, h: 1.9, d: 1.5, x: 0, y: 0, z: 0 }] },
-        mailbox: { name: 'Kotak Pos', build: () => mesh([Bx(.2, 1.6, .2, 0, .8, 0, WOOD), Bx(.9, .55, .6, 0, 1.75, 0, 0x3d8bff), Cy(.3, .3, .9, 8, 0, 2.02, 0, 0x3d8bff, { rz: 1.57 }), Bx(.08, .5, .25, .5, 2.05, 0, 0xff5d5d)]), solid: [{ w: .8, h: 2.2, d: .6, x: 0, y: 0, z: 0 }] },
-        pot: { name: 'Pot Tanaman', build: () => mesh([Cy(.7, .5, .9, 10, 0, .45, 0, 0xc4623a), Cy(.78, .78, .15, 10, 0, .95, 0, 0xd4724a), Ic(.7, 0, 1.4, 0, 0x3f9d4a), Ic(.5, .5, 1.6, .2, 0x4fb85a), Ic(.15, -.2, 1.9, .3, 0xff6688)]), solid: [{ w: 1.5, h: 1, d: 1.5, x: 0, y: 0, z: 0 }] },
+        barrel: { name: 'Barel', build: () => mesh([Cy(.65, .7, .5, 14, 0, .25, 0, 0x8b5a2b), Cy(.8, .65, .5, 14, 0, .75, 0, 0x9a6632), Cy(.8, .8, .4, 14, 0, 1.2, 0, 0x8b5a2b), Cy(.7, .8, .5, 14, 0, 1.65, 0, 0x9a6632), Cy(.72, .72, .12, 14, 0, .45, 0, 0x2f343b), Cy(.82, .82, .12, 14, 0, 1.0, 0, 0x2f343b), Cy(.72, .72, .12, 14, 0, 1.85, 0, 0x2f343b), Cy(.62, .62, .06, 14, 0, 1.92, 0, 0xc89a60)]), solid: [{ w: 1.5, h: 1.9, d: 1.5, x: 0, y: 0, z: 0 }] },
+        mailbox: { name: 'Kotak Pos', build: () => mesh([Bx(.2, 1.6, .2, 0, .8, 0, WOOD), Bx(.9, .55, .6, 0, 1.75, 0, 0x3d8bff), Cy(.3, .3, .9, 10, 0, 2.02, 0, 0x3d8bff, { rz: 1.57 }), Bx(.08, .5, .25, .5, 2.05, 0, 0xff5d5d)]), solid: [{ w: .8, h: 2.2, d: .6, x: 0, y: 0, z: 0 }] },
+        pot: { name: 'Pot Tanaman', build: () => mesh([Cy(.7, .5, .9, 12, 0, .45, 0, 0xc4623a), Cy(.78, .78, .15, 12, 0, .95, 0, 0xd4724a), Ic(.7, 0, 1.4, 0, 0x3f9d4a), Ic(.5, .5, 1.6, .2, 0x4fb85a), Ic(.15, -.2, 1.9, .3, 0xff6688)]), solid: [{ w: 1.5, h: 1, d: 1.5, x: 0, y: 0, z: 0 }] },
         sign: { name: 'Papan Petunjuk', build: () => mesh([Bx(.2, 2.6, .2, 0, 1.3, 0, DWOOD), Bx(1.8, .7, .12, .5, 2.3, 0, 0xe6c07a), Co(.45, .8, 3, 1.6, 2.3, 0, 0xe6c07a, { rz: -1.57 }), Bx(1.4, .55, .12, -.3, 1.5, .02, 0xd9a85a), Bx(1.4, .08, .02, .4, 2.3, .07, DWOOD)]), solid: [{ w: .5, h: 2.6, d: .5, x: 0, y: 0, z: 0 }] },
-        tent: { name: 'Tenda', build: () => mesh([{ geo: prism(3.8, [[-2.4, 0], [2.4, 0], [0, 2.8]]), color: 0xff8a3a }, { geo: prism(3.9, [[-.9, 0], [.9, 0], [0, 1.8]]), y: .01, z: 2.3 * 0 + .2, color: 0x4a2f1a }, Bx(.12, .12, 5, 0, 2.78, 0, 0x5a3a1a, { rx: 0, ry: 0 }), Bx(.08, 2.9, .08, 1.8, 1.4, 2.5, 0xcfcfcf)]), solid: [{ w: 3.8, h: 2.4, d: 4.8, x: 0, y: 0, z: 0 }] },
-        umbrella: { name: 'Payung Pantai', build: () => mesh([Cy(.07, .07, 3.4, 6, 0, 1.7, 0, 0xeeeeee), Co(2.2, .9, 8, 0, 3.55, 0, 0xff5d5d), Co(1.5, .6, 8, 0, 3.8, 0, 0xffffff), Ic(.12, 0, 4.15, 0, 0xffd23f)]), solid: [{ w: .3, h: 3.5, d: .3, x: 0, y: 0, z: 0 }] }
+        tent: { name: 'Tenda', build: () => mesh([{ geo: prism(3.8, [[-2.4, 0], [2.4, 0], [0, 2.8]]), color: 0xff8a3a }, { geo: prism(3.9, [[-.9, 0], [.9, 0], [0, 1.8]]), y: .01, z: .2, color: 0x4a2f1a }, Bx(.12, .12, 5, 0, 2.78, 0, 0x5a3a1a), Bx(.08, 2.9, .08, 1.8, 1.4, 2.5, 0xcfcfcf)]), solid: [{ w: 3.8, h: 2.4, d: 4.8, x: 0, y: 0, z: 0 }] },
+        umbrella: { name: 'Payung Pantai', build: () => mesh([Cy(.07, .07, 3.4, 7, 0, 1.7, 0, 0xeeeeee), Co(2.2, .9, 9, 0, 3.55, 0, 0xff5d5d), Co(1.5, .6, 9, 0, 3.8, 0, 0xffffff), Ic(.12, 0, 4.15, 0, 0xffd23f)]), solid: [{ w: .3, h: 3.5, d: .3, x: 0, y: 0, z: 0 }] }
     };
-    const G = { // ── BANGUNAN ──
+    const G = {
         house: { name: 'Rumah Kecil', build: () => mesh([Bx(6, 3.6, 5, 0, 1.8, 0, 0xf2e2c0), { geo: prism(6.8, [[-3.2, 0], [3.2, 0], [0, 2.4]]), y: 3.6, color: 0xc0503a }, Bx(1.3, 2.3, .15, 0, 1.15, 2.55, 0x6b4423), Ic(.08, .4, 1.1, 2.65, 0xffd23f), Bx(1.2, 1.1, .15, -2, 2.1, 2.55, 0x9fd8ff), Bx(1.2, 1.1, .15, 2, 2.1, 2.55, 0x9fd8ff), Bx(1.4, .15, .3, -2, 1.5, 2.6, 0xffffff), Bx(1.4, .15, .3, 2, 1.5, 2.6, 0xffffff), Bx(.8, 1.6, .8, 1.8, 5, -.8, 0x9a6a5a)]), solid: [{ w: 6, h: 3.6, d: 5, x: 0, y: 0, z: 0 }] },
-        tower: { name: 'Menara', build: () => { const ps = [Cy(2, 2.4, 8, 10, 0, 4, 0, 0xa8a8a0), Cy(2.5, 2.5, .6, 10, 0, 8.3, 0, 0x8a8a82), Co(2.6, 3.4, 10, 0, 10.4, 0, 0xb5483a), Bx(.9, 1.4, .3, 0, 5, 2, 0x2a2a30), Bx(.5, 1, .3, 0, 7.2, 2, 0x2a2a30)]; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; ps.push(Bx(.7, .7, .7, Math.cos(a) * 2.2, 8.9, Math.sin(a) * 2.2, 0x8a8a82, { ry: -a })); } return mesh(ps); }, solid: [{ w: 4.4, h: 8.6, d: 4.4, x: 0, y: 0, z: 0 }] },
-        archway: { name: 'Gerbang', build: () => mesh([Bx(1, 7, 1, -3, 3.5, 0, 0x8a8a82), Bx(1, 7, 1, 3, 3.5, 0, 0x8a8a82), Bx(1.4, .5, 1.4, -3, .25, 0, STONE), Bx(1.4, .5, 1.4, 3, .25, 0, STONE), Bx(8, .9, 1, 0, 7.4, 0, 0x9a9a92), Bx(8.6, .3, 1.3, 0, 8, 0, 0x7a7a72), { geo: new THREE.TorusGeometry(1.4, .18, 6, 20, Math.PI), y: 7.8, color: 0xffd23f }, Ic(.4, -3, 7.5, 0, 0xffd23f, {}), Ic(.4, 3, 7.5, 0, 0xffd23f)]), solid: [{ w: 1, h: 7, d: 1, x: -3, y: 0, z: 0 }, { w: 1, h: 7, d: 1, x: 3, y: 0, z: 0 }, { w: 8, h: 1.2, d: 1, x: 0, y: 6.9, z: 0 }] },
+        tower: { name: 'Menara', build: () => { const ps = [Cy(2, 2.4, 8, 12, 0, 4, 0, 0xa8a8a0), Cy(2.5, 2.5, .6, 12, 0, 8.3, 0, 0x8a8a82), Co(2.6, 3.4, 12, 0, 10.4, 0, 0xb5483a), Bx(.9, 1.4, .3, 0, 5, 2, 0x2a2a30), Bx(.5, 1, .3, 0, 7.2, 2, 0x2a2a30)]; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; ps.push(Bx(.7, .7, .7, Math.cos(a) * 2.2, 8.9, Math.sin(a) * 2.2, 0x8a8a82, { ry: -a })); } return mesh(ps); }, solid: [{ w: 4.4, h: 8.6, d: 4.4, x: 0, y: 0, z: 0 }] },
+        archway: { name: 'Gerbang', build: () => mesh([Bx(1, 7, 1, -3, 3.5, 0, 0x8a8a82), Bx(1, 7, 1, 3, 3.5, 0, 0x8a8a82), Bx(1.4, .5, 1.4, -3, .25, 0, STONE), Bx(1.4, .5, 1.4, 3, .25, 0, STONE), Bx(8, .9, 1, 0, 7.4, 0, 0x9a9a92), Bx(8.6, .3, 1.3, 0, 8, 0, 0x7a7a72), { geo: new THREE.TorusGeometry(1.4, .18, 6, 20, Math.PI), y: 7.8, color: 0xffd23f }, Ic(.4, -3, 7.5, 0, 0xffd23f), Ic(.4, 3, 7.5, 0, 0xffd23f)]), solid: [{ w: 1, h: 7, d: 1, x: -3, y: 0, z: 0 }, { w: 1, h: 7, d: 1, x: 3, y: 0, z: 0 }, { w: 8, h: 1.2, d: 1, x: 0, y: 6.9, z: 0 }] },
         bridge: { name: 'Jembatan', build: () => { const ps = []; for (let i = 0; i < 10; i++) ps.push(Bx(3, .18, .72, 0, .9, -3.6 + i * .8, i % 2 ? 0xa06a35 : 0xb27a3f)); ps.push(Bx(.25, .3, 8, -1.4, .75, 0, DWOOD), Bx(.25, .3, 8, 1.4, .75, 0, DWOOD)); for (let i = 0; i < 5; i++) [-1.4, 1.4].forEach(x => ps.push(Bx(.2, 1.1, .2, x, 1.4, -3.6 + i * 1.8, WOOD))); ps.push(Bx(.15, .15, 8, -1.4, 2, 0, WOOD), Bx(.15, .15, 8, 1.4, 2, 0, WOOD)); return mesh(ps); }, solid: [{ w: 3, h: .9, d: 8, x: 0, y: 0, z: 0 }] },
         fence: { name: 'Pagar', build: () => { const ps = []; for (let i = 0; i < 5; i++) ps.push(Bx(.22, 1.4, .22, i * .8 - 1.6, .7, 0, 0xc8a070), Co(.16, .3, 4, i * .8 - 1.6, 1.55, 0, 0xc8a070, { ry: .785 })); ps.push(Bx(3.6, .15, .1, 0, .5, 0, 0xa8804f), Bx(3.6, .15, .1, 0, 1.0, 0, 0xa8804f)); return mesh(ps); }, solid: [{ w: 3.6, h: 1.4, d: .4, x: 0, y: 0, z: 0 }] },
-        well: { name: 'Sumur', build: () => mesh([Cy(1.7, 1.9, 1.3, 12, 0, .65, 0, 0x8a8a82), Cy(1.4, 1.4, .1, 12, 0, 1.25, 0, 0x2a6a9a), Bx(.2, 3.2, .2, -1.5, 2.4, 0, WOOD), Bx(.2, 3.2, .2, 1.5, 2.4, 0, WOOD), Cy(.1, .1, 3.2, 6, 0, 3.6, 0, DWOOD, { rz: 1.57 }), { geo: prism(4, [[-2, 0], [2, 0], [0, 1.5]]), y: 4, color: 0xa04030 }, Cy(.05, .05, .9, 4, 0, 3.1, 0, 0xcccccc), Cy(.25, .2, .35, 8, 0, 2.5, 0, 0x8a6a3a)]), solid: [{ w: 3.8, h: 1.4, d: 3.8, x: 0, y: 0, z: 0 }] },
-        fountain: { name: 'Air Mancur', build: () => grp([Cy(2.6, 2.8, .9, 16, 0, .45, 0, LSTONE), Cy(2.3, 2.3, .2, 16, 0, .85, 0, 0x4aa8e8), Cy(.4, .5, 1.8, 8, 0, 1.3, 0, 0xd0d0c6), Cy(1.2, .5, .3, 12, 0, 2.2, 0, LSTONE), Cy(1, 1, .1, 12, 0, 2.38, 0, 0x6ac0f0), Cy(.15, .15, .8, 6, 0, 2.8, 0, 0xcfefff)], g => { const dr = []; for (let i = 0; i < 8; i++) { const m = glow(new THREE.IcosahedronGeometry(.12, 0), 0x9ee0ff, 0, 0, 0); g.add(m); dr.push(m); } g.userData.tick = t => dr.forEach((m, i) => { const k = ((t * .8 + i / 8) % 1), a = i / 8 * 6.283; m.position.set(Math.cos(a) * k * 1.7, 3.2 + Math.sin(k * Math.PI) * 1.1 - k * k * 1.6, Math.sin(a) * k * 1.7); }); }), solid: [{ w: 5.2, h: 1, d: 5.2, x: 0, y: 0, z: 0 }] },
-        windmill: { name: 'Kincir Angin', build: () => grp([Cy(1.3, 2.2, 6.5, 8, 0, 3.25, 0, 0xf4ecd8), Co(1.9, 2, 8, 0, 7.5, 0, 0xb5483a), Bx(.8, 1.3, .2, 0, 1.2, 2.05, 0x6b4423), Bx(.7, .8, .2, 0, 4, 1.4, 0x9fd8ff)], g => { const bl = new THREE.Group(); bl.position.set(0, 6, 1.7); bl.add(mesh([Cy(.3, .3, .8, 8, 0, 0, 0, 0x5a3a1a, { rx: 1.57 })])); for (let i = 0; i < 4; i++) { const s = mesh([Bx(.2, 3.4, .08, 0, 1.9, 0, 0x8b5a2b), Bx(.9, 2.2, .05, .5, 2.2, .06, 0xf4ecd8)]); s.rotation.z = i * Math.PI / 2; bl.add(s); } g.add(bl); g.userData.tick = t => { bl.rotation.z = t * .8; }; }), solid: [{ w: 4.4, h: 7, d: 4.4, x: 0, y: 0, z: 0 }] },
-        lighthouse: { name: 'Mercusuar', build: () => grp([Cy(1.3, 2, 3, 12, 0, 1.5, 0, 0xffffff), Cy(1.05, 1.3, 3, 12, 0, 4.5, 0, 0xe63946), Cy(.85, 1.05, 3, 12, 0, 7.5, 0, 0xffffff), Cy(1.5, 1.5, .3, 12, 0, 9.15, 0, 0x2f343b), Cy(.75, .75, 1.2, 8, 0, 9.9, 0, 0xcfefff, { }), Co(1.1, 1.2, 8, 0, 11.1, 0, 0xe63946)], g => { const b = glow(new THREE.IcosahedronGeometry(.5, 1), 0xffee88, 0, 9.9, 0); g.add(b); g.userData.tick = t => { b.scale.setScalar(1 + Math.sin(t * 6) * .12); }; }), solid: [{ w: 3.4, h: 9.2, d: 3.4, x: 0, y: 0, z: 0 }] },
-        flagpole: { name: 'Tiang Bendera', build: () => grp([Cy(.5, .6, .4, 8, 0, .2, 0, STONE), Cy(.08, .1, 7, 6, 0, 3.8, 0, 0xcfcfcf), Ic(.18, 0, 7.4, 0, 0xffd23f)], g => { const f = mesh([Bx(2, 1.2, .05, 1, 0, 0, 0xe63946), Bx(2, .4, .06, 1, 0, 0, 0xffffff)]); f.position.set(0, 6.5, 0); g.add(f); g.userData.tick = t => { f.rotation.y = Math.sin(t * 2.2) * .25; }; }), solid: [{ w: 1, h: 7, d: 1, x: 0, y: 0, z: 0 }] },
-        statue: { name: 'Patung', build: () => mesh([Bx(2.4, .5, 2.4, 0, .25, 0, 0x8a8a8a), Bx(1.8, 1.2, 1.8, 0, 1.1, 0, 0x9a9a9a), Bx(2, .2, 2, 0, 1.8, 0, 0xaaaaaa), Cy(.5, .8, 1.8, 8, 0, 2.9, 0, 0xe6b422), Bx(.3, 1.2, .3, -.85, 3, 0, 0xe6b422, { rz: .5 }), Bx(.3, 1.6, .3, .85, 3.3, 0, 0xe6b422, { rz: -.5 }), Ic(.55, 0, 4.2, 0, 0xf2c94c), Ic(.22, 1.3, 4.1, 0, 0xffee88)]), solid: [{ w: 2.4, h: 2, d: 2.4, x: 0, y: 0, z: 0 }] },
-        campfire: { name: 'Api Unggun', build: () => { const ps = []; for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283; ps.push(Cy(.14, .14, 1.5, 5, Math.cos(a) * .5, .45, Math.sin(a) * .5, DWOOD, { rz: -Math.cos(a) * .85, rx: Math.sin(a) * .85 })); } for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283; ps.push({ geo: new THREE.DodecahedronGeometry(.3, 0), x: Math.cos(a) * 1.3, y: .15, z: Math.sin(a) * 1.3, color: 0x6a6a62 }); } const g = new THREE.Group(); g.add(mesh(ps)); const mk = (r, h, c, y) => { const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 6), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .9 })); m.position.y = y; g.add(m); return m; }; const f1 = mk(.6, 1.5, 0xff5d1a, 1), f2 = mk(.4, 1.1, 0xffa51a, 1.1), f3 = mk(.22, .8, 0xffe27a, 1.1); g.userData.tick = t => { f1.scale.set(1 + Math.sin(t * 9) * .1, 1 + Math.sin(t * 11) * .18, 1); f2.scale.set(1, 1 + Math.sin(t * 13 + 1) * .2, 1); f3.scale.set(1, 1 + Math.sin(t * 17 + 2) * .25, 1); }; return g; }, solid: 'none' },
+        well: { name: 'Sumur', build: () => mesh([Cy(1.7, 1.9, 1.3, 14, 0, .65, 0, 0x8a8a82), Cy(1.4, 1.4, .1, 14, 0, 1.25, 0, 0x2a6a9a), Bx(.2, 3.2, .2, -1.5, 2.4, 0, WOOD), Bx(.2, 3.2, .2, 1.5, 2.4, 0, WOOD), Cy(.1, .1, 3.2, 6, 0, 3.6, 0, DWOOD, { rz: 1.57 }), { geo: prism(4, [[-2, 0], [2, 0], [0, 1.5]]), y: 4, color: 0xa04030 }, Cy(.05, .05, .9, 4, 0, 3.1, 0, 0xcccccc), Cy(.25, .2, .35, 8, 0, 2.5, 0, 0x8a6a3a)]), solid: [{ w: 3.8, h: 1.4, d: 3.8, x: 0, y: 0, z: 0 }] },
+        fountain: { name: 'Air Mancur', build: () => grp([Cy(2.6, 2.8, .9, 20, 0, .45, 0, LSTONE), Cy(2.3, 2.3, .2, 20, 0, .85, 0, 0x4aa8e8), Cy(.4, .5, 1.8, 10, 0, 1.3, 0, 0xd0d0c6), Cy(1.2, .5, .3, 14, 0, 2.2, 0, LSTONE), Cy(1, 1, .1, 14, 0, 2.38, 0, 0x6ac0f0), Cy(.15, .15, .8, 7, 0, 2.8, 0, 0xcfefff)], g => { const dr = []; for (let i = 0; i < 8; i++) { const m = glow(new THREE.IcosahedronGeometry(.12, 0), 0x9ee0ff, 0, 0, 0); g.add(m); dr.push(m); } g.userData.tick = t => dr.forEach((m, i) => { const k = ((t * .8 + i / 8) % 1), a = i / 8 * 6.283; m.position.set(Math.cos(a) * k * 1.7, 3.2 + Math.sin(k * Math.PI) * 1.1 - k * k * 1.6, Math.sin(a) * k * 1.7); }); }), solid: [{ w: 5.2, h: 1, d: 5.2, x: 0, y: 0, z: 0 }] },
+        windmill: { name: 'Kincir Angin', build: () => grp([Cy(1.3, 2.2, 6.5, 10, 0, 3.25, 0, 0xf4ecd8), Co(1.9, 2, 10, 0, 7.5, 0, 0xb5483a), Bx(.8, 1.3, .2, 0, 1.2, 2.05, 0x6b4423), Bx(.7, .8, .2, 0, 4, 1.4, 0x9fd8ff)], g => { const bl = new THREE.Group(); bl.position.set(0, 6, 1.7); bl.add(mesh([Cy(.3, .3, .8, 10, 0, 0, 0, 0x5a3a1a, { rx: 1.57 })])); for (let i = 0; i < 4; i++) { const s = mesh([Bx(.2, 3.4, .08, 0, 1.9, 0, 0x8b5a2b), Bx(.9, 2.2, .05, .5, 2.2, .06, 0xf4ecd8)]); s.rotation.z = i * Math.PI / 2; bl.add(s); } g.add(bl); g.userData.tick = t => { bl.rotation.z = t * .8; }; }), solid: [{ w: 4.4, h: 7, d: 4.4, x: 0, y: 0, z: 0 }] },
+        lighthouse: { name: 'Mercusuar', build: () => grp([Cy(1.3, 2, 3, 14, 0, 1.5, 0, 0xffffff), Cy(1.05, 1.3, 3, 14, 0, 4.5, 0, 0xe63946), Cy(.85, 1.05, 3, 14, 0, 7.5, 0, 0xffffff), Cy(1.5, 1.5, .3, 14, 0, 9.15, 0, 0x2f343b), Cy(.75, .75, 1.2, 10, 0, 9.9, 0, 0xcfefff), Co(1.1, 1.2, 10, 0, 11.1, 0, 0xe63946)], g => { const b = glow(new THREE.IcosahedronGeometry(.5, 1), 0xffee88, 0, 9.9, 0); g.add(b); g.userData.tick = t => { b.scale.setScalar(1 + Math.sin(t * 6) * .12); }; }), solid: [{ w: 3.4, h: 9.2, d: 3.4, x: 0, y: 0, z: 0 }] },
+        flagpole: { name: 'Tiang Bendera', build: () => grp([Cy(.5, .6, .4, 10, 0, .2, 0, STONE), Cy(.08, .1, 7, 6, 0, 3.8, 0, 0xcfcfcf), Ic(.18, 0, 7.4, 0, 0xffd23f)], g => { const f = mesh([Bx(2, 1.2, .05, 1, 0, 0, 0xe63946), Bx(2, .4, .06, 1, 0, 0, 0xffffff)]); f.position.set(0, 6.5, 0); g.add(f); g.userData.tick = t => { f.rotation.y = Math.sin(t * 2.2) * .25; }; }), solid: [{ w: 1, h: 7, d: 1, x: 0, y: 0, z: 0 }] },
+        statue: { name: 'Patung', build: () => mesh([Bx(2.4, .5, 2.4, 0, .25, 0, 0x8a8a8a), Bx(1.8, 1.2, 1.8, 0, 1.1, 0, 0x9a9a9a), Bx(2, .2, 2, 0, 1.8, 0, 0xaaaaaa), Cy(.5, .8, 1.8, 10, 0, 2.9, 0, 0xe6b422), Bx(.3, 1.2, .3, -.85, 3, 0, 0xe6b422, { rz: .5 }), Bx(.3, 1.6, .3, .85, 3.3, 0, 0xe6b422, { rz: -.5 }), Ic(.55, 0, 4.2, 0, 0xf2c94c), Ic(.22, 1.3, 4.1, 0, 0xffee88)]), solid: [{ w: 2.4, h: 2, d: 2.4, x: 0, y: 0, z: 0 }] },
+        campfire: { name: 'Api Unggun', build: () => { const ps = []; for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283; ps.push(Cy(.14, .14, 1.5, 6, Math.cos(a) * .5, .45, Math.sin(a) * .5, DWOOD, { rz: -Math.cos(a) * .85, rx: Math.sin(a) * .85 })); } for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283; ps.push({ geo: new THREE.DodecahedronGeometry(.3, 0), x: Math.cos(a) * 1.3, y: .15, z: Math.sin(a) * 1.3, color: 0x6a6a62 }); } const g = new THREE.Group(); g.add(mesh(ps)); const mk = (r, h, c, y) => { const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 8), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .9 })); m.position.y = y; g.add(m); return m; }; const f1 = mk(.6, 1.5, 0xff5d1a, 1), f2 = mk(.4, 1.1, 0xffa51a, 1.1), f3 = mk(.22, .8, 0xffe27a, 1.1); g.userData.tick = t => { f1.scale.set(1 + Math.sin(t * 9) * .1, 1 + Math.sin(t * 11) * .18, 1); f2.scale.set(1, 1 + Math.sin(t * 13 + 1) * .2, 1); f3.scale.set(1, 1 + Math.sin(t * 17 + 2) * .25, 1); }; return g; }, solid: 'none' },
         pool: { name: 'Kolam', build: () => mesh([Bx(8, .3, 8, 0, .15, 0, 0x4aa8e8), Bx(8.6, .6, .6, 0, .3, -4, LSTONE), Bx(8.6, .6, .6, 0, .3, 4, LSTONE), Bx(.6, .6, 7.4, -4, .3, 0, LSTONE), Bx(.6, .6, 7.4, 4, .3, 0, LSTONE), Ic(.5, -2, .35, 1, 0x6ac0f0, { sy: .15 }), Ic(.4, 1.5, .35, -2, 0x6ac0f0, { sy: .15 })]), solid: [{ w: 8.6, h: .6, d: 8.6, x: 0, y: 0, z: 0 }] }
     };
 
@@ -111,7 +122,7 @@ function bMake(type, color) {
     let o;
     if (d.sc) {
         const c = color != null ? color : d.col;
-        o = new THREE.Mesh(d.geo(), new THREE.MeshPhongMaterial({ color: c, flatShading: true, shininess: 8, side: THREE.DoubleSide }));
+        o = new THREE.Mesh(d.geo(), buildMat(c, { side: THREE.DoubleSide, shininess: 28, specular: 0x444444 }));
         o.userData.color = c;
     } else o = d.build();
     o.userData.type = type; o.userData.sc = !!d.sc;
@@ -127,16 +138,24 @@ const bThumb = (() => {
         try {
             if (!r) {
                 r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-                r.setSize(88, 88); r.setPixelRatio(1);
-                sc2 = new THREE.Scene(); sc2.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, .95));
-                const dl2 = new THREE.DirectionalLight(0xffffff, .8); dl2.position.set(3, 6, 4); sc2.add(dl2);
-                cm = new THREE.PerspectiveCamera(32, 1, .1, 200);
+                r.setSize(96, 96); r.setPixelRatio(1);
+                r.setClearColor(0x000000, 0);
+                sc2 = new THREE.Scene();
+                sc2.add(new THREE.HemisphereLight(0xffffff, 0x8090c0, 1.05));
+                const dl2 = new THREE.DirectionalLight(0xffffff, .85); dl2.position.set(4, 7, 5); sc2.add(dl2);
+                const dl3 = new THREE.DirectionalLight(0xffd6a0, .35); dl3.position.set(-3, 2, -4); sc2.add(dl3);
+                cm = new THREE.PerspectiveCamera(30, 1, .1, 200);
             }
-            const o = bMake(type); const bb = new THREE.Box3().setFromObject(o), c = bb.getCenter(new THREE.Vector3()), s = bb.getSize(new THREE.Vector3());
-            const rad = Math.max(s.x, s.y, s.z, .5) * .5 * 1.08; const dist = rad / Math.tan(16 * Math.PI / 180) * 1.12;
-            sc2.add(o); cm.position.set(c.x + dist * .62, c.y + dist * .42, c.z + dist * .66); cm.lookAt(c);
-            r.setClearColor(0x000000, 0); r.render(sc2, cm);
-            cache[type] = r.domElement.toDataURL('image/png'); sc2.remove(o);
+            const o = bMake(type);
+            const bb = new THREE.Box3().setFromObject(o), c = bb.getCenter(new THREE.Vector3()), s = bb.getSize(new THREE.Vector3());
+            const rad = Math.max(s.x, s.y, s.z, .5) * .5 * 1.15;
+            const dist = rad / Math.tan(15 * Math.PI / 180) * 1.18;
+            sc2.add(o);
+            cm.position.set(c.x + dist * .55, c.y + dist * .48, c.z + dist * .72);
+            cm.lookAt(c);
+            r.render(sc2, cm);
+            cache[type] = r.domElement.toDataURL('image/png');
+            sc2.remove(o);
         } catch (e) { cache[type] = ''; }
         return cache[type];
     };
@@ -151,7 +170,7 @@ function initBuildMode() {
     buildCamera.target.set(0, 0, 0);
     cy = .6; pitch = .75; zd = 10; cam.fov = 60; cam.updateProjectionMatrix();
 
-    buildFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshPhongMaterial({ color: 0x3f9a4e }));
+    buildFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshPhongMaterial({ color: 0x3f9a4e, shininess: 5 }));
     buildFloor.rotation.x = -Math.PI / 2; buildFloor.position.y = .04; buildFloor.receiveShadow = true; buildFloor.name = 'BUILD_FLOOR';
     buildGroup.add(buildFloor);
     const grid = new THREE.GridHelper(1000, 1000 / BUILD_GRID / 2, 0x0d3a18, 0x0d3a18);
@@ -164,7 +183,7 @@ function initBuildMode() {
     $('hud').classList.remove('hide');
     bBindInput(); initBuildUI(); switchTool('add'); bPickerRefresh();
     pl.vy = pl.vx = pl.vz = 0; pl.y = 0; pl.root.visible = true;
-    toast('Mode Builds! Drag = putar kamera · WASD = geser · Klik = pasang · Tombol ▶ = coba main');
+    toast('Mode Builds! Drag = putar kamera · WASD = geser · Klik = pasang · ▶ = coba main');
 }
 function buildCleanup() {
     buildPlay = false; cols.length = 0;
@@ -292,7 +311,6 @@ function updateBuildMode(now, dt) {
         if (currentTool === 'add') placeGhost();
         if (selBox) selBox.update();
     }
-    // bayangan & langit mengikuti kamera
     const f = buildPlay ? pl : t;
     if (skyDome) skyDome.position.set(f.x, 0, f.z);
     dl.position.set(f.x + 60, 100, f.z + 40); dlTarget.position.set(f.x, 0, f.z);
@@ -300,7 +318,7 @@ function updateBuildMode(now, dt) {
 }
 const bHold = { up: 0, down: 0 };
 
-/* ───────────── Mode Play (coba jalan di bangunanmu) ───────────── */
+/* ───────────── Mode Play ───────────── */
 function buildCols() {
     cols.length = 0;
     cols.push({ x: 0, y: -3, z: 0, w: 1200, h: 3, d: 1200, enabled: true, slip: 0 });
@@ -310,14 +328,14 @@ function buildCols() {
         const swap = Math.abs(Math.sin(o.rotation.y)) > .7, S = o.scale;
         const push = (w, h, dd, cx, cy_, cz) => cols.push({ x: cx, y: cy_, z: cz, w: swap ? dd : w, h, d: swap ? w : dd, enabled: true, slip: 0 });
         if (d.solid === 'none') continue;
-        if (d.steps) { // tangga/ramp: potong jadi anak tangga
+        if (d.steps) {
             const n = d.steps, H = 4 * S.y, W = 4 * S.x, D = 4 * S.z;
             for (let i = 0; i < n; i++) { v.set(0, 0, -2 * S.z + (i + .5) * D / n).applyEuler(o.rotation).add(o.position); push(W, H * (i + 1) / n, D / n + .02, v.x, o.position.y, v.z); }
         } else if (Array.isArray(d.solid)) {
             for (const s of d.solid) { v.set(s.x * S.x, 0, s.z * S.z).applyEuler(o.rotation).add(o.position); push(s.w * S.x, s.h * S.y, s.d * S.z, v.x, o.position.y + s.y * S.y, v.z); }
         } else {
             bb.setFromObject(o); push(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z, (bb.max.x + bb.min.x) / 2, bb.min.y, (bb.max.z + bb.min.z) / 2);
-            const c = cols[cols.length - 1]; c.w = bb.max.x - bb.min.x; c.d = bb.max.z - bb.min.z; // sudah dalam koordinat dunia
+            const c = cols[cols.length - 1]; c.w = bb.max.x - bb.min.x; c.d = bb.max.z - bb.min.z;
         }
     }
 }
@@ -428,8 +446,8 @@ function bPickerRefresh() {
     cols_.classList.toggle('hide', currentPartCat !== 'bentuk');
     cols_.innerHTML = '';
     BUILD_COLORS.forEach(c => {
-        const b = document.createElement('button'); b.className = 'sw' + (currentColor === c ? ' on' : ''); b.style.background = '#' + c.toString(16).padStart(6, '0');
-        b.onclick = () => { currentColor = c; if (buildGhost) { /* ghost tetap biru */ } bPickerRefresh(); }; cols_.appendChild(b);
+        const b = document.createElement('button'); b.className = 'sw' + (currentColor === c ? ' on' : ''); b.style.setProperty('--sw', '#' + c.toString(16).padStart(6, '0'));
+        b.onclick = () => { currentColor = c; bPickerRefresh(); }; cols_.appendChild(b);
     });
 }
 
@@ -439,7 +457,7 @@ function switchTool(tool) {
     if (tool === 'add') updateGhostPart();
     ['add', 'sculpt', 'remove'].forEach(t => $('bt-' + t).classList.toggle('on', t === tool));
     $('bt-rot').style.display = tool === 'add' ? '' : 'none';
-    if (tool !== 'add') $('part-picker').classList.add('hide'); 
+    if (tool !== 'add') $('part-picker').classList.add('hide');
     $('bhint').textContent = tool === 'add' ? 'Klik / tap = pasang · R = putar · klik lagi tombol + = daftar part' : tool === 'sculpt' ? 'Klik objek untuk diedit: geser, ubah ukuran, warna' : 'Klik objek untuk menghapus';
 }
 function showInspector(o) {

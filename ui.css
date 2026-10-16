@@ -387,3 +387,57 @@ body.bplay #bhint { display: none; }
   #hats button{min-height:44px;padding:6px 3px 14px;font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){#deco i,.jc,.ttl,button::after,.mb .big::before,#mmfx::before,#bxking::before,#loadSpinner,.mchip .ph i,#act{animation:none!important}}
+/* ═══ Track Category Tabs ═══ */
+.ttabs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.ttabs .tcat{flex:1;min-width:80px;max-width:140px;padding:10px 6px;font-size:10px;letter-spacing:1px;background:linear-gradient(#fff,#dcebff);color:var(--k);--lo:#c3d6f3;--hi:#fff;box-shadow:var(--bd),inset 0 -3px 0 #b6cdf0;margin:0}
+.ttabs .tcat.on{background:linear-gradient(var(--cc,#3d8bff),#1a4fb8);color:#fff;--lo:#0e2f78;--hi:#a8d4ff;box-shadow:var(--bd),0 0 0 3px #fff,0 0 0 6px var(--cc,#3d8bff)}
+.ttabs .tcat:hover{filter:brightness(1.08)}
+#cars button.car .cc{font-size:7px;letter-spacing:1px;padding:1px 5px;background:#17306b;color:#7fd0ff;box-shadow:0 2px 0 #0004;align-self:center}
+#cars button.car.on .cc{background:#17306b;color:#ffd23f}
+
+/* ═══ Build mode improvements (v2) ═══ */
+.popup{
+  background:linear-gradient(#f4f9ff,#e3eeff);
+  border:0;
+  box-shadow:var(--bd),0 0 0 4px #fff,0 0 0 8px var(--k),0 12px 0 8px #0004;
+  border-radius:0;
+}
+.popup-title{
+  background:repeating-linear-gradient(90deg,var(--k) 0 6px,transparent 6px 12px);
+  padding:8px 12px;margin:-16px -16px 8px;font-size:11px;letter-spacing:2px;
+  color:var(--k);
+}
+#part-tabs button{
+  padding:10px 6px;font-size:10px;letter-spacing:1px;background:linear-gradient(#fff,#dcebff);
+  color:var(--k);--lo:#c3d6f3;--hi:#fff;box-shadow:var(--bd),inset 0 -3px 0 #b6cdf0;margin:0;min-height:0
+}
+#part-tabs button.on{
+  background:linear-gradient(#ffd23f,#ffb02a);color:#17306b;--lo:#a86a00;--hi:#fff8d0;
+  box-shadow:var(--bd),0 0 0 3px #fff,0 0 0 6px #ffd23f;transform:translateY(-2px)
+}
+#part-grid button.pp{
+  background:linear-gradient(#fff,#e9f2ff);box-shadow:var(--bd),inset 0 -3px 0 #c3d6f3,inset 0 3px 0 #fff;
+  transition:transform .1s steps(2)
+}
+#part-grid button.pp:hover{transform:translateY(-3px);filter:brightness(1.08)}
+#part-grid button.pp.on{
+  background:linear-gradient(#fff3b0,#ffd23f);box-shadow:var(--bd),0 0 0 3px #fff,0 0 0 6px #ffd23f;
+  transform:translateY(-2px)
+}
+#part-colors .sw{box-shadow:0 0 0 2px var(--k),inset 0 -4px 0 #0003,inset 0 4px 0 #fff6}
+#part-colors .sw.on{box-shadow:0 0 0 2px var(--k),0 0 0 5px #ffd23f,0 0 0 7px #fff;transform:translateY(-2px) scale(1.08)}
+.build-toolbar{
+  background:linear-gradient(#26468f,#17306b);padding:10px;gap:8px;
+  box-shadow:0 0 0 3px #fff,0 0 0 7px var(--k),0 12px 0 7px #0004
+}
+.build-tool{
+  background:linear-gradient(#fff,#dcebff);box-shadow:var(--bd),inset 0 -4px 0 #b6cdf0,inset 0 4px 0 #fff;
+  color:var(--k)
+}
+.build-tool.on{
+  background:linear-gradient(#fff6b0,#ffd23f);box-shadow:0 0 0 3px var(--k),0 0 0 6px #fff,0 0 0 9px #ffd23f;
+  transform:translateY(-4px)
+}
+.build-tool.d{background:linear-gradient(#ff7a7a,#ff3a3a);color:#fff;--lo:#8a1a1a;--hi:#ffb0b0}
+.build-tool.play{background:linear-gradient(#7dff9a,#2fc457);color:#fff;--lo:#1c8a3a;--hi:#c8ffd4}
+.inspector-row input[type=range]{background:linear-gradient(90deg,#cfe0f7,#a8c8f0);box-shadow:0 0 0 2px var(--k),inset 0 2px 0 #fff8}

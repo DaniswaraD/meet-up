@@ -1,7 +1,27 @@
 const $=i=>document.getElementById(i);
-const cfg=Object.assign({name:'',c1:'#3a8dff',c2:'#7fd0ff',sh:0,hat:0,nc:'#ffffff',nf:'monospace',rd:180,jb:0,gfx:'low',car:'f1',cars:['f1'],vc:[]},JSON.parse(localStorage.mu||'{}'));
+const cfg=Object.assign({name:'',c1:'#3a8dff',c2:'#7fd0ff',sh:0,hat:0,nc:'#ffffff',nf:'monospace',rd:180,jb:0,gfx:'low',car:'f1',cars:['f1'],vc:[],hats:[0]},JSON.parse(localStorage.mu||'{}'));
 if(!Array.isArray(cfg.cars)||!cfg.cars.length)cfg.cars=['f1'];
 if(!Array.isArray(cfg.vc))cfg.vc=[];
+if(!Array.isArray(cfg.hats))cfg.hats=[0];
+if(!cfg.hats.includes(0))cfg.hats.unshift(0);
+
+// ═══════════════════════════════════════════════════════════════════════
+// DISCORD WEBHOOK — untuk "Kotak Masukan"
+// Ganti URL di bawah dengan webhook Discord milikmu!
+// ═══════════════════════════════════════════════════════════════════════
+const DISCORD_WEBHOOK='https://discord.com/api/webhooks/1560506376868987086/ybIdSB7ewJNqWJPsN5bajeklfek9gCs_40CRT0nRLVun4yOt_i4eeZ_Lm9jKn6LIbzA8';
+
+// ── Harga aksesori (JB) — paling murah 25, paling mahal 1000 ──
+const HAT_PRICES=[0,1000,150,75,200,350,250,100,100,25,500,400];
+
+// Palet warna untuk CSS color picker
+const C_PALETTE=[
+  '#ff5d5d','#ff8c1a','#ffd23f','#3fdc6a','#3d8bff','#7fd0ff',
+  '#b05dff','#ff5db1','#ff90b8','#8b5a2b','#f0e6d0','#ffffff',
+  '#c0c0c0','#808080','#404040','#17306b','#0e1a3a','#000000'
+];
+const C_LIGHT=new Set(['#ffffff','#f0e6d0','#ffd23f','#7fd0ff','#c0c0c0','#ffe27a']);
+
 const CARS=[
   {id:'f1',    n:'F1 Ferrari',      price:0,    top:48.6, boost:76.4,  acc:1,    col:0xd8342a, col2:0xffe27a, seatY:.55, seatScale:.62},
   {id:'yaris', n:'Toyota Yaris GR', price:750,  top:52.8, boost:90.3,  acc:1.75, col:0xe8e8e8, col2:0xd8342a, seatY:1.05, seatScale:.55},
@@ -514,6 +534,151 @@ function torch(x,z){
   fl2.position.set(x,4.6,z); world.add(fl2);
   FOUNTAINS.push({parts:[{m:fl,baseAng:0,t:0,isFlame:true},{m:fl2,baseAng:1,t:.5,isFlame:true}],x,z,topY:4.3});
   addCol(x,0,z,.5,4,.5);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PAPAN MASUKAN — board di tiap map (kecuali balapan)
+   ══════════════════════════════════════════════════════════════════ */
+const BOARDS=[];
+function feedbackBoard(x,z,rot,y){
+  rot=rot||0; y=y||0;
+  const c=Math.cos(rot),s=Math.sin(rot);
+  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
+  const P=[];
+  [[-1.8,0],[1.8,0]].forEach(([lx,lz])=>{
+    const p=T(lx,lz);
+    P.push({geo:new THREE.CylinderGeometry(.18,.22,4.5,6),x:p[0],y:y+2.25,z:p[1],color:0x8b5a2b});
+    P.push({geo:BOX(.55,.4,.55),x:p[0],y:y+.2,z:p[1],color:0x6b4a1b});
+    P.push({geo:BOX(.7,.15,.7),x:p[0],y:y+4.55,z:p[1],color:0x5a3a1a});
+  });
+  P.push({geo:BOX(5.2,3,.28),x,y:y+3.5,z,color:0x5a3a1a,ry:rot});
+  P.push({geo:BOX(4.8,2.6,.12),x,y:y+3.5,z,color:0xf0e0c0,ry:rot});
+  P.push({geo:BOX(4.8,.5,.14),x,y:y+4.7,z,color:0xffd23f,ry:rot});
+  P.push({geo:new THREE.ConeGeometry(3.6,.8,4),x,y:y+5.3,z,color:0xa04030,ry:rot+Math.PI/4});
+  P.push({geo:BOX(1.2,.15,.15),x,y:y+1.95,z,color:0x8b5a2b,ry:rot});
+  addMerged(P);
+  addCol(x,y,z,5,5,.6,{ry:rot});
+
+  const texBoard=tex(256,128,(q,w,h)=>{
+    q.fillStyle='#f0e0c0';q.fillRect(0,0,w,h);
+    q.fillStyle='#8b5a2b';q.fillRect(0,0,w,18);
+    q.fillStyle='#ffd23f';q.font='bold 13px monospace';q.textAlign='center';
+    q.fillText('KOTAK MASUKAN',w/2,13);
+    q.fillStyle='#17306b';q.font='bold 12px monospace';
+    q.fillText('Kirim masukanmu',w/2,48);
+    q.fillStyle='#a05000';q.font='10px monospace';
+    q.fillText('Tekan ACTION',w/2,72);
+    q.fillStyle='#b32b30';q.font='9px monospace';
+    q.fillText('Masukan tak berguna',w/2,96);
+    q.fillText('bakal dihiraukan',w/2,110);
+  },1,1);
+  const signMesh=Mt(new THREE.PlaneGeometry(4.6,2.4),new THREE.MeshBasicMaterial({map:texBoard}),0,0,0);
+  signMesh.position.set(x,y+3.5,z);
+  signMesh.rotation.y=rot;
+  signMesh.position.x+=Math.sin(rot)*.16;
+  signMesh.position.z+=Math.cos(rot)*.16;
+
+  const ring=Mt(new THREE.RingGeometry(.8,1.15,32).rotateX(-1.5708),
+    new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}),
+    x,y+.14,z);
+  const ring2=Mt(new THREE.RingGeometry(.5,.85,32).rotateX(-1.5708),
+    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}),
+    x,y+.16,z);
+  const ring3=Mt(new THREE.RingGeometry(.35,.55,24).rotateX(-1.5708),
+    new THREE.MeshBasicMaterial({color:0xff8c1a,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}),
+    x,y+.18,z);
+
+  BOARDS.push({x,z,y,rot,ring,ring2,ring3,t:Math.random()*6.28,active:false});
+  return{x,z};
+}
+
+let nearBoard=null;
+function updateBoards(now){
+  nearBoard=null;
+  const on=playing&&curMap!=='speedrace';
+  if(on){
+    let bd=5.5;
+    for(const b of BOARDS){
+      const d=Math.hypot(pl.x-b.x,pl.z-b.z);
+      if(d<bd){bd=d;nearBoard=b}
+    }
+  }
+  for(const b of BOARDS){
+    const isNear=b===nearBoard;
+    b.t+=0.02;
+    const tgt=isNear?1:0;
+    const k=Math.min(1,.12);
+    b.ring.material.opacity+=(tgt*.75-b.ring.material.opacity)*k;
+    b.ring2.material.opacity+=(tgt*.55-b.ring2.material.opacity)*k;
+    b.ring3.material.opacity+=(tgt*.85-b.ring3.material.opacity)*k;
+    const s=1+Math.sin(b.t*3)*.12;
+    b.ring.scale.setScalar(s);
+    b.ring2.scale.setScalar(1+Math.sin(b.t*3+1)*.18);
+    b.ring3.scale.setScalar(1+Math.sin(b.t*3+2)*.25);
+    b.ring.rotation.z+=0.02;
+    b.ring2.rotation.z-=0.015;
+    b.ring3.rotation.z+=0.03;
+    b.active=isNear;
+  }
+  const ab=$('act');
+  if(ab){
+    if(nearBoard&&playing&&!pl.balloon&&!(pl.koTimer>0))ab.classList.add('show');
+    else ab.classList.remove('show');
+  }
+}
+
+function openFeedback(){
+  const fb=$('fb');
+  if(!fb)return;
+  $('fbn').textContent=cfg.name||'Pemain';
+  $('fbi').value='';
+  fb.classList.remove('hide');
+  const btn=$('fbs');btn.disabled=false;btn.textContent='Kirim';
+  setTimeout(()=>{try{$('fbi').focus()}catch(e){}},120);
+}
+function closeFeedback(){
+  const fb=$('fb');if(fb)fb.classList.add('hide');
+}
+async function submitFeedback(){
+  const msg=($('fbi').value||'').trim();
+  if(!msg){toast('Tulis masukanmu dulu');return}
+  if(msg.length<3){toast('Masukan terlalu pendek');return}
+  if(!DISCORD_WEBHOOK){toast('Webhook Discord belum diatur di game.js');return}
+  const name=cfg.name||'Pemain';
+  const btn=$('fbs');btn.disabled=true;btn.textContent='Mengirim...';
+  try{
+    const res=await fetch(DISCORD_WEBHOOK,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        username:'Meet-UP Kotak Masukan',
+        content:'**Dikirim oleh :** '+name+'\n**Masukan :** '+msg,
+        allowed_mentions:{parse:[]}
+      })
+    });
+    if(res.ok||res.status===204){
+      toast('Masukan terkirim! Terima kasih ✨');
+      if(nearBoard){
+        for(let i=0;i<24;i++){
+          const a=i/24*6.28;
+          puff(nearBoard.x+Math.cos(a)*.9,nearBoard.z+Math.sin(a)*.9,1,['#ffd23f','#7fd0ff','#3fdc6a','#ff5db1'][i%4],5,1.5+Math.random()*2);
+        }
+      }
+      ring(pl.x,pl.z,'#ffd23f',.2,1);
+      closeFeedback();
+    }else{
+      toast('Gagal kirim (HTTP '+res.status+')');
+    }
+  }catch(e){
+    console.error('[feedback]',e);
+    toast('Gagal kirim: koneksi bermasalah');
+  }
+  btn.disabled=false;btn.textContent='Kirim';
+}
+function doAction(){
+  if(!playing||!pl)return;
+  if(curMap=='speedrace')return;
+  if(nearBoard){openFeedback()}
 }
 
 function makeAnimal(type){
@@ -1103,7 +1268,6 @@ function monStep(dt,now){
   if(pl.hp<pl.maxHp&&MON.last>6&&(MON.regen+=dt)>3){MON.regen=0;pl.hp++}
 }
 
-// ══════ STRUKTUR KHAS TIAP IKLIM (beda layout per map) ══════
 function climateStructure(n){
   const P=[],bx=(x,z,w,d,h,c,y0)=>{y0=y0||0;P.push({geo:BOX(w,h,d),x,y:y0+h/2,z,color:c});addCol(x,y0,z,w,h,d)},
     pil=(x,z,w,h,c)=>{bx(x,z,w,w,h,c);P.push({geo:BOX(w*1.4,.5,w*1.4),x,y:h+.25,z,color:c+0x101010})};
@@ -1125,7 +1289,7 @@ function climateStructure(n){
   addMerged(P)}
 const ANIM=[];
 function pyramid(x,z,base,tiers,col,gc){const P=[],h=2;for(let k=0;k<tiers;k++){const w=base*(1-k/tiers*.85);P.push({geo:BOX(w,h,w),x,y:k*h+h/2,z,color:k%2?col:col+0x101008});addCol(x,k*h,z,w,h,w)}addMerged(P);ANIM.push(glowAt(x,tiers*h+1.2,z,gc,1.1))}
-function glowAt(x,y,z,c,r){const m=Mt(ICO(r,1),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.8}),x,y,z);return(dt,t)=>{const k=Math.sin(t/300+x);m.material.opacity=.6+k*.3;m.scale.setScalar(1+k*.12)}}
+function glowAt(x,y,z,c,r){const m=Mt(ICO(r,1),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.8}),x,y,z);return(dt,t)=>{const k=Math.sin(t/300+x);m.material.opacity=.6+k*.3;m.material.scale?m.scale.setScalar(1+k*.12):m.scale.setScalar(1+k*.12)}}
 function enrich(n,tc,dr,hh,bz){
   const lv=FXL(),lim=LIM-14,K=[.6,1,1.4,1.8][lv],placed=[];
   const spot=(r0,r1,pad)=>{for(let i=0;i<30;i++){const a=Math.random()*6.28,d=r0+Math.random()*(Math.min(r1,lim)-r0),x=Math.cos(a)*d,z=Math.sin(a)*d;if(!tc(x,z,pad)&&dr(x,z)>2&&!hh(x,z,0)&&!placed.some(p=>Math.hypot(p[0]-x,p[1]-z)<pad+p[2])){placed.push([x,z,pad]);return[x,z]}}return null};
@@ -1230,7 +1394,7 @@ function enrich(n,tc,dr,hh,bz){
 
 function build(n){
   sc.remove(world);world=new THREE.Group();sc.add(world);
-  cols=[];plats=[];MOV.length=0;PKC.length=0;LAS.length=0;SPC.length=0;PKCP=[];pkPush.t=0;pkZone=null;hillGrass=[];CROWD=null;SPIN.length=0;ANIM.length=0;MON.list.length=0;MON.on=false;MON.pops.length=0;JDR.length=0;
+  cols=[];plats=[];MOV.length=0;PKC.length=0;LAS.length=0;SPC.length=0;PKCP=[];pkPush.t=0;pkZone=null;hillGrass=[];CROWD=null;SPIN.length=0;ANIM.length=0;MON.list.length=0;MON.on=false;MON.pops.length=0;JDR.length=0;BOARDS.length=0;
   jbs.forEach(j=>sc.remove(j.m));jbs=[];
   boostBubbles.forEach(b=>sc.remove(b.m));boostBubbles=[];
   swings=[];rings=[];WINDMILLS=[];FLAGPOLES=[];ANIMALS=[];FOUNTAINS=[];WATERFALLS=[];BALLOONS=[];WATERWHEELS=[];BELLS=[];LANTERNS=[];BEACONS.length=0;clearJellogers();
@@ -1318,10 +1482,11 @@ function build(n){
     if(FXL()>=2)for(let i=3;i<PARKOUR.length;i+=3){const p=PARKOUR[i];SPIN.push(Mt(new THREE.TorusGeometry(3.2,.12,4,20),new THREE.MeshBasicMaterial({color:[0x7fd0ff,0xff5db1,0xffd23f][i%3]}),p[0],p[1]+4,p[2]))}
     for(let i=0;i<80;i++)spawnAmb('stars',{x:(Math.random()-.5)*400,y:20+Math.random()*40,z:Math.random()*500});
     for(let i=0;i<30;i++)spawnAmb('orbs',{x:(Math.random()-.5)*200,y:3+Math.random()*25,z:Math.random()*500,ph:Math.random()*6.28});
+    feedbackBoard(0,-5,0,1);
     spawnJBs();return;
   }
 
-  if(n=='boxing'){buildBoxing();return}
+  if(n=='boxing'){buildBoxing();feedbackBoard(0,-28,0,0);return}
   if(n=='speedrace'){(rtrack=='drag'?buildRace:buildCurved)();spawnJBs();return}
 
   if(n=='island'){disc(320,0x2a7fd0,0);disc(210,gr,.02)}else if(n=='desert'){disc(210,0xc99a5b,0);disc(185,gr,.05)}else disc(210,gr,0);
@@ -1362,6 +1527,9 @@ function build(n){
   const roadData=[];
   for(const r of L.roads){const safePts=r.pts.filter(([px,pz])=>!hitsHill(px,pz,-4));if(safePts.length<2)continue;roadData.push(road(safePts,r.w,L.roadFill,L.roadTrim))}
   plaza(L.plaza,L.roadFill,L.roadTrim);
+
+  // ── Papan masukan untuk map hangout ──
+  {const bR=L.plaza+4;const a=-Math.PI*0.62;const bx=Math.cos(a)*bR,bz=Math.sin(a)*bR;const brot=Math.atan2(-bx,-bz);feedbackBoard(bx,bz,brot,0)}
 
   if(L.oasis)oasis(L.oasis.x,L.oasis.z,L.oasis.r);
   if(L.lake)frozenLake(L.lake.x,L.lake.z,L.lake.r);
@@ -1714,12 +1882,78 @@ $('ppbk').onclick=()=>show('menu');
 const SHAPES=['Setengah','Kotak','Segitiga','Bola','Silinder','Piramida','Permata','Telur','Dodeka','Ikosa','Cakram','Prisma','Menara','Bantal'];
 const shGrid=$('shapes');
 SHAPES.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;b.className=cfg.sh==i?'on':'';b.onclick=()=>{cfg.sh=i;sv();setSelf();[...shGrid.children].forEach((x,j)=>x.classList.toggle('on',j==i))};shGrid.append(b)});
-const hGrid=$('hats');HATS.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;b.className=(cfg.hat|0)==i?'on':'';b.onclick=()=>{cfg.hat=i;sv();setSelf();[...hGrid.children].forEach((x,j)=>x.classList.toggle('on',j==i))};hGrid.append(b)});
+
+/* ═══ HATS dengan harga ═══ */
+const hGrid=$('hats');
+function refreshHatUI(){
+  [...hGrid.children].forEach((b,i)=>{
+    const price=HAT_PRICES[i]||0;
+    const owned=(cfg.hats||[0]).includes(i);
+    b.className=((cfg.hat|0)==i?'on':'')+(price>0&&!owned?' locked':'');
+    const hp=b.querySelector('.hp');
+    if(hp){
+      if(price===0){hp.textContent='GRATIS';hp.className='hp own'}
+      else if(owned){hp.textContent='✓ DIMILIKI';hp.className='hp own'}
+      else{hp.textContent=price+' JB';hp.className='hp'}
+    }
+  });
+}
+HATS.forEach((n,i)=>{
+  const b=document.createElement('button');
+  b.innerHTML=n+'<small class="hp"></small>';
+  b.onclick=()=>selectHat(i);
+  hGrid.append(b);
+});
+function selectHat(i){
+  const price=HAT_PRICES[i]||0;
+  cfg.hats=cfg.hats||[0];
+  if(price>0&&!cfg.hats.includes(i)){
+    if(cfg.jb<price){toast('Kurang '+(price-cfg.jb)+' JB untuk '+HATS[i]);return}
+    cfg.jb-=price;
+    cfg.hats.push(i);
+    sv();
+    const jbn=$('jbn');if(jbn)jbn.textContent=cfg.jb+' JB';
+    me&&me.update({jb:cfg.jb});
+    if(window.refreshChip)refreshChip();
+    toast('Membeli '+HATS[i]+'! -'+price+' JB');
+    for(let k=0;k<20;k++){const a=Math.random()*6.28,r=Math.random()*1.5;puff(pl.x+Math.cos(a)*r,pl.z+Math.sin(a)*r,1,['#ffd23f','#fff3a0'][k%2],4,pl.y+.5+Math.random()*1.5)}
+  }
+  cfg.hat=i;
+  sv();
+  setSelf();
+  refreshHatUI();
+}
+refreshHatUI();
+
 const FONTS=['monospace','sans-serif','serif','cursive','Impact','Georgia','Verdana','Trebuchet MS','Courier New'];
 const fGrid=$('fonts');
 FONTS.forEach(n=>{const b=document.createElement('button');b.textContent=n;b.style.fontFamily=n;b.className=cfg.nf==n?'on':'';b.onclick=()=>{cfg.nf=n;sv();setSelf();[...fGrid.children].forEach(x=>x.classList.toggle('on',x.textContent==n))};fGrid.append(b)});
 
-/* ═══════════════════ KENDARAAN — pilih di Custom Skin ═══════════════════ */
+/* ═══ CSS Color Picker (c1, c2, nc) ═══ */
+function buildColorGrid(containerId,key){
+  const grid=$(containerId);
+  if(!grid)return;
+  grid.innerHTML='';
+  C_PALETTE.forEach(hex=>{
+    const b=document.createElement('button');
+    b.type='button';
+    b.style.setProperty('--sw',hex);
+    b.dataset.c=hex;
+    if(C_LIGHT.has(hex))b.dataset.light='1';
+    if((cfg[key]||'').toLowerCase()===hex.toLowerCase())b.classList.add('on');
+    b.onclick=()=>{
+      cfg[key]=hex;sv();
+      [...grid.children].forEach(x=>x.classList.toggle('on',x.dataset.c.toLowerCase()===hex.toLowerCase()));
+      setSelf();
+    };
+    grid.append(b);
+  });
+}
+buildColorGrid('c1grid','c1');
+buildColorGrid('c2grid','c2');
+buildColorGrid('ncgrid','nc');
+
+/* ═══════════════════ KENDARAAN ═══════════════════ */
 function drawCarPreview(cv,C){
   const x=cv.getContext('2d'),W=cv.width,H=cv.height;
   x.imageSmoothingEnabled=false;
@@ -1861,9 +2095,7 @@ function selectCar(C){
   refreshCarUI();
 })();
 
-/* ══════════════════════════════════════════════════════════════════════ */
-
-/* ═══════════ VOUCHER — ketuk title 3x di main menu ═══════════ */
+/* ═══════════ VOUCHER ═══════════ */
 (function initVoucher(){
   const menu=$('menu'),ttl=menu&&menu.querySelector('.ttl'),vi=$('vi');if(!ttl||!vi)return;
   const CODES={PLSJB:100000};
@@ -1911,16 +2143,47 @@ parkour:'<rect x="0" y="9" width="4" height="2" fill="#5cb85c"/><rect x="4" y="6
 boxing:'<rect x="3" y="1" width="6" height="1" fill="#17306b"/><rect x="2" y="2" width="8" height="5" fill="#ff5d5d"/><rect x="3" y="2" width="3" height="1" fill="#ff9a9a"/><rect x="1" y="3" width="1" height="3" fill="#17306b"/><rect x="10" y="3" width="1" height="3" fill="#17306b"/><rect x="2" y="7" width="8" height="1" fill="#b32b30"/><rect x="3" y="8" width="6" height="3" fill="#ffffff"/><rect x="3" y="11" width="6" height="1" fill="#17306b"/>',
 speedrace:'<rect x="1" y="6" width="10" height="3" fill="#ff5d5d"/><rect x="3" y="4" width="6" height="2" fill="#7fd0ff"/><rect x="2" y="8" width="3" height="3" fill="#17306b"/><rect x="7" y="8" width="3" height="3" fill="#17306b"/><rect x="5" y="2" width="2" height="2" fill="#ffd23f"/>'};
 const micon=k=>'<svg class="mi" viewBox="0 0 12 12">'+(MICON[k]||'')+'</svg>';
-const MU=[['island','Pulau'],['desert','Gurun'],['jungle','Jungle'],['snow','Salju'],['parkour','Parkour'],['speedrace','Balapan'],['boxing','Boxing']];
-const mGrid=$('maps');
-MU.forEach(([k,l])=>{const b=document.createElement('button');b.innerHTML=micon(k)+'<span>'+l+'</span>';b.className=selMap==k?'on':'';b.onclick=()=>{selMap=k;[...mGrid.children].forEach((x,j)=>x.classList.toggle('on',MU[j][0]==k))};mGrid.append(b)});
+const MU_HANGOUT=[['island','Pulau'],['desert','Gurun'],['jungle','Jungle'],['snow','Salju']];
+const MU_FUN=[['parkour','Parkour'],['speedrace','Balapan'],['boxing','Boxing']];
+const MU=[...MU_HANGOUT,...MU_FUN];
+
+const mGridHangout=$('mapsHangout');
+const mGridFun=$('mapsFun');
+const mGrid=mGridHangout;
+const mkMapBtn=(k,l,host)=>{const b=document.createElement('button');b.innerHTML=micon(k)+'<span>'+l+'</span>';b.className=selMap==k?'on':'';b.dataset.map=k;
+  b.onclick=()=>{selMap=k;[...mGridHangout.children,...mGridFun.children].forEach(x=>x.classList.toggle('on',x.dataset.map===k))};return b};
+MU_HANGOUT.forEach(([k,l])=>mGridHangout.append(mkMapBtn(k,l)));
+MU_FUN.forEach(([k,l])=>mGridFun.append(mkMapBtn(k,l)));
+
 let rtrack='drag';
 const TRACKS=[['drag','Drag','Lurus, 4 zona cuaca','#5ab05a',1],['rally','Rally','Berkelok lewat hutan','#c89a5a',4],['neon','Neon City','Kota neon malam hari','#ff2bd6',3],['beach','Pantai Sunset','Pesisir pasir dan senja','#ff9a5a',2],['canyon','Canyon Gurun','Tikungan tajam di tebing','#d0602a',5],['jelly','Jelly Land','Dunia jelly dan bubble','#ff8ad8',3]],TRACK_KEYS=TRACKS.map(t=>t[0]);
 function trkPreview(k,c){const x=c.getContext('2d'),S=48;x.fillStyle='#17306b';x.fillRect(0,0,S,S);setTrack(k);const b=TRK.bb,kz=(S-8)/Math.max(b.h,1),kx=kz*Math.min(8,(S-12)/Math.max(1,b.w*kz)),ox=S/2-(b.w/2)*kx,X=p=>ox+(p.x-b.x0)*kx,Y=p=>S-4-(p.z-b.z0)*kz;x.strokeStyle='#7fd0ff';x.lineWidth=2;x.beginPath();TRK.pts.forEach((p,i)=>i?x.lineTo(X(p),Y(p)):x.moveTo(X(p),Y(p)));x.stroke();const a=TRK.pts[0],e=TRK.pts[TRK.pts.length-1];x.fillStyle='#3fbf5f';x.fillRect(X(a)-3,Y(a)-3,6,5);x.fillStyle='#ffd23f';x.fillRect(X(e)-3,Y(e)-1,6,5)}
 function pickTrack(){return new Promise(res=>{const d=document.createElement('div');d.className='ui';d.innerHTML='<div class="card tkc" style="pointer-events:auto"><div class="lbl">Pilih Trek</div><div class="grid tkg"></div><button class="s">Kembali</button></div>';const g=d.querySelector('.grid');TRACKS.forEach(([k,n,t,col,df])=>{const b=document.createElement('button');b.className='tk';b.style.setProperty('--c',col);b.innerHTML='<canvas width="48" height="48"></canvas><span class="tt"><b>'+n+'</b><small>'+t+'</small><em class="dif">'+[1,2,3,4,5].map(i=>'<i'+(i<=df?' class="on"':'')+'></i>').join('')+'</em></span>';trkPreview(k,b.firstChild);b.onclick=()=>{d.remove();res(k)};g.append(b)});d.querySelector('.s').onclick=()=>{d.remove();res(null)};document.body.append(d)})}
-const ppGrid=$('playMaps');
+
+/* ═══ Play Maps (2 group) ═══ */
+const ppGridHangout=$('playMapsHangout');
+const ppGridFun=$('playMapsFun');
+async function startFromPlay(k){
+  selMap=k;
+  if(k=='speedrace'){const t=await pickTrack();if(!t)return;rtrack=t}
+  $('mp').disabled=true;
+  await join(k=='speedrace'?'g_'+k+'_'+(uid||'x'):'g_'+k,k,false);
+  $('mp').disabled=false;
+  start(k,k=='speedrace');
+}
+MU_HANGOUT.forEach(([k,l])=>{
+  const b=document.createElement('button');b.dataset.map=k;
+  b.innerHTML=micon(k)+'<span>'+l+'</span><small data-cnt>· · ·</small>';
+  b.onclick=()=>startFromPlay(k);
+  ppGridHangout.append(b);
+});
+MU_FUN.forEach(([k,l])=>{
+  const b=document.createElement('button');b.dataset.map=k;
+  b.innerHTML=micon(k)+'<span>'+l+'</span><small data-cnt>'+(k=='speedrace'?'solo':'· · ·')+'</small>';
+  b.onclick=()=>startFromPlay(k);
+  ppGridFun.append(b);
+});
 const countUnsubs={};
-MU.forEach(([k,l])=>{const b=document.createElement('button');b.dataset.map=k;b.innerHTML=micon(k)+'<span>'+l+'</span><small data-cnt>'+(k=='speedrace'?'solo':'· · ·')+'</small>';b.onclick=async()=>{selMap=k;if(k=='speedrace'){const t=await pickTrack();if(!t)return;rtrack=t}$('mp').disabled=true;await join(k=='speedrace'?'g_'+k+'_'+(uid||'x'):'g_'+k,k,false);$('mp').disabled=false;start(k,k=='speedrace')};ppGrid.append(b)});
 
 async function setupGlobalCounts(){
   try{await ready}catch(e){}
@@ -1937,7 +2200,7 @@ async function setupGlobalCounts(){
         const t=p.lastSeen;
         if(typeof t==='number' && t>0 && (now-t)<300000)cnt++;
       }
-      const btn=[...ppGrid.children].find(x=>x.dataset.map===k);
+      const btn=[...document.querySelectorAll('#playMapsHangout button, #playMapsFun button')].find(x=>x.dataset.map===k);
       if(!btn)return;
       const small=btn.querySelector('[data-cnt]');
       if(!small)return;
@@ -1949,13 +2212,13 @@ async function setupGlobalCounts(){
   }
 }
 setupGlobalCounts();
-for(const k of['c1','c2','nc']){const el=$(k);el.value=cfg[k];el.oninput=()=>{cfg[k]=el.value;sv();setSelf()}}
+
 $('rd').value=cfg.rd;$('rd').oninput=e=>{cfg.rd=+e.target.value;sv();setRD()};
 $('sb').onclick=()=>{$('set').classList.add('hide');playing?$('pause').classList.remove('hide'):show('menu')};
 $('ms').onclick=()=>{show('skin');window.refreshCarUI&&window.refreshCarUI()};$('mr').onclick=()=>show('croom');$('mt').onclick=()=>show('set');
 $('mp').onclick=()=>show('playpick');
 
-// ══════ PWA INSTALL — auto install ══════
+/* ══════ PWA INSTALL ══════ */
 let dp=null;
 const mdBtn=$('md');
 const setMdLabel=(t,d)=>{if(mdBtn){mdBtn.textContent=t;mdBtn.disabled=!!d}};
@@ -1999,12 +2262,31 @@ function emo(i){if(!playing||!pl)return;const n=pl.e==i?-1:i;setE(pl,n);me&&me.u
 function send(){if(!pl)return;const t=$('ci').value.trim();if(t){say(pl,t);me&&me.update({ch:t,ct:TS})}$('ci').value='';$('chat').classList.add('hide')}
 $('cb').onclick=()=>{$('chat').classList.toggle('hide');$('ci').focus()};
 $('cs').onclick=send;$('ci').onkeydown=e=>{if(e.key=='Enter')send()};
-addEventListener('keydown',e=>{if(e.target.tagName=='INPUT')return;keys[e.code]=1;if(e.code=='KeyF'||e.code=='KeyJ')attack();if(e.key>='1'&&e.key<='8')emo(actPage*8+ +e.key-1);if(e.key=='9'){actPage=(actPage+1)%3;renderBar()}if(e.key=='Enter'){$('chat').classList.remove('hide');$('ci').focus();e.preventDefault()}});
+
+/* ═══ Keydown: Skip INPUT/TEXTAREA, tambah key E untuk action, ESC tutup feedback ═══ */
+addEventListener('keydown',e=>{
+  if(e.code=='Escape'&&!$('fb').classList.contains('hide')){closeFeedback();e.preventDefault();return}
+  if(e.target.tagName=='INPUT'||e.target.tagName=='TEXTAREA')return;
+  keys[e.code]=1;
+  if(e.code=='KeyF'||e.code=='KeyJ')attack();
+  if(e.code=='KeyE'&&playing&&nearBoard)doAction();
+  if(e.key>='1'&&e.key<='8')emo(actPage*8+ +e.key-1);
+  if(e.key=='9'){actPage=(actPage+1)%3;renderBar()}
+  if(e.key=='Enter'){$('chat').classList.remove('hide');$('ci').focus();e.preventDefault()}
+});
 addEventListener('keyup',e=>keys[e.code]=0);
 let ds=0,lx=0,ly=0,cvT={};
 const look=(dx,dy)=>{cy-=dx*.008;pitch=Math.min(1.35,Math.max(.05,pitch+dy*.006))};
 let clk=null;cv.onmousedown=e=>{ds=1;lx=e.clientX;ly=e.clientY;clk={t:performance.now(),x:e.clientX,y:e.clientY}};
-addEventListener('mouseup',e=>{ds=0;if(clk&&playing&&curMap=='boxing'&&e.button===0&&performance.now()-clk.t<230&&Math.hypot(e.clientX-clk.x,e.clientY-clk.y)<7)attack();clk=null});
+/* ═══ Mouseup: boxing punch ATAU action button ═══ */
+addEventListener('mouseup',e=>{
+  ds=0;
+  if(clk&&playing&&e.button===0&&performance.now()-clk.t<230&&Math.hypot(e.clientX-clk.x,e.clientY-clk.y)<7){
+    if(curMap=='boxing')attack();
+    else if(nearBoard)doAction();
+  }
+  clk=null;
+});
 addEventListener('mousemove',e=>{if(ds&&playing){look(e.clientX-lx,e.clientY-ly);lx=e.clientX;ly=e.clientY}});
 cv.onwheel=e=>zd=Math.min(22,Math.max(3,zd+e.deltaY*.01));
 cv.ontouchstart=e=>{for(const t of e.changedTouches)cvT[t.identifier]={x:t.clientX,y:t.clientY}};
@@ -2032,16 +2314,22 @@ $('jb').addEventListener('touchend',()=>{if(jbHoldTimer){clearTimeout(jbHoldTime
 $('rb').addEventListener('touchstart',()=>{if(pl&&pl.balloon){mobileDown=true}},{capture:true});
 $('rb').addEventListener('touchend',()=>{mobileDown=false},{capture:true});
 
+/* ═══ Bind Action Button & Feedback ═══ */
+const actBtn=$('act');
+if(actBtn){
+  actBtn.onclick=e=>{e.preventDefault();e.stopPropagation();doAction()};
+  actBtn.ontouchend=e=>{e.preventDefault();e.stopPropagation();doAction()};
+}
+const fbClose=$('fbc'),fbSend=$('fbs');
+if(fbClose)fbClose.onclick=closeFeedback;
+if(fbSend)fbSend.onclick=submitFeedback;
+
 const PR=0.5,PH=1.5,STEP=1.3;
 function resolveH(){for(const c of cols){if(!c.enabled)continue;if(c.type==='dome')continue;const top=c.y+c.h;if(pl.y>=top-0.1)continue;if(top-pl.y<=STEP)continue;if(pl.y+PH<=c.y)continue;const dx=pl.x-c.x,dz=pl.z-c.z;const ox=c.w/2+PR-Math.abs(dx);const oz=c.d/2+PR-Math.abs(dz);if(ox>0&&oz>0){if(ox<oz){pl.x=c.x+Math.sign(dx||1)*(c.w/2+PR);if(pl.vx*Math.sign(dx||1)<0)pl.vx=0}else{pl.z=c.z+Math.sign(dz||1)*(c.d/2+PR);if(pl.vz*Math.sign(dz||1)<0)pl.vz=0}}}}
 function groundY(){let GY=-999,GSLIP=0,GBOUNCE=0;const gr=0.42;for(const c of cols){if(!c.enabled)continue;if(c.type==='dome'){const dd=Math.hypot(pl.x-c.x,pl.z-c.z);if(dd<c.radius){const topH=c.domeH*Math.sqrt(Math.max(0,1-(dd/c.radius)**2));if(topH>GY){GY=topH;GSLIP=0;GBOUNCE=0}}continue}const top=c.y+c.h;if(pl.y<top-0.55)continue;if(pl.x+gr>c.x-c.w/2&&pl.x-gr<c.x+c.w/2&&pl.z+gr>c.z-c.d/2&&pl.z-gr<c.z+c.d/2){if(top>GY){GY=top;GSLIP=c.slip||0;GBOUNCE=c.bounce||0}}}if(GY<-500)GY=(curMap=='parkour')?-50:0;return{GY,GSLIP,GBOUNCE}}
 function groundYSafe(){let GY=-999;const gr=0.42;for(const c of cols){if(!c.enabled)continue;if(c.type==='dome'){const dd=Math.hypot(pl.x-c.x,pl.z-c.z);if(dd<c.radius){const topH=c.domeH*Math.sqrt(Math.max(0,1-(dd/c.radius)**2));if(topH>GY)GY=topH}continue}const top=c.y+c.h;if(pl.y<top-0.55)continue;if(pl.x+gr>c.x-c.w/2&&pl.x-gr<c.x+c.w/2&&pl.z+gr>c.z-c.d/2&&pl.z-gr<c.z+c.d/2){if(top>GY)GY=top}}if(GY<-500)GY=(curMap=='parkour')?-50:0;return GY}
 function groundYSafeAt(x,z){let GY=0;const gr=0.42;for(const c of cols){if(!c.enabled)continue;if(c.type==='dome'){const dd=Math.hypot(x-c.x,z-c.z);if(dd<c.radius){const topH=c.domeH*Math.sqrt(Math.max(0,1-(dd/c.radius)**2));if(topH>GY)GY=topH}continue}const top=c.y+c.h;if(x+gr>c.x-c.w/2&&x-gr<c.x+c.w/2&&z+gr>c.z-c.d/2&&z-gr<c.z+c.d/2){if(top>GY)GY=top}}return GY}
 
-/* ═══════════════════════════════════════════════════════════════════
-   MOBIL — 4 kendaraan: F1, Yaris, Corvette, Chiron
-   Top speed & boost & akselerasi sesuai spesifikasi pemain
-   ═══════════════════════════════════════════════════════════════════ */
 const car={sp:0,st:0};
 function mkCar(c,type){type=type||'f1';const CFG=carOf(type);const body=CFG.col,trim=CFG.col2;
   const g=new THREE.Group(),w=[],P=[],put=(geo,col,x,y,z,o)=>P.push(Object.assign({geo,color:col,x,y,z},o||{}));
@@ -2310,9 +2598,6 @@ function pkHud(){const b=$('pkb');if(!b||!PKCP.length)return;const ZE=PARKOUR[PA
 function movStep(now){const t=now/1000;for(const m of MOV){const c=m.c;let nx=m.bx,ny=m.by,nz=m.bz;const sn=Math.sin(t*m.sp+m.ph);if(m.t==6)nx+=sn*m.amp;else if(m.t==7)nz+=sn*m.amp;else if(m.t==8)ny+=sn*m.amp;else{nx+=Math.cos(t*m.sp+m.ph)*m.amp;nz+=sn*m.amp}
   const dx=nx-c.x,dy=ny-c.y,dz=nz-c.z;if(!pl.sitting&&!pl.balloon&&Math.abs(pl.x-c.x)<c.w/2+.1&&Math.abs(pl.z-c.z)<c.d/2+.1&&Math.abs(pl.y-(c.y+c.h))<.2&&pl.vy<=.01){pl.x+=dx;pl.z+=dz;pl.y+=dy}
   c.x=nx;c.y=ny;c.z=nz;m.g.position.set(nx,ny,nz)}}
-// ══════════════════════════════════════════════════════════════════════
-//  MODE BOXING
-// ══════════════════════════════════════════════════════════════════════
 const BX={lob:{x:0,z:0,r:36},gate:{x:0,z:21},ring:{x:0,z:130,h:22,fy:1.4},exit:{x:-16,z:114},
   REACH:3.5,ARC:.15,CD:.34,HP:10,HEAL:2,GRACE:2.5,KO:1.8,FIGHT:4};
 const bx={king:null,kingName:'',kingKills:0,cd:0,combo:0,lastP:0,portalCd:0,fightAt:-1e9,shake:0,bags:[],boards:[],rank:[],sig:'',synced:false,
@@ -2666,6 +2951,8 @@ function frame(now){
     if(curMap=='boxing')boxStep(dt,now);
     if(curMap=='speedrace'&&BOTS.length)botsStep(dt,now);
     raceHud(dt);
+    /* ═══ Update papan masukan ═══ */
+    updateBoards(now);
     if(MON.on)monStep(dt,now);
     for(const a of ANIM)a(dt,now);
     for(const b of BEACONS){b.t+=dt;b.beam.rotation.y=b.t*.8}
@@ -2708,6 +2995,7 @@ function frame(now){
     pl.r=0;pl.vx=pl.vz=0;$('prompt').classList.add('hide');
     currentDlgTarget=null;
     if(dlgBtnEl)dlgBtnEl.classList.remove('show');
+    if($('act'))$('act').classList.remove('show');
   }
 
   const all=[pl,...Object.values(P),...JELLOGERS,...BOTS.map(b=>b.p)];
@@ -2759,6 +3047,8 @@ function frame(now){
     for(const a of ANIMALS){x.fillStyle='#ffffff';x.fillRect(f(a.x)-1,f(a.z)-1,3,3)}
     for(const j of JELLOGERS){x.fillStyle=j.secret?'#ffe27a':'#8fd08f';x.fillRect(f(j.x)-1,f(j.z)-1,3,3)}
     for(const id in P){x.fillStyle='#e22';x.fillRect(f(P[id].x)-2,f(P[id].z)-2,4,4)}
+    /* Papan masukan di minimap */
+    for(const b of BOARDS){x.fillStyle=b.active?'#ffd23f':'#e0a000';x.fillRect(f(b.x)-2,f(b.z)-2,4,4)}
     x.fillStyle='#ffd23f';x.fillRect(f(pl.x)-2,f(pl.z)-2,4,4);
     x.strokeStyle='#0e1a3a';x.lineWidth=1;x.strokeRect(f(pl.x)-3.5,f(pl.z)-3.5,7,7);}
   }

@@ -1,6 +1,6 @@
-/* ═══ builds.js — Mode Bangun-Bangunan (v2) ═══
-   Map, Tools, Parts (49 desain 3D), kamera bebas, mode Play, Save/Load, UI.
-   Dimuat setelah world.js. ═══ */
+/* ═══ builds.js — Mode Bangun-Bangunan (v3) ═══
+   Map, Tools, Parts, kamera bebas, mode Play, Save/Load, UI.
+   Fitur baru: Move drag, Size handles (6 axis), Rotate 2 drag buttons. ═══ */
 
 const BUILD_GRID = 2;      // snap grid
 const BUILD_LIMIT = 490;   // batas map (±)
@@ -12,13 +12,18 @@ let buildCamera = { target: new THREE.Vector3(0, 0, 0) };
 const buildPtr = { x: 0, y: 0 };
 const inBuild = () => playing && curMap === 'builds';
 
+/* NEW: size handle & drag state */
+let sizeHandles = [];
+let activeDrag = null;          // { type: 'size' | 'move', ... }
+const bHold = { up: 0, down: 0 };
+
 /* ───────────── Perpustakaan Part ───────────── */
 const BUILD_PARTS = (() => {
     const Bx = (w, h, d, x, y, z, c, o) => Object.assign({ geo: new THREE.BoxGeometry(w, h, d), x, y, z, color: c }, o);
     const Cy = (rt, rb, h, s, x, y, z, c, o) => Object.assign({ geo: new THREE.CylinderGeometry(rt, rb, h, s), x, y, z, color: c }, o);
     const Ic = (r, x, y, z, c, o) => Object.assign({ geo: new THREE.IcosahedronGeometry(r, 1), x, y, z, color: c }, o);
     const Co = (r, h, s, x, y, z, c, o) => Object.assign({ geo: new THREE.ConeGeometry(r, h, s), x, y, z, color: c }, o);
-    // prisma segitiga: profil (z,y) di-extrude sepanjang x
+    const Torus = (r, t, x, y, z, c, o) => Object.assign({ geo: new THREE.TorusGeometry(r, t, 8, 16), x, y, z, color: c }, o);
     const prism = (w, pts) => {
         const [a, b, c] = pts, v = [], x0 = -w / 2, x1 = w / 2;
         const tri = (p, q, r) => v.push(...p, ...q, ...r);
@@ -29,29 +34,37 @@ const BUILD_PARTS = (() => {
         g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals(); return g;
     };
     const solidGeo = ps => mergeParts(ps.map(p => Object.assign({}, p, { color: 0xffffff })));
-    const mesh = ps => {
-        const m = new THREE.Mesh(mergeParts(ps), new THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true }));
-        return m;
-    };
+    const mesh = ps => new THREE.Mesh(mergeParts(ps), new THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true }));
     const grp = (ps, extra) => { const g = new THREE.Group(); g.add(mesh(ps)); if (extra) extra(g); return g; };
     const glow = (geo, c, x, y, z) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); return m; };
     const WOOD = 0x8b5a2b, DWOOD = 0x5a3a1a, STONE = 0x8a8a82, LSTONE = 0xb4b4aa;
     const steps = (n, w, h, d) => { const ps = []; for (let i = 0; i < n; i++) { const hh = h * (i + 1) / n; ps.push(Bx(w, hh, d / n, 0, hh / 2, -d / 2 + (i + .5) * d / n, 0xffffff)); } return solidGeo(ps); };
 
-    const S = { // ── BENTUK (bisa diubah ukuran & warna) ──
-        wall:   { name: 'Dinding', col: 0xd9d4c7, geo: () => solidGeo([Bx(4, 4, .5, 0, 2, 0)]) },
-        wwall:  { name: 'Dinding Jendela', col: 0xd9d4c7, geo: () => solidGeo([Bx(1, 4, .5, -1.5, 2, 0), Bx(1, 4, .5, 1.5, 2, 0), Bx(2, 1, .5, 0, .5, 0), Bx(2, 1, .5, 0, 3.5, 0)]) },
-        dwall:  { name: 'Dinding Pintu', col: 0xd9d4c7, geo: () => solidGeo([Bx(1, 4, .5, -1.5, 2, 0), Bx(1, 4, .5, 1.5, 2, 0), Bx(2, 1.2, .5, 0, 3.4, 0)]) },
-        floor:  { name: 'Lantai', col: 0xb08a60, geo: () => solidGeo([Bx(4, .4, 4, 0, .2, 0)]) },
+    const S = { // ── BENTUK ──
+        wall: { name: 'Dinding', col: 0xd9d4c7, geo: () => solidGeo([Bx(4, 4, .5, 0, 2, 0)]) },
+        wwall: { name: 'Dinding Jendela', col: 0xd9d4c7, geo: () => solidGeo([Bx(1, 4, .5, -1.5, 2, 0), Bx(1, 4, .5, 1.5, 2, 0), Bx(2, 1, .5, 0, .5, 0), Bx(2, 1, .5, 0, 3.5, 0)]) },
+        dwall: { name: 'Dinding Pintu', col: 0xd9d4c7, geo: () => solidGeo([Bx(1, 4, .5, -1.5, 2, 0), Bx(1, 4, .5, 1.5, 2, 0), Bx(2, 1.2, .5, 0, 3.4, 0)]) },
+        floor: { name: 'Lantai', col: 0xb08a60, geo: () => solidGeo([Bx(4, .4, 4, 0, .2, 0)]) },
         pillar: { name: 'Pilar', col: 0xe8e4da, geo: () => solidGeo([Cy(.5, .6, 4, 12, 0, 2, 0), Cy(.8, .8, .3, 12, 0, .15, 0), Cy(.8, .8, .3, 12, 0, 3.85, 0)]) },
         stairs: { name: 'Tangga', col: 0xc9bfae, geo: () => steps(4, 4, 4, 4), steps: 4 },
-        ramp:   { name: 'Ramp', col: 0xbbbbbb, geo: () => prism(4, [[-2, 0], [2, 0], [2, 4]]), steps: 8 },
-        box:    { name: 'Kotak', col: 0x9aa8b8, geo: () => solidGeo([Bx(4, 4, 4, 0, 2, 0)]) },
+        stairsWide: { name: 'Tangga Lebar', col: 0xc9bfae, geo: () => steps(5, 6, 4, 6), steps: 5 },
+        ramp: { name: 'Ramp', col: 0xbbbbbb, geo: () => prism(4, [[-2, 0], [2, 0], [2, 4]]), steps: 8 },
+        box: { name: 'Kotak', col: 0x9aa8b8, geo: () => solidGeo([Bx(4, 4, 4, 0, 2, 0)]) },
         sphere: { name: 'Bola', col: 0xe07a5f, geo: () => new THREE.SphereGeometry(2, 16, 12).translate(0, 2, 0), solid: [{ w: 3, h: 4, d: 3, x: 0, y: 0, z: 0 }] },
-        cone:   { name: 'Kerucut', col: 0x81b29a, geo: () => new THREE.ConeGeometry(2, 4, 12).translate(0, 2, 0), solid: [{ w: 3, h: 2, d: 3, x: 0, y: 0, z: 0 }] },
+        cone: { name: 'Kerucut', col: 0x81b29a, geo: () => new THREE.ConeGeometry(2, 4, 12).translate(0, 2, 0), solid: [{ w: 3, h: 2, d: 3, x: 0, y: 0, z: 0 }] },
         cylinder: { name: 'Tabung', col: 0xf2cc8f, geo: () => new THREE.CylinderGeometry(2, 2, 4, 16).translate(0, 2, 0) },
-        dome:   { name: 'Kubah', col: 0x8ecae6, geo: () => new THREE.SphereGeometry(2, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), solid: [{ w: 3, h: 1.6, d: 3, x: 0, y: 0, z: 0 }] },
-        roof:   { name: 'Atap', col: 0xb5483a, geo: () => prism(4.4, [[-2.4, 0], [2.4, 0], [0, 2.2]]), solid: [{ w: 4.4, h: 1, d: 4.8, x: 0, y: 0, z: 0 }] }
+        dome: { name: 'Kubah', col: 0x8ecae6, geo: () => new THREE.SphereGeometry(2, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), solid: [{ w: 3, h: 1.6, d: 3, x: 0, y: 0, z: 0 }] },
+        roof: { name: 'Atap', col: 0xb5483a, geo: () => prism(4.4, [[-2.4, 0], [2.4, 0], [0, 2.2]]), solid: [{ w: 4.4, h: 1, d: 4.8, x: 0, y: 0, z: 0 }] },
+        /* NEW */
+        pyramid: { name: 'Piramida', col: 0xd9b86a, geo: () => new THREE.ConeGeometry(2.6, 4, 4).translate(0, 2, 0), solid: [{ w: 3.5, h: 2, d: 3.5, x: 0, y: 0, z: 0 }] },
+        hex: { name: 'Hexagon', col: 0x88c0a8, geo: () => new THREE.CylinderGeometry(2, 2, 4, 6).translate(0, 2, 0) },
+        tube: { name: 'Pipa', col: 0xa0a8b8, geo: () => new THREE.CylinderGeometry(2, 2, 4, 16, 1, true).translate(0, 2, 0), solid: 'none' },
+        torus: { name: 'Cincin', col: 0xffc45c, geo: () => new THREE.TorusGeometry(1.8, .5, 10, 24).rotateX(Math.PI / 2).translate(0, .5, 0), solid: 'none' },
+        plate: { name: 'Piring', col: 0xc8b088, geo: () => new THREE.CylinderGeometry(2, 2, .3, 16).translate(0, .15, 0) },
+        bar: { name: 'Balok Panjang', col: 0xa08060, geo: () => solidGeo([Bx(8, .6, .6, 0, .3, 0)]) },
+        halfsphere: { name: 'Setengah Bola', col: 0xff9ec4, geo: () => new THREE.SphereGeometry(2, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), solid: [{ w: 3, h: 1.6, d: 3, x: 0, y: 0, z: 0 }] },
+        arch: { name: 'Bentuk Gapura', col: 0xcfc8b8, geo: () => { const s = []; for (let i = 0; i < 8; i++) { const a = Math.PI * i / 7; s.push(Bx(.4, .4, .6, Math.cos(a) * 1.6, 1.6 + Math.sin(a) * 1.6, 0)); } s.push(Bx(.4, 1.6, .6, -1.6, .8, 0), Bx(.4, 1.6, .6, 1.6, .8, 0)); return solidGeo(s); }, solid: 'none' },
+        spiral: { name: 'Tangga Spiral', col: 0xa8a8a0, geo: () => { const s = [Cy(.15, .15, 5, 6, 0, 2.5, 0)]; for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 * 3; s.push(Bx(2.4, .15, 1.2, Math.cos(a) * 1.2, .4 + i * .32, Math.sin(a) * 1.2, 0, { ry: -a })); } return solidGeo(s); } }
     };
     Object.values(S).forEach(p => p.sc = true);
 
@@ -66,7 +79,15 @@ const BUILD_PARTS = (() => {
         rocks: { name: 'Tumpukan Batu', build: () => mesh([Ic(1.5, 0, .9, 0, 0x7d7d76, { sy: .8 }), Ic(1.1, 1.8, .6, .4, 0x8d8d86, { sy: .8 }), Ic(.9, -1.4, .5, .8, 0x9c9c94, { sy: .8 }), Ic(.7, .4, 1.9, -.2, 0xa8a8a0, { sy: .8 })]), solid: [{ w: 3.4, h: 1.6, d: 2.4, x: 0, y: 0, z: 0 }] },
         mushroom: { name: 'Jamur', build: () => mesh([Cy(.25, .3, .8, 6, 0, .4, 0, 0xf4ecd8), { geo: new THREE.SphereGeometry(.7, 10, 6, 0, 6.283, 0, 1.6), y: .75, color: 0xe63946 }, Ic(.1, .3, 1.3, .2, 0xffffff), Ic(.1, -.3, 1.2, -.2, 0xffffff), Ic(.08, -.1, 1.4, .4, 0xffffff)]), solid: 'none' },
         cactus: { name: 'Kaktus', build: () => mesh([Cy(.45, .5, 3.2, 8, 0, 1.6, 0, 0x3f9d5a), Ic(.45, 0, 3.2, 0, 0x3f9d5a), Cy(.22, .22, 1, 6, .8, 1.8, 0, 0x3f9d5a, { rz: 0 }), Cy(.22, .22, .8, 6, .55, 1.4, 0, 0x3f9d5a, { rz: 1.57 }), Cy(.22, .22, .9, 6, -.8, 2.2, 0, 0x3f9d5a), Cy(.22, .22, .8, 6, -.55, 1.8, 0, 0x3f9d5a, { rz: 1.57 }), Ic(.14, 0, 3.8, 0, 0xff7aa8)]), solid: [{ w: 1, h: 3.4, d: 1, x: 0, y: 0, z: 0 }] },
-        stump: { name: 'Tunggul', build: () => mesh([Cy(.8, 1, 1, 9, 0, .5, 0, 0x7a4a22), Cy(.7, .7, .06, 9, 0, 1, 0, 0xd9b27a), Cy(.4, .4, .08, 9, 0, 1.01, 0, 0xc89a60)]) }
+        stump: { name: 'Tunggul', build: () => mesh([Cy(.8, 1, 1, 9, 0, .5, 0, 0x7a4a22), Cy(.7, .7, .06, 9, 0, 1, 0, 0xd9b27a), Cy(.4, .4, .08, 9, 0, 1.01, 0, 0xc89a60)]) },
+        /* NEW */
+        boulder: { name: 'Batu Besar', build: () => mesh([Ic(2, 0, 1.3, 0, 0x7d7d76, { sy: .8 }), Ic(1.4, 2, .8, .8, 0x8d8d86, { sy: .85 }), Ic(1.2, -1.6, .7, -.6, 0x9c9c94, { sy: .8 }), Ic(.9, .6, 2.4, .4, 0xa8a8a0, { sy: .85 })]), solid: [{ w: 4, h: 3, d: 4, x: 0, y: 0, z: 0 }] },
+        crystal: { name: 'Kristal', build: () => { const g = new THREE.Group(); g.add(mesh([Cy(0, .8, 3, 4, 0, 1.5, 0, 0x7fd0ff)])); const b = glow(new THREE.IcosahedronGeometry(.3, 1), 0xaee8ff, 0, 3.3, 0); g.add(b); g.userData.tick = t => { b.scale.setScalar(1 + Math.sin(t * 4) * .12); }; return g; }, solid: [{ w: 1, h: 3, d: 1, x: 0, y: 0, z: 0 }] },
+        coral: { name: 'Karang', build: () => mesh([Cy(.2, .25, 1.5, 6, 0, .75, 0, 0xff5d8a), Cy(.15, .15, 1.2, 6, .4, 1.4, 0, 0xff5d8a, { rz: -.4 }), Cy(.15, .15, 1, 6, -.4, 1.4, 0, 0xff5d8a, { rz: .4 }), Ic(.25, .4, 2.1, 0, 0xff90b0), Ic(.25, -.4, 2.1, 0, 0xff90b0), Ic(.25, 0, 2, 0, 0xff90b0)]), solid: 'none' },
+        log: { name: 'Kayu Roboh', build: () => mesh([Cy(.5, .55, 6, 8, 0, .55, 0, 0x7a4a22, { rz: 1.5708 }), Cy(.55, .55, .5, 8, 3, .55, 0, 0x9a6a3a, { rz: 1.5708 }), Ic(.3, 1, .8, .5, 0x4f8f3f), Ic(.2, -1.5, .7, -.4, 0x4f8f3f)]), solid: [{ w: 6.5, h: 1.1, d: 1.1, x: 0, y: 0, z: 0 }] },
+        vine: { name: 'Sulur', build: () => { const s = []; for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283; s.push(Ic(.15, Math.sin(a) * .3, i * .6, 0, 0x3a8a4a)); } return mesh(s); }, solid: 'none' },
+        lilypad: { name: 'Daun Teratai', build: () => { const s = [Cy(1.2, 1.2, .08, 12, 0, .04, 0, 0x3aa84a)]; for (let i = 0; i < 4; i++) { const a = i / 4 * 6.283; s.push(Ic(.15, Math.cos(a) * .7, .15, Math.sin(a) * .7, 0xffb0d0)); } return mesh(s); }, solid: 'none' },
+        volcano: { name: 'Gunung Kecil', build: () => { const s = [Cy(3, .5, 4, 8, 0, 2, 0, 0x6a5a4a)]; for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283; s.push(Ic(.4, Math.cos(a) * .8, 3.8, Math.sin(a) * .8, 0x8a2a2a)); } return mesh(s); }, solid: [{ w: 3, h: 4, d: 3, x: 0, y: 0, z: 0 }] }
     };
     const F = { // ── PERABOT ──
         lamp: { name: 'Lampu Jalan', build: () => grp([Cy(.14, .2, 4.4, 6, 0, 2.2, 0, 0x2f343b), Cy(.35, .35, .3, 6, 0, .15, 0, 0x2f343b), Bx(1, .12, .12, .35, 4.45, 0, 0x2f343b), Bx(.8, .3, .8, .8, 4.2, 0, 0x2f343b), Co(.6, .4, 4, .8, 4.65, 0, 0x2f343b, { ry: .785 })], g => { const b = glow(new THREE.IcosahedronGeometry(.28, 1), 0xffe27a, .8, 4.05, 0); g.add(b); g.userData.tick = t => { b.scale.setScalar(1 + Math.sin(t * 5) * .04); }; }), solid: [{ w: .6, h: 4.5, d: .6, x: 0, y: 0, z: 0 }] },
@@ -80,22 +101,49 @@ const BUILD_PARTS = (() => {
         pot: { name: 'Pot Tanaman', build: () => mesh([Cy(.7, .5, .9, 10, 0, .45, 0, 0xc4623a), Cy(.78, .78, .15, 10, 0, .95, 0, 0xd4724a), Ic(.7, 0, 1.4, 0, 0x3f9d4a), Ic(.5, .5, 1.6, .2, 0x4fb85a), Ic(.15, -.2, 1.9, .3, 0xff6688)]), solid: [{ w: 1.5, h: 1, d: 1.5, x: 0, y: 0, z: 0 }] },
         sign: { name: 'Papan Petunjuk', build: () => mesh([Bx(.2, 2.6, .2, 0, 1.3, 0, DWOOD), Bx(1.8, .7, .12, .5, 2.3, 0, 0xe6c07a), Co(.45, .8, 3, 1.6, 2.3, 0, 0xe6c07a, { rz: -1.57 }), Bx(1.4, .55, .12, -.3, 1.5, .02, 0xd9a85a), Bx(1.4, .08, .02, .4, 2.3, .07, DWOOD)]), solid: [{ w: .5, h: 2.6, d: .5, x: 0, y: 0, z: 0 }] },
         tent: { name: 'Tenda', build: () => mesh([{ geo: prism(3.8, [[-2.4, 0], [2.4, 0], [0, 2.8]]), color: 0xff8a3a }, { geo: prism(3.9, [[-.9, 0], [.9, 0], [0, 1.8]]), y: .01, z: 2.3 * 0 + .2, color: 0x4a2f1a }, Bx(.12, .12, 5, 0, 2.78, 0, 0x5a3a1a, { rx: 0, ry: 0 }), Bx(.08, 2.9, .08, 1.8, 1.4, 2.5, 0xcfcfcf)]), solid: [{ w: 3.8, h: 2.4, d: 4.8, x: 0, y: 0, z: 0 }] },
-        umbrella: { name: 'Payung Pantai', build: () => mesh([Cy(.07, .07, 3.4, 6, 0, 1.7, 0, 0xeeeeee), Co(2.2, .9, 8, 0, 3.55, 0, 0xff5d5d), Co(1.5, .6, 8, 0, 3.8, 0, 0xffffff), Ic(.12, 0, 4.15, 0, 0xffd23f)]), solid: [{ w: .3, h: 3.5, d: .3, x: 0, y: 0, z: 0 }] }
+        umbrella: { name: 'Payung Pantai', build: () => mesh([Cy(.07, .07, 3.4, 6, 0, 1.7, 0, 0xeeeeee), Co(2.2, .9, 8, 0, 3.55, 0, 0xff5d5d), Co(1.5, .6, 8, 0, 3.8, 0, 0xffffff), Ic(.12, 0, 4.15, 0, 0xffd23f)]), solid: [{ w: .3, h: 3.5, d: .3, x: 0, y: 0, z: 0 }] },
+        /* NEW */
+        bookshelf: { name: 'Rak Buku', build: () => { const ps = [Bx(3, .3, 1, 0, .15, 0, DWOOD), Bx(3, .3, 1, 0, 3, 0, DWOOD), Bx(.25, 3.3, 1, -1.4, 1.65, 0, DWOOD), Bx(.25, 3.3, 1, 1.4, 1.65, 0, DWOOD)]; const COLS = [0xe63946, 0x3d8bff, 0xffd23f, 0x3fdc6a, 0xb05dff]; [.6, 1.4, 2.2].forEach(y => { ps.push(Bx(2.6, .1, 1, 0, y, 0, DWOOD)); let x = -1.1; for (let i = 0; i < 7; i++) { const h = .5 + Math.random() * .35, w = .18 + Math.random() * .1; ps.push(Bx(w, h, .75, x, y + .05 + h / 2, 0, COLS[(Math.random() * 5) | 0])); x += w + .02 + Math.random() * .04; } }); return mesh(ps); }, solid: [{ w: 3, h: 3.3, d: 1, x: 0, y: 0, z: 0 }] },
+        bed: { name: 'Kasur', build: () => mesh([Bx(3, .5, 6, 0, .35, 0, 0xd9b27a), Bx(3, .35, .5, 0, .75, -2.75, 0x6b4423), Bx(2.7, .2, 2.2, 0, .65, 1.8, 0xff9ec4), Bx(1.6, .2, .6, 0, .68, -2.2, 0xffffff), Bx(2.9, .15, 2.5, 0, .6, .3, 0xffe27a)]), solid: [{ w: 3, h: 1, d: 6, x: 0, y: 0, z: 0 }] },
+        sofa: { name: 'Sofa', build: () => mesh([Bx(4, .7, 1.6, 0, .55, 0, 0xd47a58), Bx(4, .9, .6, 0, 1.15, -.6, 0xd47a58), Bx(.6, 1.4, 1.6, -1.9, 1.15, 0, 0xd47a58), Bx(.6, 1.4, 1.6, 1.9, 1.15, 0, 0xd47a58), Bx(.8, .5, 1, 0, 1.25, .3, 0xfff0d8), Bx(.8, .5, 1, -1, 1.25, .3, 0xfff0d8), Bx(.8, .5, 1, 1, 1.25, .3, 0xfff0d8)]), solid: [{ w: 4, h: 1.4, d: 1.6, x: 0, y: 0, z: 0 }] },
+        desk: { name: 'Meja Kerja', build: () => { const ps = [Bx(4, .2, 2, 0, 1.5, 0, 0xb27a3f)]; [[-1.7, -.8], [1.7, -.8], [-1.7, .8], [1.7, .8]].forEach(([x, z]) => ps.push(Bx(.2, 1.4, .2, x, .7, z, DWOOD))); ps.push(Bx(2.2, 1.5, 1.9, -0.8, 2.35, -.05, DWOOD)); ps.push(Bx(2, 1.3, .15, -0.8, 2.35, .95, 0x9fd8ff)); ps.push(Bx(1.4, .15, .55, 0, 1.35, 0, 0x2f343b)); ps.push(Bx(1.2, .08, .4, 0, 1.62, 0, 0x1a1a1a)); return mesh(ps); }, solid: [{ w: 4, h: 2, d: 2, x: 0, y: 0, z: 0 }] },
+        clock: { name: 'Jam Dinding', build: () => { const g = grp([Cy(1.3, 1.3, .25, 20, 0, 0, 0, 0x3a2a1a, { rx: 1.5708 }), Cy(1.15, 1.15, .27, 20, 0, 0, .01, 0xfff3d8, { rx: 1.5708 }), Bx(.1, .8, .05, 0, .35, .15, 0x2a2a2a), Bx(.6, .1, .05, .25, 0, .15, 0x2a2a2a)]); g.rotation.y = Math.PI; return g; }, solid: 'none' },
+        painting: { name: 'Lukisan', build: () => mesh([Bx(2.6, 2, .15, 0, 2, 0, 0x6b4423), Bx(2.3, 1.7, .18, 0, 2, .02, 0xfff3d8), Ic(.7, -.6, 1.6, .15, 0x3aa84a), Ic(.4, .5, 2.1, .15, 0x3d8bff), Ic(.5, -.3, 2.5, .15, 0xffd23f), Ic(.3, .7, 1.5, .15, 0xe63946)]), solid: 'none' },
+        rug: { name: 'Karpet', build: () => mesh([Cy(2, 2, .08, 20, 0, .04, 0, 0xc23a4a), Cy(1.6, 1.6, .09, 20, 0, .05, 0, 0xffc45c), Cy(1, 1, .1, 20, 0, .06, 0, 0x3d8bff)]), solid: 'none' },
+        candle: { name: 'Lilin', build: () => grp([Cy(.15, .18, .8, 8, 0, .4, 0, 0xfff3d8), Cy(.13, .13, .05, 8, 0, .82, 0, 0xffd23f), Cy(.05, .05, .15, 6, 0, .9, 0, 0x2a2a2a)], g => { const f = glow(new THREE.ConeGeometry(.12, .35, 6), 0xff8c1a, 0, 1.05, 0); g.add(f); g.userData.tick = t => { f.scale.y = 1 + Math.sin(t * 12) * .25; f.position.x = Math.sin(t * 8) * .02; }; }), solid: 'none' },
+        monitor: { name: 'Layar TV', build: () => mesh([Bx(3.4, 2, .15, 0, 2, 0, 0x1a1a1f), Bx(3.1, 1.75, .18, 0, 2, .02, 0x2a4a8a), Cy(.3, .3, .15, 8, 0, 1, 0, 0x1a1a1f, { rx: 1.5708 }), Bx(.8, .8, .5, 0, .6, 0, 0x2f343b)]), solid: 'none' },
+        plantstand: { name: 'Meja Tanaman', build: () => { const ps = [Cy(1.1, 1.1, .15, 12, 0, 1.4, 0, 0xb27a3f)]; [[-1.4, -.8], [1.4, -.8], [-1.4, .8], [1.4, .8]].forEach(([x, z]) => ps.push(Bx(.15, 1.4, .15, x, .7, z, DWOOD))); ps.push(Cy(.5, .4, .8, 10, 0, 1.9, 0, 0xc4623a)); ps.push(Ic(.8, 0, 2.8, 0, 0x3f9d4a)); ps.push(Ic(.6, .5, 3, .2, 0x4fb85a)); return mesh(ps); }, solid: [{ w: 1, h: 1.4, d: 1, x: 0, y: 0, z: 0 }] },
+        stool: { name: 'Kursi Tinggi', build: () => mesh([Cy(.7, .7, .15, 8, 0, .75, 0, 0xc0884a), Cy(.5, .5, .7, 8, 0, 1.55, 0, 0xc0884a), Cy(.55, .55, .15, 8, 0, 1.98, 0, 0xc0884a)]), solid: [{ w: 1, h: 1, d: 1, x: 0, y: 0, z: 0 }] },
+        mirror: { name: 'Cermin', build: () => mesh([Bx(1.8, 3, .15, 0, 2, 0, 0xb27a3f), Bx(1.55, 2.75, .18, 0, 2, .02, 0x9fd8ff)]), solid: 'none' },
+        fishtank: { name: 'Akuarium', build: () => grp([Bx(3, 2, 1.5, 0, 1, 0, 0x8ecae6), Bx(3.1, .15, 1.6, 0, 2.05, 0, 0x2f343b), Bx(3.1, .4, 1.6, 0, .2, 0, 0x2f343b), Bx(.3, 1.5, .3, -1, .95, -.4, 0x3aa84a), Bx(.3, .8, .3, 1.2, .6, .3, 0x3aa84a), Bx(.15, .3, .3, 0, 1.2, 0, 0xe63946), Bx(.15, .3, .3, -.5, 1.5, 0, 0xffd23f), Bx(.15, .3, .3, .8, .9, 0, 0x3d8bff)]), solid: [{ w: 3, h: 2, d: 1.5, x: 0, y: 0, z: 0 }] },
+        piano: { name: 'Piano', build: () => mesh([Bx(4, .3, 1.5, 0, 2.1, 0, 0x1a1a1f), Bx(4, .3, 1.5, 0, 1.8, 0, 0x2f343b), Bx(4, 1.6, .3, 0, .95, -.6, 0x2f343b), Bx(2, 1.6, .3, -1, .95, .6, 0x2f343b), Bx(2, 1.6, .3, 1, .95, .6, 0x2f343b), Bx(3.8, .08, .9, 0, 2.27, .25, 0xfff3d8)]), solid: [{ w: 4, h: 2.3, d: 1.5, x: 0, y: 0, z: 0 }] }
     };
     const G = { // ── BANGUNAN ──
         house: { name: 'Rumah Kecil', build: () => mesh([Bx(6, 3.6, 5, 0, 1.8, 0, 0xf2e2c0), { geo: prism(6.8, [[-3.2, 0], [3.2, 0], [0, 2.4]]), y: 3.6, color: 0xc0503a }, Bx(1.3, 2.3, .15, 0, 1.15, 2.55, 0x6b4423), Ic(.08, .4, 1.1, 2.65, 0xffd23f), Bx(1.2, 1.1, .15, -2, 2.1, 2.55, 0x9fd8ff), Bx(1.2, 1.1, .15, 2, 2.1, 2.55, 0x9fd8ff), Bx(1.4, .15, .3, -2, 1.5, 2.6, 0xffffff), Bx(1.4, .15, .3, 2, 1.5, 2.6, 0xffffff), Bx(.8, 1.6, .8, 1.8, 5, -.8, 0x9a6a5a)]), solid: [{ w: 6, h: 3.6, d: 5, x: 0, y: 0, z: 0 }] },
         tower: { name: 'Menara', build: () => { const ps = [Cy(2, 2.4, 8, 10, 0, 4, 0, 0xa8a8a0), Cy(2.5, 2.5, .6, 10, 0, 8.3, 0, 0x8a8a82), Co(2.6, 3.4, 10, 0, 10.4, 0, 0xb5483a), Bx(.9, 1.4, .3, 0, 5, 2, 0x2a2a30), Bx(.5, 1, .3, 0, 7.2, 2, 0x2a2a30)]; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; ps.push(Bx(.7, .7, .7, Math.cos(a) * 2.2, 8.9, Math.sin(a) * 2.2, 0x8a8a82, { ry: -a })); } return mesh(ps); }, solid: [{ w: 4.4, h: 8.6, d: 4.4, x: 0, y: 0, z: 0 }] },
         archway: { name: 'Gerbang', build: () => mesh([Bx(1, 7, 1, -3, 3.5, 0, 0x8a8a82), Bx(1, 7, 1, 3, 3.5, 0, 0x8a8a82), Bx(1.4, .5, 1.4, -3, .25, 0, STONE), Bx(1.4, .5, 1.4, 3, .25, 0, STONE), Bx(8, .9, 1, 0, 7.4, 0, 0x9a9a92), Bx(8.6, .3, 1.3, 0, 8, 0, 0x7a7a72), { geo: new THREE.TorusGeometry(1.4, .18, 6, 20, Math.PI), y: 7.8, color: 0xffd23f }, Ic(.4, -3, 7.5, 0, 0xffd23f, {}), Ic(.4, 3, 7.5, 0, 0xffd23f)]), solid: [{ w: 1, h: 7, d: 1, x: -3, y: 0, z: 0 }, { w: 1, h: 7, d: 1, x: 3, y: 0, z: 0 }, { w: 8, h: 1.2, d: 1, x: 0, y: 6.9, z: 0 }] },
-        bridge: { name: 'Jembatan', build: () => { const ps = []; for (let i = 0; i < 10; i++) ps.push(Bx(3, .18, .72, 0, .9, -3.6 + i * .8, i % 2 ? 0xa06a35 : 0xb27a3f)); ps.push(Bx(.25, .3, 8, -1.4, .75, 0, DWOOD), Bx(.25, .3, 8, 1.4, .75, 0, DWOOD)); for (let i = 0; i < 5; i++) [-1.4, 1.4].forEach(x => ps.push(Bx(.2, 1.1, .2, x, 1.4, -3.6 + i * 1.8, WOOD))); ps.push(Bx(.15, .15, 8, -1.4, 2, 0, WOOD), Bx(.15, .15, 8, 1.4, 2, 0, WOOD)); return mesh(ps); }, solid: [{ w: 3, h: .9, d: 8, x: 0, y: 0, z: 0 }] },
+        bridge: { name: 'Jembatan', build: () => { const ps = []; for (let i = 0; i < 10; i++) ps.push(Bx(3, .18, .72, 0, .9, -3.6 + i * .8, i % 2 ? 0xa06a35 : 0xb27a3f)); ps.push(Bx(.25, .3, 8, -1.4, .75, 0, DWOOD), Bx(.25, .3, 8, 1.4, .75, 0, DWOOD)); for (let i = 0; i < 5; i++)[-1.4, 1.4].forEach(x => ps.push(Bx(.2, 1.1, .2, x, 1.4, -3.6 + i * 1.8, WOOD))); ps.push(Bx(.15, .15, 8, -1.4, 2, 0, WOOD), Bx(.15, .15, 8, 1.4, 2, 0, WOOD)); return mesh(ps); }, solid: [{ w: 3, h: .9, d: 8, x: 0, y: 0, z: 0 }] },
         fence: { name: 'Pagar', build: () => { const ps = []; for (let i = 0; i < 5; i++) ps.push(Bx(.22, 1.4, .22, i * .8 - 1.6, .7, 0, 0xc8a070), Co(.16, .3, 4, i * .8 - 1.6, 1.55, 0, 0xc8a070, { ry: .785 })); ps.push(Bx(3.6, .15, .1, 0, .5, 0, 0xa8804f), Bx(3.6, .15, .1, 0, 1.0, 0, 0xa8804f)); return mesh(ps); }, solid: [{ w: 3.6, h: 1.4, d: .4, x: 0, y: 0, z: 0 }] },
         well: { name: 'Sumur', build: () => mesh([Cy(1.7, 1.9, 1.3, 12, 0, .65, 0, 0x8a8a82), Cy(1.4, 1.4, .1, 12, 0, 1.25, 0, 0x2a6a9a), Bx(.2, 3.2, .2, -1.5, 2.4, 0, WOOD), Bx(.2, 3.2, .2, 1.5, 2.4, 0, WOOD), Cy(.1, .1, 3.2, 6, 0, 3.6, 0, DWOOD, { rz: 1.57 }), { geo: prism(4, [[-2, 0], [2, 0], [0, 1.5]]), y: 4, color: 0xa04030 }, Cy(.05, .05, .9, 4, 0, 3.1, 0, 0xcccccc), Cy(.25, .2, .35, 8, 0, 2.5, 0, 0x8a6a3a)]), solid: [{ w: 3.8, h: 1.4, d: 3.8, x: 0, y: 0, z: 0 }] },
         fountain: { name: 'Air Mancur', build: () => grp([Cy(2.6, 2.8, .9, 16, 0, .45, 0, LSTONE), Cy(2.3, 2.3, .2, 16, 0, .85, 0, 0x4aa8e8), Cy(.4, .5, 1.8, 8, 0, 1.3, 0, 0xd0d0c6), Cy(1.2, .5, .3, 12, 0, 2.2, 0, LSTONE), Cy(1, 1, .1, 12, 0, 2.38, 0, 0x6ac0f0), Cy(.15, .15, .8, 6, 0, 2.8, 0, 0xcfefff)], g => { const dr = []; for (let i = 0; i < 8; i++) { const m = glow(new THREE.IcosahedronGeometry(.12, 0), 0x9ee0ff, 0, 0, 0); g.add(m); dr.push(m); } g.userData.tick = t => dr.forEach((m, i) => { const k = ((t * .8 + i / 8) % 1), a = i / 8 * 6.283; m.position.set(Math.cos(a) * k * 1.7, 3.2 + Math.sin(k * Math.PI) * 1.1 - k * k * 1.6, Math.sin(a) * k * 1.7); }); }), solid: [{ w: 5.2, h: 1, d: 5.2, x: 0, y: 0, z: 0 }] },
         windmill: { name: 'Kincir Angin', build: () => grp([Cy(1.3, 2.2, 6.5, 8, 0, 3.25, 0, 0xf4ecd8), Co(1.9, 2, 8, 0, 7.5, 0, 0xb5483a), Bx(.8, 1.3, .2, 0, 1.2, 2.05, 0x6b4423), Bx(.7, .8, .2, 0, 4, 1.4, 0x9fd8ff)], g => { const bl = new THREE.Group(); bl.position.set(0, 6, 1.7); bl.add(mesh([Cy(.3, .3, .8, 8, 0, 0, 0, 0x5a3a1a, { rx: 1.57 })])); for (let i = 0; i < 4; i++) { const s = mesh([Bx(.2, 3.4, .08, 0, 1.9, 0, 0x8b5a2b), Bx(.9, 2.2, .05, .5, 2.2, .06, 0xf4ecd8)]); s.rotation.z = i * Math.PI / 2; bl.add(s); } g.add(bl); g.userData.tick = t => { bl.rotation.z = t * .8; }; }), solid: [{ w: 4.4, h: 7, d: 4.4, x: 0, y: 0, z: 0 }] },
-        lighthouse: { name: 'Mercusuar', build: () => grp([Cy(1.3, 2, 3, 12, 0, 1.5, 0, 0xffffff), Cy(1.05, 1.3, 3, 12, 0, 4.5, 0, 0xe63946), Cy(.85, 1.05, 3, 12, 0, 7.5, 0, 0xffffff), Cy(1.5, 1.5, .3, 12, 0, 9.15, 0, 0x2f343b), Cy(.75, .75, 1.2, 8, 0, 9.9, 0, 0xcfefff, { }), Co(1.1, 1.2, 8, 0, 11.1, 0, 0xe63946)], g => { const b = glow(new THREE.IcosahedronGeometry(.5, 1), 0xffee88, 0, 9.9, 0); g.add(b); g.userData.tick = t => { b.scale.setScalar(1 + Math.sin(t * 6) * .12); }; }), solid: [{ w: 3.4, h: 9.2, d: 3.4, x: 0, y: 0, z: 0 }] },
+        lighthouse: { name: 'Mercusuar', build: () => grp([Cy(1.3, 2, 3, 12, 0, 1.5, 0, 0xffffff), Cy(1.05, 1.3, 3, 12, 0, 4.5, 0, 0xe63946), Cy(.85, 1.05, 3, 12, 0, 7.5, 0, 0xffffff), Cy(1.5, 1.5, .3, 12, 0, 9.15, 0, 0x2f343b), Cy(.75, .75, 1.2, 8, 0, 9.9, 0, 0xcfefff, {}), Co(1.1, 1.2, 8, 0, 11.1, 0, 0xe63946)], g => { const b = glow(new THREE.IcosahedronGeometry(.5, 1), 0xffee88, 0, 9.9, 0); g.add(b); g.userData.tick = t => { b.scale.setScalar(1 + Math.sin(t * 6) * .12); }; }), solid: [{ w: 3.4, h: 9.2, d: 3.4, x: 0, y: 0, z: 0 }] },
         flagpole: { name: 'Tiang Bendera', build: () => grp([Cy(.5, .6, .4, 8, 0, .2, 0, STONE), Cy(.08, .1, 7, 6, 0, 3.8, 0, 0xcfcfcf), Ic(.18, 0, 7.4, 0, 0xffd23f)], g => { const f = mesh([Bx(2, 1.2, .05, 1, 0, 0, 0xe63946), Bx(2, .4, .06, 1, 0, 0, 0xffffff)]); f.position.set(0, 6.5, 0); g.add(f); g.userData.tick = t => { f.rotation.y = Math.sin(t * 2.2) * .25; }; }), solid: [{ w: 1, h: 7, d: 1, x: 0, y: 0, z: 0 }] },
         statue: { name: 'Patung', build: () => mesh([Bx(2.4, .5, 2.4, 0, .25, 0, 0x8a8a8a), Bx(1.8, 1.2, 1.8, 0, 1.1, 0, 0x9a9a9a), Bx(2, .2, 2, 0, 1.8, 0, 0xaaaaaa), Cy(.5, .8, 1.8, 8, 0, 2.9, 0, 0xe6b422), Bx(.3, 1.2, .3, -.85, 3, 0, 0xe6b422, { rz: .5 }), Bx(.3, 1.6, .3, .85, 3.3, 0, 0xe6b422, { rz: -.5 }), Ic(.55, 0, 4.2, 0, 0xf2c94c), Ic(.22, 1.3, 4.1, 0, 0xffee88)]), solid: [{ w: 2.4, h: 2, d: 2.4, x: 0, y: 0, z: 0 }] },
         campfire: { name: 'Api Unggun', build: () => { const ps = []; for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283; ps.push(Cy(.14, .14, 1.5, 5, Math.cos(a) * .5, .45, Math.sin(a) * .5, DWOOD, { rz: -Math.cos(a) * .85, rx: Math.sin(a) * .85 })); } for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283; ps.push({ geo: new THREE.DodecahedronGeometry(.3, 0), x: Math.cos(a) * 1.3, y: .15, z: Math.sin(a) * 1.3, color: 0x6a6a62 }); } const g = new THREE.Group(); g.add(mesh(ps)); const mk = (r, h, c, y) => { const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 6), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .9 })); m.position.y = y; g.add(m); return m; }; const f1 = mk(.6, 1.5, 0xff5d1a, 1), f2 = mk(.4, 1.1, 0xffa51a, 1.1), f3 = mk(.22, .8, 0xffe27a, 1.1); g.userData.tick = t => { f1.scale.set(1 + Math.sin(t * 9) * .1, 1 + Math.sin(t * 11) * .18, 1); f2.scale.set(1, 1 + Math.sin(t * 13 + 1) * .2, 1); f3.scale.set(1, 1 + Math.sin(t * 17 + 2) * .25, 1); }; return g; }, solid: 'none' },
-        pool: { name: 'Kolam', build: () => mesh([Bx(8, .3, 8, 0, .15, 0, 0x4aa8e8), Bx(8.6, .6, .6, 0, .3, -4, LSTONE), Bx(8.6, .6, .6, 0, .3, 4, LSTONE), Bx(.6, .6, 7.4, -4, .3, 0, LSTONE), Bx(.6, .6, 7.4, 4, .3, 0, LSTONE), Ic(.5, -2, .35, 1, 0x6ac0f0, { sy: .15 }), Ic(.4, 1.5, .35, -2, 0x6ac0f0, { sy: .15 })]), solid: [{ w: 8.6, h: .6, d: 8.6, x: 0, y: 0, z: 0 }] }
+        pool: { name: 'Kolam', build: () => mesh([Bx(8, .3, 8, 0, .15, 0, 0x4aa8e8), Bx(8.6, .6, .6, 0, .3, -4, LSTONE), Bx(8.6, .6, .6, 0, .3, 4, LSTONE), Bx(.6, .6, 7.4, -4, .3, 0, LSTONE), Bx(.6, .6, 7.4, 4, .3, 0, LSTONE), Ic(.5, -2, .35, 1, 0x6ac0f0, { sy: .15 }), Ic(.4, 1.5, .35, -2, 0x6ac0f0, { sy: .15 })]), solid: [{ w: 8.6, h: .6, d: 8.6, x: 0, y: 0, z: 0 }] },
+        /* NEW */
+        gazebo: { name: 'Gazebo', build: () => { const ps = [Cy(3, 3, .3, 8, 0, .15, 0, 0xc8b088)]; for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283; ps.push(Cy(.2, .25, 4, 6, Math.cos(a) * 2.6, 2.15, Math.sin(a) * 2.6, 0xf4ecd8)); } ps.push(Co(3.6, 2.5, 6, 0, 5.4, 0, 0xa04030)); ps.push(Cy(3.3, 3.3, .3, 6, 0, 4.3, 0, 0x9a8a6a)); return mesh(ps); }, solid: [{ w: 6, h: 4, d: 6, x: 0, y: 0, z: 0 }] },
+        greenhouse: { name: 'Rumah Kaca', build: () => mesh([Bx(6, 3, 5, 0, 1.5, 0, 0xa8d8b0), { geo: prism(6.8, [[-3.2, 0], [3.2, 0], [0, 2]]), y: 3, color: 0x6ab88a }, Bx(1.2, 2.2, .15, 0, 1.1, 2.55, 0x6b4423), Bx(1.5, 2, .15, -2, 2, 2.55, 0x9fd8ff), Bx(1.5, 2, .15, 2, 2, 2.55, 0x9fd8ff), Bx(.15, 3, .15, -3, 1.5, 0, 0x6b4423), Bx(.15, 3, .15, 3, 1.5, 0, 0x6b4423), Bx(.15, 3, .15, 0, 1.5, -2.5, 0x6b4423)]), solid: [{ w: 6, h: 3, d: 5, x: 0, y: 0, z: 0 }] },
+        silo: { name: 'Silo', build: () => mesh([Cy(2.2, 2.4, 8, 12, 0, 4, 0, 0xd8d0c0), Cy(2.5, 2.5, .3, 12, 0, 8.15, 0, 0x8a8a82), Co(2.3, 2.5, 12, 0, 9.5, 0, 0x8a8a82), Bx(1.2, .15, 1.2, 0, 3, 2.2, 0x2f343b)]), solid: [{ w: 4.4, h: 8, d: 4.4, x: 0, y: 0, z: 0 }] },
+        watchtower: { name: 'Menara Pengawas', build: () => { const ps = []; for (const [x, z] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) ps.push(Bx(.4, 8, .4, x, 4, z, WOOD)); ps.push(Bx(5, .4, 5, 0, 8, 0, 0xa06a35)); for (let i = 0; i < 4; i++) ps.push(Bx(5, 3.5, .2, 0, 9.75, -2.4 + i * 1.6, 0x8b5a2b, { ry: 0 })); for (const [x, z] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) for (let k = 1; k < 4; k++) ps.push(Bx(.1, .3, 5, x, k * 2, 0, WOOD, { ry: 0 })); ps.push(Co(3.6, 2, 4, 0, 11.5, 0, 0xa04030, { ry: .785 })); return mesh(ps); }, solid: [{ w: 5, h: 8.5, d: 5, x: 0, y: 0, z: 0 }] },
+        dock: { name: 'Dermaga', build: () => { const ps = []; for (let i = 0; i < 8; i++) ps.push(Bx(3, .2, .9, 0, .5, -3.6 + i * .9, i % 2 ? 0xa06a35 : 0xb27a3f)); for (let i = 0; i < 5; i++) [-1.4, 1.4].forEach(x => ps.push(Bx(.25, 1.5, .25, x, .75, -3.6 + i * 1.9, WOOD))); return mesh(ps); }, solid: [{ w: 3, h: .5, d: 7.2, x: 0, y: 0, z: 0 }] },
+        station: { name: 'Pos Jaga', build: () => mesh([Bx(4, 3, 4, 0, 1.5, 0, 0xd4c8a8), { geo: prism(4.8, [[-2.4, 0], [2.4, 0], [0, 1.5]]), y: 3, color: 0x8a4a3a }, Bx(.9, 1.8, .15, 0, .9, 2.05, 0x6b4423), Bx(1.2, 1, .15, -1.3, 2, 2.05, 0x9fd8ff), Bx(1.2, 1, .15, 1.3, 2, 2.05, 0x9fd8ff), Bx(.15, 1, .15, 1.5, 4, 1.2, 0xcccccc), Bx(1.2, .6, .05, 2.2, 4.4, 1.2, 0xe63946)]), solid: [{ w: 4, h: 3, d: 4, x: 0, y: 0, z: 0 }] },
+        shrine: { name: 'Kuil Kecil', build: () => mesh([Bx(4.5, .5, 4, 0, .25, 0, LSTONE), Bx(3.5, .5, 3, 0, .75, 0, LSTONE), Bx(4, 3, 3.5, 0, 2.5, 0, 0xd4c8b0), { geo: prism(5, [[-2.8, 0], [2.8, 0], [0, 2]]), y: 4, color: 0x8a4a3a }, Bx(2.2, 1.4, .3, 0, 3.2, 1.4, 0x6b4423), Ic(.3, 0, 4.9, 0, 0xffd23f), Cy(.15, .15, 1.5, 6, -1.8, 1.75, 1.6, 0x8a8a82), Cy(.15, .15, 1.5, 6, 1.8, 1.75, 1.6, 0x8a8a82)]), solid: [{ w: 4.5, h: 4, d: 3.5, x: 0, y: 0, z: 0 }] },
+        fountainBig: { name: 'Air Mancur Besar', build: () => grp([Cy(3.5, 3.7, 1.2, 16, 0, .6, 0, LSTONE), Cy(3.2, 3.2, .3, 16, 0, 1.2, 0, 0x4aa8e8), Cy(1.8, 2, .8, 12, 0, 1.5, 0, LSTONE), Cy(1.5, 1.5, .25, 12, 0, 1.9, 0, 0x4aa8e8), Cy(.5, .6, 2.5, 8, 0, 2.7, 0, LSTONE), Cy(.9, .5, .4, 12, 0, 4, 0, 0x6ac0f0), Cy(.15, .15, 1.2, 6, 0, 4.7, 0, 0xcfefff)], g => { const dr = []; for (let i = 0; i < 14; i++) { const m = glow(new THREE.IcosahedronGeometry(.14, 0), 0x9ee0ff, 0, 0, 0); g.add(m); dr.push(m); } g.userData.tick = t => dr.forEach((m, i) => { const k = ((t * .6 + i / 14) % 1), a = i / 14 * 6.283; m.position.set(Math.cos(a) * k * 2.8, 5 + Math.sin(k * Math.PI) * 1.6 - k * k * 3, Math.sin(a) * k * 2.8); }); }), solid: [{ w: 7, h: 1.5, d: 7, x: 0, y: 0, z: 0 }] },
+        wellBrick: { name: 'Sumur Bata', build: () => mesh([Cy(1.8, 2, 1.4, 12, 0, .7, 0, 0x8a3a2a), Cy(1.5, 1.5, .1, 12, 0, 1.35, 0, 0x2a6a9a), Bx(.2, 3.4, .2, -1.6, 2.5, 0, WOOD), Bx(.2, 3.4, .2, 1.6, 2.5, 0, WOOD), Cy(.12, .12, 3.4, 6, 0, 3.8, 0, DWOOD, { rz: 1.57 }), { geo: prism(4.2, [[-2.1, 0], [2.1, 0], [0, 1.6]]), y: 4.2, color: 0x4a2a1a }, Cy(.06, .06, 1, 4, 0, 3.2, 0, 0xcccccc), Cy(.3, .25, .4, 8, 0, 2.6, 0, 0x8a6a3a)]), solid: [{ w: 4, h: 1.5, d: 4, x: 0, y: 0, z: 0 }] },
+        mailboxStand: { name: 'Booth Surat', build: () => mesh([Bx(1.6, 2.4, 1.6, 0, 1.2, 0, 0x3d8bff), Bx(1.8, .2, 1.8, 0, 2.5, 0, 0x2f343b), Co(1.4, 1, 4, 0, 3, 0, 0x2f343b, { ry: .785 }), Bx(1, 1.4, .15, 0, 1.3, .85, 0x1a2a4a), Bx(.5, .5, .15, .4, 1.6, .9, 0xffd23f), Bx(.3, .15, .18, -.2, 1.5, .9, 0xffffff), Bx(.3, .15, .18, -.2, 1.2, .9, 0xffffff)]), solid: [{ w: 1.6, h: 2.4, d: 1.6, x: 0, y: 0, z: 0 }] },
+        chimney: { name: 'Cerobong', build: () => mesh([Bx(1.6, 4, 1.6, 0, 2, 0, 0x8a3a2a), Bx(2, .4, 2, 0, 4.2, 0, 0x6a2a1a), Bx(1.2, 1, 1.2, 0, 3, 0, 0x5a2010)]), solid: [{ w: 1.6, h: 4, d: 1.6, x: 0, y: 0, z: 0 }] }
     };
 
     const defs = { bentuk: S, alam: N, perabot: F, bangunan: G };
@@ -147,6 +195,7 @@ function initBuildMode() {
     if (buildGroup) sc.remove(buildGroup);
     buildGroup = new THREE.Group(); sc.add(buildGroup);
     placedObjects = []; selectedObject = null; undoStack = []; selBox = null; buildGhost = null;
+    sizeHandles = []; activeDrag = null;
     currentTool = 'add'; currentPartCat = 'bentuk'; currentPartType = 'wall'; currentColor = null; ghostRot = 0; buildPlay = false;
     buildCamera.target.set(0, 0, 0);
     cy = .6; pitch = .75; zd = 10; cam.fov = 60; cam.updateProjectionMatrix();
@@ -164,29 +213,76 @@ function initBuildMode() {
     $('hud').classList.remove('hide');
     bBindInput(); initBuildUI(); switchTool('add'); bPickerRefresh();
     pl.vy = pl.vx = pl.vz = 0; pl.y = 0; pl.root.visible = true;
-    toast('Mode Builds! Drag = putar kamera · WASD = geser · Klik = pasang · Tombol ▶ = coba main');
+    toast('Mode Builds! Drag = putar kamera · WASD = geser · Klik = pasang');
 }
 function buildCleanup() {
     buildPlay = false; cols.length = 0;
+    activeDrag = null;
+    clearSizeHandles();
     document.body.classList.remove('bld', 'bplay');
     ['part-picker', 'inspector', 'save-panel', 'bstop'].forEach(i => { const e = document.getElementById(i); if (e) e.classList.add('hide'); });
+    const rp = document.getElementById('rotate-pad'); if (rp) rp.classList.add('hide');
     if (buildGroup) { sc.remove(buildGroup); buildGroup = null; }
 }
 
-/* ───────────── Input (klik ≠ drag) ───────────── */
+/* ───────────── Input (klik ≠ drag, drag handle size, drag move) ───────────── */
 function bBindInput() {
     if (bBindInput.done) return; bBindInput.done = true;
     const down = new Map(); cv.style.touchAction = 'none';
     const set = e => { buildPtr.x = e.clientX / innerWidth * 2 - 1; buildPtr.y = -(e.clientY / innerHeight * 2 - 1); };
-    cv.addEventListener('pointerdown', e => { if (!inBuild()) return; down.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now(), mv: 0 }); if (down.size > 1) down.forEach(d => d.multi = 1); set(e); });
-    cv.addEventListener('pointermove', e => { if (!inBuild()) return; const d = down.get(e.pointerId); if (d) d.mv = Math.max(d.mv, Math.hypot(e.clientX - d.x, e.clientY - d.y)); set(e); });
+
+    cv.addEventListener('pointerdown', e => {
+        if (!inBuild() || buildPlay) return;
+        set(e);
+
+        // 1) Cek apakah menekan size handle
+        if (currentTool === 'size' && sizeHandles.length) {
+            buildRay.setFromCamera(buildPtr, cam);
+            const hits = buildRay.intersectObjects(sizeHandles.map(h => h.mesh), false);
+            if (hits.length) {
+                const h = sizeHandles.find(x => x.mesh === hits[0].object);
+                if (h) { startSizeDrag(e, h); e.preventDefault(); return; }
+            }
+        }
+
+        // 2) Cek apakah menekan objek (move drag)
+        if (currentTool === 'sculpt') {
+            buildRay.setFromCamera(buildPtr, cam);
+            const hits = buildRay.intersectObjects(placedObjects, true);
+            if (hits.length) {
+                const obj = bRoot(hits[0].object);
+                selectObj(obj);
+                startMoveDrag(e, hits[0].point);
+                e.preventDefault(); return;
+            }
+        }
+
+        // 3) Klik biasa
+        down.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now(), mv: 0 });
+        if (down.size > 1) down.forEach(d => d.multi = 1);
+    });
+
+    cv.addEventListener('pointermove', e => {
+        if (!inBuild() || buildPlay) return;
+        set(e);
+        if (activeDrag) {
+            if (activeDrag.type === 'size') dragSize(e);
+            else if (activeDrag.type === 'move') dragMove(e);
+            e.preventDefault(); return;
+        }
+        const d = down.get(e.pointerId);
+        if (d) d.mv = Math.max(d.mv, Math.hypot(e.clientX - d.x, e.clientY - d.y));
+    });
+
     const up = e => {
+        if (activeDrag) { activeDrag = null; return; }
         const d = down.get(e.pointerId); down.delete(e.pointerId);
         if (!d || e.type === 'pointercancel' || d.multi || d.mv > 8 || performance.now() - d.t > 350 || buildPlay || (e.pointerType === 'mouse' && e.button !== 0) || !inBuild()) return;
         set(e); buildClick();
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('contextmenu', e => e.preventDefault());
+
     addEventListener('keydown', e => {
         if (!inBuild() || e.target.tagName === 'INPUT') return;
         if (e.code === 'KeyR' || e.code === 'KeyQ') rotateGhost();
@@ -262,9 +358,141 @@ function buildUndo() {
 function selectObj(o) {
     selectedObject = o;
     if (selBox) { buildGroup.remove(selBox); selBox = null; }
+    clearSizeHandles();
     if (!o) { hideInspector(); return; }
     selBox = new THREE.BoxHelper(o, 0xffd23f); selBox.material.depthTest = false; selBox.renderOrder = 9; buildGroup.add(selBox);
+    if (currentTool === 'size') createSizeHandles(o);
     showInspector(o);
+}
+
+/* ───────────── SIZE HANDLES ───────────── */
+function clearSizeHandles() {
+    for (const h of sizeHandles) buildGroup.remove(h.mesh);
+    sizeHandles = [];
+}
+function createSizeHandles(obj) {
+    clearSizeHandles();
+    if (!obj) return;
+    const bb = new THREE.Box3().setFromObject(obj);
+    const center = bb.getCenter(new THREE.Vector3());
+    const size = bb.getSize(new THREE.Vector3());
+    const geo = new THREE.BoxGeometry(.45, .45, .45);
+    const axes = [['x', 1], ['x', -1], ['y', 1], ['y', -1], ['z', 1], ['z', -1]];
+    for (const [axis, sign] of axes) {
+        const col = axis === 'x' ? 0xff5d5d : axis === 'y' ? 0x5dff5d : 0x5d9aff;
+        const mat = new THREE.MeshBasicMaterial({ color: col, depthTest: false, transparent: true, opacity: .95 });
+        const m = new THREE.Mesh(geo, mat);
+        m.renderOrder = 100;
+        m.position.copy(center); m.position[axis] += sign * size[axis] / 2;
+        buildGroup.add(m);
+        sizeHandles.push({ mesh: m, axis, sign });
+    }
+}
+function updateSizeHandles() {
+    if (currentTool !== 'size' || !selectedObject) { if (sizeHandles.length) clearSizeHandles(); return; }
+    if (!sizeHandles.length) { createSizeHandles(selectedObject); return; }
+    const bb = new THREE.Box3().setFromObject(selectedObject);
+    const center = bb.getCenter(new THREE.Vector3());
+    const size = bb.getSize(new THREE.Vector3());
+    for (const h of sizeHandles) {
+        h.mesh.position.copy(center);
+        h.mesh.position[h.axis] += h.sign * size[h.axis] / 2;
+    }
+}
+function getLocalBB(obj) {
+    const sp = obj.position.clone(), sr = obj.rotation.clone(), ss = obj.scale.clone();
+    obj.position.set(0, 0, 0); obj.rotation.set(0, 0, 0); obj.scale.set(1, 1, 1);
+    obj.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(obj);
+    obj.position.copy(sp); obj.rotation.copy(sr); obj.scale.copy(ss);
+    obj.updateMatrixWorld(true);
+    return bb;
+}
+function startSizeDrag(e, handle) {
+    const obj = selectedObject;
+    const bb = new THREE.Box3().setFromObject(obj);
+    const size = bb.getSize(new THREE.Vector3());
+    activeDrag = {
+        type: 'size', obj,
+        axis: handle.axis, sign: handle.sign,
+        startPtr: { x: e.clientX, y: e.clientY },
+        worldHalf: size[handle.axis] / 2,
+        minV: bb.min[handle.axis],
+        maxV: bb.max[handle.axis],
+        localBB: getLocalBB(obj),
+    };
+    bSfx('tick');
+}
+function dragSize(e) {
+    const d = activeDrag; if (!d) return;
+    const { obj, axis, sign, startPtr, worldHalf, minV, maxV, localBB } = d;
+    // Delta layar, diproyeksikan ke arah handle dari pusat di layar
+    const bb = new THREE.Box3().setFromObject(obj);
+    const center = bb.getCenter(new THREE.Vector3());
+    const handlePos = center.clone(); handlePos[axis] += sign * worldHalf;
+    // Proyeksi 3D → 2D
+    const cS = worldToScreen(center);
+    const hS = worldToScreen(handlePos);
+    const dx = hS.x - cS.x, dy = hS.y - cS.y;
+    const screenLen = Math.hypot(dx, dy) || 1;
+    const sdx = dx / screenLen, sdy = dy / screenLen;
+    // Gerakan mouse yang diproyeksikan pada arah handle
+    const mx = e.clientX - startPtr.x, my = e.clientY - startPtr.y;
+    const proj = mx * sdx + my * sdy;
+    // Skala baru berdasarkan perbandingan panjang di layar
+    const ratio = Math.max(.05, (screenLen + proj) / screenLen);
+    const newHalf = worldHalf * ratio;
+    // Hitung min/max baru
+    let newMin, newMax;
+    if (sign > 0) { newMin = minV; newMax = minV + newHalf * 2; }
+    else { newMax = maxV; newMin = maxV - newHalf * 2; }
+    if (newMax - newMin < .15) return;
+    // Update scale & posisi agar sisi seberang tetap
+    const bb0min = localBB.min[axis];
+    const bb0max = localBB.max[axis];
+    const bb0Span = (bb0max - bb0min) || 1;
+    const newScale = (newMax - newMin) / bb0Span;
+    if (newScale <= .01 || newScale > 100) return;
+    obj.scale[axis] = newScale;
+    obj.position[axis] = newMin - newScale * bb0min;
+    if (selBox) selBox.update();
+    if ($('inspector') && !$('inspector').classList.contains('hide')) {
+        const v = (i, x) => { const el = $('in-' + i); if (el) el.value = x; };
+        v('sx', obj.scale.x); v('sy', obj.scale.y); v('sz', obj.scale.z);
+        v('px', obj.position.x); v('py', obj.position.y); v('pz', obj.position.z);
+    }
+}
+function worldToScreen(v) {
+    const p = v.clone().project(cam);
+    return { x: (p.x * .5 + .5) * innerWidth, y: (-p.y * .5 + .5) * innerHeight };
+}
+
+/* ───────────── MOVE DRAG ───────────── */
+function startMoveDrag(e, hitPoint) {
+    const obj = selectedObject;
+    activeDrag = {
+        type: 'move', obj,
+        startPtr: { x: e.clientX, y: e.clientY },
+        startObjPos: obj.position.clone(),
+        startHit: hitPoint.clone(),
+        plane: new THREE.Plane(new THREE.Vector3(0, 1, 0), -hitPoint.y),
+    };
+}
+function dragMove(e) {
+    const d = activeDrag; if (!d) return;
+    buildRay.setFromCamera(buildPtr, cam);
+    const hit = new THREE.Vector3();
+    if (!buildRay.ray.intersectPlane(d.plane, hit)) return;
+    const delta = hit.clone().sub(d.startHit);
+    const nx = d.startObjPos.x + delta.x;
+    const nz = d.startObjPos.z + delta.z;
+    d.obj.position.x = Math.round(nx / BUILD_GRID) * BUILD_GRID;
+    d.obj.position.z = Math.round(nz / BUILD_GRID) * BUILD_GRID;
+    if (selBox) selBox.update();
+    if ($('inspector') && !$('inspector').classList.contains('hide')) {
+        const v = (i, x) => { const el = $('in-' + i); if (el) el.value = x; };
+        v('px', d.obj.position.x); v('pz', d.obj.position.z);
+    }
 }
 
 /* ───────────── Loop ───────────── */
@@ -273,6 +501,8 @@ function updateBuildMode(now, dt) {
     const t = buildCamera.target, typing = document.activeElement && document.activeElement.tagName === 'INPUT';
     const tm = now / 1000;
     for (const o of placedObjects) if (o.userData.tick) o.userData.tick(tm);
+    if (selectedObject && currentTool === 'size') updateSizeHandles();
+    if (selBox) selBox.update();
 
     if (buildPlay) { buildPlayStep(dt); }
     else {
@@ -290,17 +520,14 @@ function updateBuildMode(now, dt) {
         cam.lookAt(t.x, t.y, t.z);
         pl.x = t.x; pl.z = t.z; pl.y = 0; pl.vx = pl.vz = pl.vy = 0;
         if (currentTool === 'add') placeGhost();
-        if (selBox) selBox.update();
     }
-    // bayangan & langit mengikuti kamera
     const f = buildPlay ? pl : t;
     if (skyDome) skyDome.position.set(f.x, 0, f.z);
     dl.position.set(f.x + 60, 100, f.z + 40); dlTarget.position.set(f.x, 0, f.z);
     if (R.shadowMap.enabled) dl.shadow.camera.updateProjectionMatrix();
 }
-const bHold = { up: 0, down: 0 };
 
-/* ───────────── Mode Play (coba jalan di bangunanmu) ───────────── */
+/* ───────────── Mode Play ───────────── */
 function buildCols() {
     cols.length = 0;
     cols.push({ x: 0, y: -3, z: 0, w: 1200, h: 3, d: 1200, enabled: true, slip: 0 });
@@ -310,14 +537,14 @@ function buildCols() {
         const swap = Math.abs(Math.sin(o.rotation.y)) > .7, S = o.scale;
         const push = (w, h, dd, cx, cy_, cz) => cols.push({ x: cx, y: cy_, z: cz, w: swap ? dd : w, h, d: swap ? w : dd, enabled: true, slip: 0 });
         if (d.solid === 'none') continue;
-        if (d.steps) { // tangga/ramp: potong jadi anak tangga
+        if (d.steps) {
             const n = d.steps, H = 4 * S.y, W = 4 * S.x, D = 4 * S.z;
             for (let i = 0; i < n; i++) { v.set(0, 0, -2 * S.z + (i + .5) * D / n).applyEuler(o.rotation).add(o.position); push(W, H * (i + 1) / n, D / n + .02, v.x, o.position.y, v.z); }
         } else if (Array.isArray(d.solid)) {
             for (const s of d.solid) { v.set(s.x * S.x, 0, s.z * S.z).applyEuler(o.rotation).add(o.position); push(s.w * S.x, s.h * S.y, s.d * S.z, v.x, o.position.y + s.y * S.y, v.z); }
         } else {
             bb.setFromObject(o); push(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z, (bb.max.x + bb.min.x) / 2, bb.min.y, (bb.max.z + bb.min.z) / 2);
-            const c = cols[cols.length - 1]; c.w = bb.max.x - bb.min.x; c.d = bb.max.z - bb.min.z; // sudah dalam koordinat dunia
+            const c = cols[cols.length - 1]; c.w = bb.max.x - bb.min.x; c.d = bb.max.z - bb.min.z;
         }
     }
 }
@@ -326,6 +553,7 @@ function startPlay() {
     buildPlay = true; selectObj(null);
     if (buildGhost) { buildGroup.remove(buildGhost); buildGhost = null; }
     ['part-picker', 'inspector', 'save-panel'].forEach(i => $(i).classList.add('hide'));
+    const rp = document.getElementById('rotate-pad'); if (rp) rp.classList.add('hide');
     buildCols();
     pl.x = buildCamera.target.x; pl.z = buildCamera.target.z; pl.y = 200; pl.vx = pl.vz = pl.vy = 0; pl.y = groundY().GY; pl.jc = 0;
     zd = 9; pitch = .45; cam.fov = 60;
@@ -363,25 +591,96 @@ function buildPlayStep(dt) {
 
 /* ───────────── UI ───────────── */
 const B_ICONS = {
-    add: '<path d="M12 5v14M5 12h14"/>', sculpt: '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>', remove: '<path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13M10 11v6M14 11v6"/>',
-    rot: '<path d="M19 12a7 7 0 1 1-2.1-5M19 4v4h-4"/>', undo: '<path d="M9 5L4 10l5 5M4 10h10a5 5 0 0 1 0 10h-4"/>',
-    play: '<path d="M7 4l13 8-13 8z" fill="currentColor"/>', stop: '<rect x="6" y="6" width="12" height="12" fill="currentColor"/>',
-    save: '<path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6"/>', exit: '<path d="M10 4H5v16h5M14 8l5 4-5 4M19 12H9"/>', up: '<path d="M12 19V6M6 11l6-6 6 6"/>', down: '<path d="M12 5v13M6 13l6 6 6-6"/>'
+    add: '<path d="M12 5v14M5 12h14"/>',
+    sculpt: '<path d="M12 2v20M2 12h20M8 8l4-4 4 4M8 16l4 4 4-4"/>',
+    size: '<path d="M3 3h7v7M3 3l7 7M21 21h-7v-7M21 21l-7-7M21 3h-7v7M21 3l-7 7M3 21h7v-7M3 21l7-7"/>',
+    remove: '<path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13M10 11v6M14 11v6"/>',
+    rot: '<path d="M19 12a7 7 0 1 1-2.1-5M19 4v4h-4"/>',
+    undo: '<path d="M9 5L4 10l5 5M4 10h10a5 5 0 0 1 0 10h-4"/>',
+    play: '<path d="M7 4l13 8-13 8z" fill="currentColor"/>',
+    stop: '<rect x="6" y="6" width="12" height="12" fill="currentColor"/>',
+    save: '<path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6"/>',
+    exit: '<path d="M10 4H5v16h5M14 8l5 4-5 4M19 12H9"/>',
+    up: '<path d="M12 19V6M6 11l6-6 6 6"/>',
+    down: '<path d="M12 5v13M6 13l6 6 6-6"/>'
 };
 const bIcon = k => '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter">' + B_ICONS[k] + '</svg>';
 
+/* NEW: inject tombol Size + Rotate pad */
+(function injectBuildExtras() {
+    const bar = document.getElementById('build-bar');
+    if (!bar || document.getElementById('bt-size')) return;
+    // Sisipkan tombol Size setelah sculpt
+    const sculptBtn = document.getElementById('bt-sculpt');
+    const sizeBtn = document.createElement('button');
+    sizeBtn.id = 'bt-size'; sizeBtn.className = 'build-tool'; sizeBtn.dataset.bi = 'size';
+    sizeBtn.innerHTML = '<i></i><span>Size</span>';
+    sizeBtn.querySelector('i').innerHTML = bIcon('size');
+    if (sculptBtn && sculptBtn.nextSibling) bar.insertBefore(sizeBtn, sculptBtn.nextSibling);
+    else bar.appendChild(sizeBtn);
+    // Ganti icon bt-sculpt jadi arrow-move
+    const sIcon = sculptBtn && sculptBtn.querySelector('i');
+    if (sIcon) sIcon.innerHTML = bIcon('sculpt');
+    // Rotate pad (2 tombol drag untuk rotasi)
+    let rp = document.getElementById('rotate-pad');
+    if (!rp) {
+        rp = document.createElement('div');
+        rp.id = 'rotate-pad'; rp.className = 'hide';
+        rp.innerHTML = '<button id="rot-y" class="build-tool rot-btn"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M19 12a7 7 0 1 1-2.1-5M19 4v4h-4"/><path d="M8 12h8"/></svg></i><span>Putar Y</span></button>' +
+            '<button id="rot-x" class="build-tool rot-btn"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M4 12a8 8 0 1 0 16 0"/><path d="M12 4v16"/></svg></i><span>Miring X</span></button>';
+        // Style inline
+        rp.style.cssText = 'position:fixed;right:12px;bottom:100px;display:flex;flex-direction:column;gap:8px;z-index:20;';
+        document.body.appendChild(rp);
+        const st = document.createElement('style');
+        st.textContent = '#rotate-pad.hide{display:none}#rotate-pad .rot-btn{width:76px;height:76px;flex-direction:column;font-size:9px;touch-action:none;user-select:none;cursor:grab}#rotate-pad .rot-btn:active{cursor:grabbing;transform:translateY(2px)}#rotate-pad .rot-btn i{display:block;line-height:0}#rotate-pad .rot-btn span{font-size:8px;margin-top:2px}';
+        document.head.appendChild(st);
+    }
+    // Bind drag rotasi
+    bindRotateDrag('rot-y', 'y', (dx) => dx * .02);
+    bindRotateDrag('rot-x', 'x', (dx, dy) => dy * .02);
+})();
+
+function bindRotateDrag(btnId, axis, getDelta) {
+    const btn = document.getElementById(btnId); if (!btn) return;
+    let active = false, startX = 0, startY = 0, startRot = 0;
+    btn.addEventListener('pointerdown', e => {
+        if (!selectedObject) { toast('Pilih objek dulu'); return; }
+        active = true;
+        startX = e.clientX; startY = e.clientY;
+        startRot = axis === 'y' ? selectedObject.rotation.y : selectedObject.rotation.x;
+        try { btn.setPointerCapture(e.pointerId); } catch (_) { }
+        e.preventDefault();
+    });
+    btn.addEventListener('pointermove', e => {
+        if (!active || !selectedObject) return;
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        const v = getDelta(dx, dy);
+        if (axis === 'y') selectedObject.rotation.y = startRot + v;
+        else selectedObject.rotation.x = startRot + v;
+        if (selBox) selBox.update();
+        if ($('inspector') && !$('inspector').classList.contains('hide')) {
+            const el = $('in-ry'); if (el && axis === 'y') el.value = ((selectedObject.rotation.y % 6.283) + 6.283) % 6.283;
+        }
+    });
+    const stop = () => { active = false; };
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointercancel', stop);
+    btn.addEventListener('lostpointercapture', stop);
+}
+
 function initBuildUI() {
     const ui = $('build-ui'); ui.classList.remove('hide');
-    document.querySelectorAll('[data-bi]').forEach(b => { const s = b.querySelector('i'); if (s) s.innerHTML = bIcon(b.dataset.bi); });
+    document.querySelectorAll('[data-bi]').forEach(b => { const s = b.querySelector('i'); if (s && !s.innerHTML) s.innerHTML = bIcon(b.dataset.bi); });
     $('bt-add').onclick = () => { if (currentTool === 'add') $('part-picker').classList.toggle('hide'); else switchTool('add'); };
     $('bt-sculpt').onclick = () => switchTool('sculpt');
+    const sz = $('bt-size'); if (sz) sz.onclick = () => switchTool('size');
     $('bt-remove').onclick = () => switchTool('remove');
-    $('bt-rot').onclick = rotateGhost;
+    $('bt-rot').onclick = () => switchTool('rotate');
     $('bt-undo').onclick = buildUndo;
     $('bt-play').onclick = startPlay; $('bt-stop').onclick = stopPlay;
     $('bt-save').onclick = () => { $('save-panel').classList.remove('hide'); refreshLoadList(); };
     $('bt-exit').onclick = () => { buildCleanup(); leave(); };
-    const hold = (id, k) => { const e = $(id); const on = ev => { ev.preventDefault(); bHold[k] = 1; }, off = () => bHold[k] = 0; e.onpointerdown = on; e.onpointerup = e.onpointercancel = e.onpointerleave = off; };
+    const hold = (id, k) => { const e = $(id); if (!e) return; const on = ev => { ev.preventDefault(); bHold[k] = 1; }, off = () => bHold[k] = 0; e.onpointerdown = on; e.onpointerup = e.onpointercancel = e.onpointerleave = off; };
     hold('bt-up', 'up'); hold('bt-down', 'down');
 
     const ids = ['sx', 'sy', 'sz', 'ry', 'px', 'py', 'pz'];
@@ -429,18 +728,30 @@ function bPickerRefresh() {
     cols_.innerHTML = '';
     BUILD_COLORS.forEach(c => {
         const b = document.createElement('button'); b.className = 'sw' + (currentColor === c ? ' on' : ''); b.style.background = '#' + c.toString(16).padStart(6, '0');
-        b.onclick = () => { currentColor = c; if (buildGhost) { /* ghost tetap biru */ } bPickerRefresh(); }; cols_.appendChild(b);
+        b.onclick = () => { currentColor = c; bPickerRefresh(); }; cols_.appendChild(b);
     });
 }
 
 function switchTool(tool) {
     currentTool = tool; selectObj(null);
     if (buildGhost) { buildGroup.remove(buildGhost); buildGhost = null; }
+    clearSizeHandles();
     if (tool === 'add') updateGhostPart();
-    ['add', 'sculpt', 'remove'].forEach(t => $('bt-' + t).classList.toggle('on', t === tool));
-    $('bt-rot').style.display = tool === 'add' ? '' : 'none';
-    if (tool !== 'add') $('part-picker').classList.add('hide'); 
-    $('bhint').textContent = tool === 'add' ? 'Klik / tap = pasang · R = putar · klik lagi tombol + = daftar part' : tool === 'sculpt' ? 'Klik objek untuk diedit: geser, ubah ukuran, warna' : 'Klik objek untuk menghapus';
+    if (tool === 'size' && selectedObject) createSizeHandles(selectedObject);
+
+    ['add', 'sculpt', 'size', 'rotate', 'remove'].forEach(t => {
+        const el = $('bt-' + (t === 'rotate' ? 'rot' : t));
+        if (el) el.classList.toggle('on', t === tool);
+    });
+    const rp = document.getElementById('rotate-pad');
+    if (rp) rp.classList.toggle('hide', tool !== 'rotate');
+
+    $('bt-rot').style.display = '';
+    $('bhint').textContent = tool === 'add' ? 'Klik / tap = pasang · R = putar part · klik tombol + = daftar part'
+        : tool === 'sculpt' ? 'Klik objek lalu drag untuk pindah posisi. Inspector muncul untuk edit detail.'
+            : tool === 'size' ? 'Pilih objek, lalu drag titik ±X / ±Y / ±Z untuk ubah ukuran.'
+                : tool === 'rotate' ? 'Pilih objek, lalu drag tombol Putar Y (kiri/kanan) atau Miring X (depan/belakang).'
+                    : 'Klik objek untuk menghapus';
 }
 function showInspector(o) {
     $('inspector').classList.remove('hide');
@@ -456,7 +767,7 @@ function hideInspector() { $('inspector').classList.add('hide'); }
 function saveBuild() {
     const name = $('save-name').value.trim();
     if (!name) { toast('Masukkan nama bangunan!'); return; }
-    const data = { v: 2, items: placedObjects.map(o => ({ type: o.userData.type, color: o.userData.color, x: o.position.x, y: o.position.y, z: o.position.z, ry: o.rotation.y, sx: o.scale.x, sy: o.scale.y, sz: o.scale.z })) };
+    const data = { v: 3, items: placedObjects.map(o => ({ type: o.userData.type, color: o.userData.color, x: o.position.x, y: o.position.y, z: o.position.z, rx: o.rotation.x, ry: o.rotation.y, rz: o.rotation.z, sx: o.scale.x, sy: o.scale.y, sz: o.scale.z })) };
     try { localStorage.setItem('meetup_build_' + name, JSON.stringify(data)); toast('Bangunan "' + name + '" berhasil disimpan!'); refreshLoadList(); }
     catch (e) { toast('Gagal menyimpan: ' + e.message); }
 }
@@ -469,7 +780,7 @@ function loadBuild() {
         selectObj(null); placedObjects.forEach(o => buildGroup.remove(o)); placedObjects = []; undoStack = [];
         items.forEach(d => {
             const o = bMake(d.type, d.color); if (!o) return;
-            o.position.set(d.x, d.y, d.z); o.rotation.y = d.ry || 0; o.scale.set(d.sx || 1, d.sy || 1, d.sz || 1);
+            o.position.set(d.x, d.y, d.z); o.rotation.set(d.rx || 0, d.ry || 0, d.rz || 0); o.scale.set(d.sx || 1, d.sy || 1, d.sz || 1);
             addObj(o, false);
         });
         toast('Bangunan "' + name + '" dimuat (' + placedObjects.length + ' objek)'); $('save-panel').classList.add('hide');

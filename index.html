@@ -229,6 +229,46 @@ body.bxm #ab{width:86px;height:86px;right:116px;bottom:92px;font-size:12px}
 .fbRow button{flex:1;margin:0}
 #fbs{background:linear-gradient(#5aa0ff,#3d8bff 55%,#2f74e6)}
 #fbs:disabled{background:#a0a0a0;--lo:#707070;--hi:#c0c0c0}
+
+/* ===== Build Mode UI ===== */
+#build-ui { z-index: 20; pointer-events: none; }
+#build-ui > * { pointer-events: auto; }
+
+.build-toolbar {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px; background: #17306b; padding: 10px;
+    box-shadow: var(--bd), 0 0 0 3px #fff, 0 8px 0 6px #0004;
+}
+.build-tool {
+    width: 60px; height: 60px; font-size: 20px; flex-direction: column;
+    background: linear-gradient(#fff, #e3eeff); color: var(--k);
+    --lo: #c3d6f3; --hi: #fff; padding: 0; margin: 0;
+}
+.build-tool span { font-size: 8px; margin-top: 2px; }
+.build-tool.on { background: #ffe27a; box-shadow: 0 0 0 3px var(--k), 0 0 0 6px #ffd23f; transform: translateY(-4px); }
+.build-tool.d { background: #ff5d5d; color: #fff; --lo: #b32b30; --hi: #ff9a9a; }
+
+.popup {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: #f4f9ff; padding: 20px; box-shadow: var(--bd), inset 0 -4px 0 #cfe0f7, inset 0 4px 0 #fff;
+    display: flex; flex-direction: column; gap: 12px; z-index: 21; width: min(92vw, 400px);
+    max-height: 80vh; overflow-y: auto;
+}
+.popup-title { font-size: 14px; text-align: center; color: var(--k); letter-spacing: 2px; border-bottom: 4px dashed #3d8bff33; padding-bottom: 8px; }
+.popup-hint { font-size: 8px; text-align: center; opacity: 0.6; }
+.divider { height: 4px; background: repeating-linear-gradient(90deg, #3d8bff 0 8px, transparent 8px 16px); opacity: 0.3; }
+
+#part-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+#part-grid button { font-size: 9px; padding: 10px 4px; min-height: 50px; white-space: normal; }
+#part-grid button.on { background: #ffd23f; color: #17306b; --lo: #d4b23a; --hi: #fff8d0; }
+
+.inspector-row { display: flex; align-items: center; gap: 10px; }
+.inspector-row label { font-size: 10px; width: 40px; text-align: right; }
+.inspector-row input[type=range] { flex: 1; }
+
+#save-panel input[type=text] { width: 100%; margin: 0; }
+#save-panel button { margin: 0; }
+#save-panel select { width: 100%; margin: 0; padding: 10px; font-size: 10px; }
 </style></head><body>
 <canvas id="c"></canvas><div id="toast" class="hide"></div>
 <div id="rot"><svg viewBox="0 0 8 8"><rect x="2" y="0" width="4" height="8"/><rect x="3" y="1" width="2" height="5" fill="#17306b"/></svg>Putar HP ke landscape</div>
@@ -297,10 +337,51 @@ body.bxm #ab{width:86px;height:86px;right:116px;bottom:92px;font-size:12px}
 <div id="bxhint" class="bxo">KLIK / F / J = PUKUL<br>SPASI = LOMPAT</div>
 <div id="chat" class="hide"><input id="ci" maxlength="60" placeholder="Pesan"><button id="cs">Kirim</button></div></div>
 <div id="flash"></div>
+
+<!-- Build UI -->
+<div id="build-ui" class="ui hide">
+    <div class="build-toolbar">
+        <button id="bt-add" class="build-tool">+<span>Tambah</span></button>
+        <button id="bt-sculpt" class="build-tool">E<span>Edit</span></button>
+        <button id="bt-remove" class="build-tool">X<span>Hapus</span></button>
+        <button id="bt-exit" class="build-tool d">><span>Keluar</span></button>
+    </div>
+    
+    <div id="part-picker" class="popup hide">
+        <div class="popup-title">Pilih Part</div>
+        <div id="part-grid" class="grid"></div>
+        <div class="popup-hint">Klik kanan tombol Tambah untuk buka/tutup</div>
+    </div>
+
+    <div id="inspector" class="popup hide">
+        <div class="popup-title">Edit Objek</div>
+        <div class="inspector-row"><label>X</label><input type="range" id="in-px" min="-500" max="500" step="1"></div>
+        <div class="inspector-row"><label>Y</label><input type="range" id="in-py" min="0" max="100" step="1"></div>
+        <div class="inspector-row"><label>Z</label><input type="range" id="in-pz" min="-500" max="500" step="1"></div>
+        <div class="inspector-row"><label>Rot</label><input type="range" id="in-ry" min="0" max="6.28" step="0.1"></div>
+        <div class="inspector-row"><label>Size X</label><input type="range" id="in-sx" min="0.1" max="20" step="0.1"></div>
+        <div class="inspector-row"><label>Size Y</label><input type="range" id="in-sy" min="0.1" max="20" step="0.1"></div>
+        <div class="inspector-row"><label>Size Z</label><input type="range" id="in-sz" min="0.1" max="20" step="0.1"></div>
+    </div>
+
+    <div id="save-panel" class="popup hide">
+        <div class="popup-title">Simpan / Muat</div>
+        <input type="text" id="save-name" placeholder="Nama Bangunan..." maxlength="16">
+        <button id="btn-save">Simpan</button>
+        <div class="divider"></div>
+        <select id="load-list"></select>
+        <button id="btn-load">Muat</button>
+        <button id="save-close" class="s">Tutup</button>
+    </div>
+    <button id="btn-save-menu" class="ib" style="position:fixed; top:80px; right:14px; width:auto; padding:0 10px;">SAVE</button>
+</div>
+
 <script src="three.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="world.js?v=2"></script>
 <script src="game.js?v=33"></script>
-<link rel="stylesheet" href="ui.css?v=5"><script src="ui.js?v=2"></script></body></html>
+<link rel="stylesheet" href="ui.css?v=5"><script src="ui.js?v=2"></script>
+<script src="builds.js?v=1"></script>
+</body></html>

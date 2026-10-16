@@ -1327,7 +1327,7 @@ const THEMES={
 const SCENES={
 scatter(from,to,step,o0,o1,minD,mk){const L=[];for(let sd=from;sd<to;sd+=step)for(const sx of[-1,1]){const q=trkAt(sd+Math.random()*step,sx*(o0+Math.random()*(o1-o0)));if(trkDist(q.x,q.z)<minD)continue;L.push(mk?mk(q,sx):{x:q.x,z:q.z,s:.8+Math.random()*.5,r:Math.random()*6.28})}return L},
 clouds(){for(let i=0;i<Math.round(10*AMB_MULT);i++){const q=trkAt(Math.random()*TRK.len,0);spawnAmb('clouds',{x:q.x+(Math.random()-.5)*400,y:45+Math.random()*20,z:q.z+(Math.random()-.5)*400,spd:.5+Math.random(),sx:1+Math.random()*1.2,sy:1+Math.random()*.4,sz:.8+Math.random()*.8})}},
-beach(lv.isDragTrack){
+beach(lv, isDragTrack){
   const W=RW,LL=TRK.len,S=SCENES,sand=(c,rx)=>LM(0xffffff,{map:tex(32,32,(x,w,h)=>noise(x,w,h,c,w*h/3,.3),rx,1)});
   ribbon(-56,56,0,24,sand('#f2d68a',8));ribbon(-64,-56,-.02,24,sand('#d9bf80',1));ribbon(56,64,-.02,24,sand('#d9bf80',1));
   const foam=[ribbon(-69,-64,-.035,10,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8,depthWrite:false})),ribbon(64,69,-.035,10,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8,depthWrite:false}))];
@@ -1346,7 +1346,7 @@ beach(lv.isDragTrack){
   instance(mergeParts([{geo:BOX(2,.8,6),y:.4,color:0xffffff},{geo:BOX(2.1,.25,6.1),y:.75,color:0xff5d5d},{geo:BOX(.2,7,.2),y:4,color:0x8b5a2b},{geo:new THREE.ConeGeometry(2.4,6.5,3),y:4.6,x:.05,sx:.12,color:0xfff6e0}]),sb);
   S.clouds()
 },
-canyon(lv.isDragTrack){
+canyon(lv,isDragTrack){
   const W=RW,LL=TRK.len,S=SCENES;
   const mesa=mergeParts([{geo:BOX(1,.34,1),y:.17,color:0xb5573a},{geo:BOX(.84,.3,.84),y:.49,color:0xd07a4a},{geo:BOX(.7,.2,.7),y:.74,color:0xe0a060},{geo:BOX(.62,.2,.62),y:.94,color:0xc86a40}]);
   const far=[],wall=[];

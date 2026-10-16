@@ -1,6 +1,6 @@
 // ══════ Meet-UP Service Worker ══════
 // Versi cache — ubah angka ini kalau mau force update cache baru
-const CACHE_NAME='meetup-v17';
+const CACHE_NAME='meetup-v18';
 
 // File yang wajib di-cache biar bisa jalan offline
 const CORE_ASSETS=[

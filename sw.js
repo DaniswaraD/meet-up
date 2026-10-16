@@ -1,6 +1,6 @@
 // ══════ Meet-UP Service Worker ══════
 // Versi cache — ubah angka ini kalau mau force update cache baru
-const CACHE_NAME='meetup-v15';
+const CACHE_NAME='meetup-v16';
 
 // File yang wajib di-cache biar bisa jalan offline
 const CORE_ASSETS=[
@@ -13,7 +13,8 @@ const CORE_ASSETS=[
   './three.min.js',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './builds.js' // TAMBAHKAN INI
 ];
 
 // ── INSTALL: cache file utama ──

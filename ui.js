@@ -1,4 +1,4 @@
-/* Meet-UP UI v3 — dekorasi, jello photocard (tilt + foil), kartu pemain. Dimuat setelah game.js */
+/* Meet-UP UI v3 — dekorasi, jello photocard, kartu pemain. Dimuat setelah game.js */
 (()=>{
 const $=i=>document.getElementById(i),qa=(s,r)=>[...(r||document).querySelectorAll(s)];
 const el=(t,c,css,html)=>{const e=document.createElement(t);if(c)e.className=c;if(css)e.style.cssText=css;if(html)e.innerHTML=html;return e};
@@ -21,16 +21,32 @@ const sp=$('loadSpinner');if(sp)sp.className='px-jello';
 
 /* ---- kartu peta: tag data-map + class photocard ---- */
 const MK={Pulau:'island',Gurun:'desert',Jungle:'jungle',Salju:'snow',Parkour:'parkour',Balapan:'speedrace',Boxing:'boxing'};
-const tag=(root)=>{qa('#playMaps button,#maps button',root).forEach((b,i)=>{if(b.classList.contains('jc'))return;const s=b.querySelector('span');b.dataset.map=b.dataset.map||MK[s&&s.textContent]||'island';b.classList.add('jc');b.style.setProperty('--i',i)})
+const tag=(root)=>{
+  qa('#playMapsHangout button,#playMapsFun button,#mapsHangout button,#mapsFun button',root).forEach((b,i)=>{
+    if(b.classList.contains('jc'))return;
+    const s=b.querySelector('span');b.dataset.map=b.dataset.map||MK[s&&s.textContent]||'island';b.classList.add('jc');b.style.setProperty('--i',i)
+  });
   qa('.tkg button.tk',root).forEach((b,i)=>{b.classList.add('jc');b.style.setProperty('--i',i)});
-  qa('.row:not(.jc)',$('ll')).forEach((b,i)=>{b.classList.add('jc');b.style.setProperty('--i',i)})};
+  qa('#ll .row:not(.jc)',$('ll')).forEach((b,i)=>{b.classList.add('jc');b.style.setProperty('--i',i)});
+};
 tag();new MutationObserver(()=>tag()).observe(document.body,{childList:true,subtree:true});
 
 /* ---- kartu pemain (menu utama) ---- */
 const chip=document.querySelector('.mchip');
-if(chip){chip.classList.add('jc','foil');chip.innerHTML='<div class="ph"><i></i></div><div class="nf"><em>PLAYER CARD</em><b id="mcn"></b><span id="mcj"></span></div>';
-  const rc=window.refreshChip;window.refreshChip=()=>{const c=chip.querySelector('#mcn');if(c){c.textContent=cfg.name||'Pemain';$('mcj').textContent=cfg.jb+' JB'}chip.style.setProperty('--j1',cfg.c1);chip.style.setProperty('--j2',cfg.c2);chip.querySelector('.ph i').style.setProperty('--j1',cfg.c1);chip.querySelector('.ph i').style.setProperty('--j2',cfg.c2)};
-  window.refreshChip()}
+if(chip){
+  chip.classList.add('jc','foil');
+  chip.innerHTML='<div class="ph"><i></i></div><div class="nf"><em>PLAYER CARD</em><b id="mcn"></b><span id="mcj"></span></div>';
+  const rc=window.refreshChip;
+  window.refreshChip=()=>{
+    const c=chip.querySelector('#mcn');
+    if(c){c.textContent=cfg.name||'Pemain';$('mcj').textContent=cfg.jb+' JB'}
+    chip.style.setProperty('--j1',cfg.c1);chip.style.setProperty('--j2',cfg.c2);
+    const ph=chip.querySelector('.ph i');
+    ph.style.setProperty('--j1',cfg.c1);ph.style.setProperty('--j2',cfg.c2);
+    if(rc)rc();
+  };
+  window.refreshChip()
+}
 const shop=document.querySelector('.shop');if(shop)shop.classList.add('jc','foil');
 
 /* ---- tilt 3D + kilau foil mengikuti pointer, jiggle saat disentuh ---- */

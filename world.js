@@ -1,39 +1,22 @@
-/* ═══ world.js — bagian 1/2 ═══
-   Konfigurasi, mesin 3D, builder semua map, avatar, efek.
-   Dimuat SEBELUM game.js (keduanya berbagi scope global). ═══ */
 const $=i=>document.getElementById(i);
 const cfg=Object.assign({name:'',c1:'#3a8dff',c2:'#7fd0ff',sh:0,hat:0,nc:'#ffffff',nf:'monospace',rd:180,jb:0,gfx:'low',car:'f1',cars:['f1'],vc:[],hats:[0]},JSON.parse(localStorage.mu||'{}'));
 if(!Array.isArray(cfg.cars)||!cfg.cars.length)cfg.cars=['f1'];
 if(!Array.isArray(cfg.vc))cfg.vc=[];
 if(!Array.isArray(cfg.hats))cfg.hats=[0];
 if(!cfg.hats.includes(0))cfg.hats.unshift(0);
-
-// ═══════════════════════════════════════════════════════════════════════
-// DISCORD WEBHOOK — untuk "Kotak Masukan"
-// Ganti URL di bawah dengan webhook Discord milikmu!
-// ═══════════════════════════════════════════════════════════════════════
 const DISCORD_WEBHOOK='https://discord.com/api/webhooks/1560506376868987086/ybIdSB7ewJNqWJPsN5bajeklfek9gCs_40CRT0nRLVun4yOt_i4eeZ_Lm9jKn6LIbzA8';
-
-// ── Harga aksesori (JB) — paling murah 25, paling mahal 1000 ──
 const HAT_PRICES=[0,1000,150,75,200,350,250,100,100,25,500,400];
-
-// Palet warna untuk CSS color picker
-const C_PALETTE=[
-  '#ff5d5d','#ff8c1a','#ffd23f','#3fdc6a','#3d8bff','#7fd0ff',
-  '#b05dff','#ff5db1','#ff90b8','#8b5a2b','#f0e6d0','#ffffff',
-  '#c0c0c0','#808080','#404040','#17306b','#0e1a3a','#000000'
-];
+const C_PALETTE=['#ff5d5d','#ff8c1a','#ffd23f','#3fdc6a','#3d8bff','#7fd0ff','#b05dff','#ff5db1','#ff90b8','#8b5a2b','#f0e6d0','#ffffff','#c0c0c0','#808080','#404040','#17306b','#0e1a3a','#000000'];
 const C_LIGHT=new Set(['#ffffff','#f0e6d0','#ffd23f','#7fd0ff','#c0c0c0','#ffe27a']);
-
 const CARS=[
   {id:'f1',    n:'F1 Ferrari',      price:0,    top:48.6, boost:76.4,  acc:1,    col:0xd8342a, col2:0xffe27a, seatY:.55, seatScale:.62},
   {id:'yaris', n:'Toyota Yaris GR', price:750,  top:52.8, boost:90.3,  acc:1.75, col:0xe8e8e8, col2:0xd8342a, seatY:1.05, seatScale:.55},
   {id:'vette', n:'Corvette ZR1',    price:1500, top:63.9, boost:104.2, acc:2.25, col:0xffd23f, col2:0x1a1a1a, seatY:.95,  seatScale:.6},
   {id:'chiron',n:'Bugatti Chiron',  price:3000, top:73.6, boost:118.1, acc:2.75, col:0x2a3a8a, col2:0x7fa8ff, seatY:1.0,  seatScale:.58},
-  {id:'jesko', n:'Jesko Absolut',   price:4000,  top:131.9, boost:148.6, acc:3,  col:0xf0f2f5, col2:0xff7a1a, seatY:1.05, seatScale:.52},
-  {id:'vbb3',  n:'Venturi VBB-3',   price:5000,  top:176.4, boost:194.4, acc:4,  col:0x1f4fd8, col2:0xffffff, seatY:1.2,  seatScale:.46},
-  {id:'ssc',   n:'Thrust SSC',      price:10000, top:305.6, boost:347.2, acc:6,  col:0xdfe3e8, col2:0xd8342a, seatY:1.45, seatScale:.46},
-  {id:'xars',  n:'Xarsdada',        price:15000, top:486.1, boost:555.6, acc:10, col:0x6a2bd8, col2:0x39e6ff, seatY:1.2,  seatScale:.5}
+  {id:'jesko', n:'Jesko Absolut',   price:4000, top:131.9, boost:148.6, acc:3,    col:0xf0f2f5, col2:0xff7a1a, seatY:1.05, seatScale:.52},
+  {id:'vbb3',  n:'Venturi VBB-3',   price:5000, top:176.4, boost:194.4, acc:4,    col:0x1f4fd8, col2:0xffffff, seatY:1.2,  seatScale:.46},
+  {id:'ssc',   n:'Thrust SSC',      price:10000,top:305.6, boost:347.2, acc:6,    col:0xdfe3e8, col2:0xd8342a, seatY:1.45, seatScale:.46},
+  {id:'xars',  n:'Xarsdada',        price:15000,top:486.1, boost:555.6, acc:10,   col:0x6a2bd8, col2:0x39e6ff, seatY:1.2,  seatScale:.5}
 ];
 const carOf=id=>CARS.find(c=>c.id===id)||CARS[0];
 const sv=()=>localStorage.mu=JSON.stringify(cfg);
@@ -44,10 +27,7 @@ let booted=false;
 const SCREENS=['name','menu','playpick','skin','croom','lobby','set','voucher'];
 function finishBoot(delay){if(booted)return;booted=true;setTimeout(()=>{const l=$('load');if(l)l.classList.add('hide');const n=$('nm');if(n)n.value=cfg.name;SCREENS.forEach(s=>{const e=$(s);if(e)e.classList.toggle('hide',s!=(cfg.name?'menu':'name'))})},delay||400)}
 setTimeout(()=>{if(!booted){setLoad('Memuat paksa...',1);finishBoot(0)}},7000);
-
-// Pengganti try/catch pembungkus lama (file sudah dibelah, jadi try{} tidak bisa lintas-file)
 addEventListener('error',e=>{console.error('Init error:',e.error||e.message);if(!booted){setLoad(''+e.message,1);finishBoot(500)}});
-
 if(typeof firebase!=='undefined')firebase.initializeApp({apiKey:"AIzaSyBrcEg6Ddw8PLmKJxi8rf9-N7eGsy4AUFs",authDomain:"meet-up-e1be8.firebaseapp.com",databaseURL:"https://meet-up-e1be8-default-rtdb.firebaseio.com",projectId:"meet-up-e1be8",storageBucket:"meet-up-e1be8.firebasestorage.app",messagingSenderId:"47326775225",appId:"1:47326775225:web:290a6644c0559ee2979868"});
 const TS=typeof firebase!=='undefined'?firebase.database.ServerValue.TIMESTAMP:0,KX='X';let db,uid,tT;
 const toast=t=>{const e=$('toast');e.textContent=t;e.classList.remove('hide');clearTimeout(tT);tT=setTimeout(()=>e.classList.add('hide'),5000)};
@@ -105,7 +85,6 @@ document.querySelectorAll('.ttl').forEach(c=>{c.width=50;c.height=10;const x=c.g
 
 let currentDlgTarget=null;
 let dlgBtnEl=null;
-// Dialog jelloger sekarang lewat bubble ACT (lihat talkTo/updateBoards)
 
 const cv=$('c'),R=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'low-power'}),sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.1,900);
 R.shadowMap.enabled=false;
@@ -140,7 +119,7 @@ function applyGfx(){
 
 function rs(){const h=240,w=Math.round(h*innerWidth/innerHeight);R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}addEventListener('resize',rs);
 function setRD(){const r=cfg.rd;const rl=$('rl');if(rl)rl.textContent='Render: '+r+'J';if(sc.fog){sc.fog.near=r;sc.fog.far=r*1.6}cam.far=r*1.7+10;cam.updateProjectionMatrix()}
-const MAPS={island:[0x87c8ff,0x5cb85c],desert:[0xf5d99a,0xe0c070],jungle:[0x3a6a4a,0x2f6b3a],snow:[0xdcecff,0xf4f8ff],parkour:[0x0e1a3a,0x1a1a3a],speedrace:[0x87ceeb,0x4a4a5a],boxing:[0x14082e,0x1a1232],builds:[0x87c8ff,0x5cb85c]};
+const MAPS={island:[0x87c8ff,0x5cb85c],parkour:[0x0e1a3a,0x1a1a3a],speedrace:[0x87ceeb,0x4a4a5a],boxing:[0x14082e,0x1a1232],builds:[0x87c8ff,0x5cb85c]};
 let world=new THREE.Group(),cols=[],plats=[],jbs=[],boostBubbles=[],swings=[],rings=[],WINDMILLS=[],FLAGPOLES=[],hillGrass=[],ANIMALS=[],FOUNTAINS=[],WATERFALLS=[],BALLOONS=[],WATERWHEELS=[],BELLS=[],LANTERNS=[],curMap='island',LIM=200;
 const JELLOGERS=[];
 const JSPARK=[];
@@ -226,318 +205,33 @@ function campfire(x,z){const P=[];for(let i=0;i<6;i++){const a=i/6*6.28;P.push({
 function totem(x,z){addMerged([{geo:new THREE.CylinderGeometry(1.2,1.4,.5,8),x,y:.25,z,color:0x6a5a4a},{geo:new THREE.BoxGeometry(2,3,2),x,y:2,z,color:0xa07040},{geo:new THREE.BoxGeometry(1.8,2.5,1.8),x,y:4.5,z,color:0x8b5a2b},{geo:new THREE.BoxGeometry(2,2.5,2),x,y:6.8,z,color:0xa07040}]);for(let i=0;i<3;i++){const y=1.5+i*2.3;Mt(BOX(.3,.3,.15),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x-.5,y,z+1.05);Mt(BOX(.3,.3,.15),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x+.5,y,z+1.05);Mt(BOX(1.2,.15,.15),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x,y-.6,z+1.05)}Mt(new THREE.ConeGeometry(.8,3,4).rotateZ(Math.PI/2),LM(0xffd23f),x-2.5,7,z);Mt(new THREE.ConeGeometry(.8,3,4).rotateZ(-Math.PI/2),LM(0xffd23f),x+2.5,7,z);addCol(x,0,z,2.4,8,2.4)}
 function archway(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];const p1=T(-3,0),p2=T(3,0);P.push({geo:BOX(.8,7,.8),x:p1[0],y:3.5,z:p1[1],color:0x8a8a82});P.push({geo:BOX(.8,7,.8),x:p2[0],y:3.5,z:p2[1],color:0x8a8a82});P.push({geo:BOX(7,.8,.8),x,y:7,z,color:0x9a9a92,ry:rot});P.push({geo:BOX(8,.4,.4),x,y:6.6,z,color:0x8a8a82,ry:rot});P.push({geo:new THREE.TorusGeometry(1,.15,4,16),x,y:8.2,z,color:0xffd23f,ry:rot});addMerged(P);addCol(x-3,0,z,.8,7,.8);addCol(x+3,0,z,.8,7,.8)}
 function marketStall(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];P.push({geo:BOX(4,1.8,2),x,y:.9,z,color:0x8b5a2b,ry:rot});P.push({geo:BOX(4.2,.15,2.2),x,y:1.9,z,color:0xa07040,ry:rot});[[-1.8,-.8],[1.8,-.8],[-1.8,.8],[1.8,.8]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:new THREE.CylinderGeometry(.1,.1,3.5,6),x:p[0],y:3.5,z:p[1],color:0x5a3a1a})});P.push({geo:new THREE.ConeGeometry(3.5,1.2,4),x,y:5.5,z,color:0xff5d5d,ry:rot+Math.PI/4});for(let i=0;i<5;i++){const a=Math.random()*6.28,d=Math.random()*1.2;const px=T(d*Math.cos(a),d*Math.sin(a));P.push({geo:ICO(.2,0),x:px[0],y:2.1,z:px[1],color:[0xff6688,0xffee55,0xff8c1a,0xb05dff,0x3fbf5f][i]})}addMerged(P);addCol(x,0,z,4.5,2,2.5)}
+function stonewall(x1,z1,x2,z2){const P=[];const dx=x2-x1,dz=z2-z1;const len=Math.hypot(dx,dz);const n=Math.max(2,Math.floor(len/1.2));const rot=Math.atan2(dx,dz);for(let i=0;i<=n;i++){const t=i/n;const px=x1+dx*t,pz=z1+dz*t;P.push({geo:BOX(.8,.55,.8),x:px,y:.3,z:pz,color:i%2?0x7a7a72:0x8a8a82,ry:rot});P.push({geo:BOX(.85,.5,.85),x:px,y:.85,z:pz,color:i%2?0x8a8a82:0x7a7a72,ry:rot});P.push({geo:BOX(.75,.45,.75),x:px+(i%2?.15:-.15),y:1.35,z:pz,color:i%3?0x6a6a62:0x8a8a82,ry:rot})}addMerged(P);for(let i=0;i<=n;i+=2){const t=i/n;addCol(x1+dx*t,0,z1+dz*t,1.2,2,1.2)}}
+function waterwheel(x,z){addMerged([{geo:BOX(.6,3,.6),x:x-2,y:1.5,z,color:0x5a3a1a},{geo:BOX(.6,3,.6),x:x+2,y:1.5,z,color:0x5a3a1a},{geo:BOX(4.5,.5,.5),x,y:3,z,color:0x5a3a1a}]);const g=new THREE.Group();g.position.set(x,2,z);const ring1=new THREE.Mesh(new THREE.TorusGeometry(1.8,.25,6,16),LM(0x8b5a2b));if(R.shadowMap.enabled)ring1.castShadow=true;g.add(ring1);for(let i=0;i<8;i++){const a=i/8*6.28;const spoke=new THREE.Mesh(BOX(.15,3.4,.15),LM(0x6b4a2b));spoke.rotation.z=a;if(R.shadowMap.enabled)spoke.castShadow=true;g.add(spoke)}for(let i=0;i<8;i++){const a=i/8*6.28;const p=new THREE.Mesh(BOX(.4,.6,.6),LM(0x7a4a1b));p.position.set(Math.cos(a)*1.8,Math.sin(a)*1.8,0);if(R.shadowMap.enabled)p.castShadow=true;g.add(p)}g.rotation.y=Math.PI/2;world.add(g);WATERWHEELS.push({g,t:Math.random()*6.28});addCol(x-2,0,z,.8,3,.8);addCol(x+2,0,z,.8,3,.8)}
+function woodenBridge(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];const len=14,wid=5;for(let i=0;i<14;i++){const t=i/13;const py=Math.sin(t*Math.PI)*.8;const p=T(0,-len/2+t*len);P.push({geo:BOX(wid,.2,len/14+.05),x:p[0],y:.6+py,z:p[1],color:0x8b5a2b,ry:rot})}[-wid/2,wid/2].forEach(xr=>{for(let i=0;i<=6;i++){const t=i/6;const py=Math.sin(t*Math.PI)*.8;const p=T(xr,-len/2+t*len);P.push({geo:BOX(.3,2.5,.3),x:p[0],y:1.5+py,z:p[1],color:0x5a3a1a})}for(let i=0;i<=12;i++){const t=i/12;const py=Math.sin(t*Math.PI)*.8;const p=T(xr,-len/2+t*len);P.push({geo:BOX(.15,.15,len/12+.1),x:p[0],y:2.2+py,z:p[1],color:0x6b4a2b,ry:rot})}});addMerged(P);addCol(x,0,z,wid,.5,len)}
+function ruinPillar(x,z){const P=[];P.push({geo:new THREE.CylinderGeometry(1.4,1.6,.5,8),x,y:.25,z,color:0x9a9a8a});P.push({geo:new THREE.CylinderGeometry(1,1.1,4+Math.random()*2,8),x,y:2.5,z,color:0x9a9a8a});if(Math.random()<.6)P.push({geo:new THREE.CylinderGeometry(1.2,1,.4,8),x,y:5.2,z,color:0x9a9a8a});P.push({geo:BOX(.3,.3,.1),x:x+.9,y:3,z:z+.6,color:0x6a6a5a});P.push({geo:BOX(.2,.4,.1),x:x-.8,y:2,z:z-.5,color:0x6a6a5a});addMerged(P);addCol(x,0,z,3,5,3)}
+function bellTower(x,z){addMerged([{geo:BOX(4,1,4),x,y:.5,z,color:0x8a8a82},{geo:BOX(3,1,3),x,y:1.5,z,color:0x9a9a92},{geo:BOX(2.5,8,2.5),x,y:6,z,color:0xa8a8a0},{geo:BOX(3.5,.4,3.5),x,y:10.2,z,color:0x8a8a82},{geo:new THREE.ConeGeometry(3,2.5,4),x,y:11.7,z,color:0xa04030,ry:Math.PI/4},{geo:BOX(.4,.4,2.5),x,y:10,z,color:0x5a3a1a}]);const g=new THREE.Group();g.position.set(x,10,z);const bell=new THREE.Mesh(new THREE.ConeGeometry(.9,1.4,10),LM(0xffd23f,{shininess:60}));if(R.shadowMap.enabled)bell.castShadow=true;bell.position.y=-.9;g.add(bell);const clapper=new THREE.Mesh(ICO(.2,0),LM(0x8b5a2b));clapper.position.y=-1.6;g.add(clapper);world.add(g);BELLS.push({g,t:Math.random()*6.28});addCol(x,0,z,4,10,4)}
+function picnicTable(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];const p1=T(0,0);P.push({geo:BOX(4,.2,1.6),x:p1[0],y:1.2,z:p1[1],color:0x8b5a2b,ry:rot});[[-2.2,0],[2.2,0]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(2,.15,1),x:p[0],y:.7,z:p[1],color:0x8b5a2b,ry:rot})});[[-1.5,-.6],[1.5,-.6],[-1.5,.6],[1.5,.6]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.2,1.3,.2),x:p[0],y:.65,z:p[1],color:0x6b4a2b,ry:rot})});[[-2.2,-.4],[2.2,-.4],[-2.2,.4],[2.2,.4]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.15,.8,.15),x:p[0],y:.4,z:p[1],color:0x6b4a2b,ry:rot})});addMerged(P);addCol(x,0,z,4.5,1.5,2)}
+function boat(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];P.push({geo:BOX(2,.6,4),x,y:.4,z,color:0x8b5a2b,ry:rot});P.push({geo:BOX(2.2,.3,4.2),x,y:.1,z,color:0x5a3a1a,ry:rot});const bow1=T(0,-2);const bow2=T(0,2);P.push({geo:new THREE.ConeGeometry(.8,1,4),x:bow1[0],y:.5,z:bow1[1],color:0x8b5a2b,ry:rot+Math.PI/4});P.push({geo:new THREE.ConeGeometry(.8,1,4),x:bow2[0],y:.5,z:bow2[1],color:0x8b5a2b,ry:rot-Math.PI/4});[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(1.8,.15,.4),x:p[0],y:.75,z:p[1],color:0xa07040,ry:rot})});const mastP=T(0,0);P.push({geo:new THREE.CylinderGeometry(.08,.1,3,6),x:mastP[0],y:2.2,z:mastP[1],color:0x5a3a1a});const oarP=T(1.2,0);P.push({geo:new THREE.CylinderGeometry(.1,.1,3,5),x:oarP[0],y:.5,z:oarP[1],color:0x6b4a2b,rx:Math.PI/2,ry:rot});addMerged(P);const g=new THREE.Group();g.position.set(mastP[0],2.5,mastP[1]);g.rotation.y=rot;const sail=new THREE.Mesh(new THREE.PlaneGeometry(1.8,2),new THREE.MeshBasicMaterial({color:0xf0e6d0,side:THREE.DoubleSide}));if(R.shadowMap.enabled)sail.castShadow=true;sail.position.x=.9;g.add(sail);world.add(g);addCol(x,0,z,2.5,1,4.5)}
+function beachHut(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];[[-1.5,-1.5],[1.5,-1.5],[-1.5,1.5],[1.5,1.5]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.2,3,.2),x:p[0],y:1.5,z:p[1],color:0x8b5a2b,ry:rot})});P.push({geo:BOX(3.5,.2,3.5),x,y:.15,z,color:0xa07040,ry:rot});P.push({geo:new THREE.ConeGeometry(3,2,4),x,y:4,z,color:0xd4a848,ry:rot+Math.PI/4});P.push({geo:new THREE.ConeGeometry(3.2,.4,8),x,y:4.9,z,color:0xc09840,ry:rot});P.push({geo:BOX(3.6,.4,3.6),x,y:3,z,color:0xc09840,ry:rot});addMerged(P);addCol(x,0,z,3.5,3,3.5)}
+function beachUmbrella(x,z){addMerged([{geo:new THREE.CylinderGeometry(.08,.1,3,6),x,y:1.5,z,color:0x5a3a1a},{geo:new THREE.ConeGeometry(2.5,1,8),x,y:3.2,z,color:0xff5d5d},{geo:new THREE.ConeGeometry(2.5,1,8,0,6.28,0),x,y:3.3,z,color:0xffffff,ry:Math.PI/8}]);Mt(BOX(1.8,.05,1),LM(0x3d8bff),x+.9,.12,z)}
+function logPile(x,z){const P=[];for(let row=0;row<3;row++){for(let i=0;i<5-row;i++){P.push({geo:new THREE.CylinderGeometry(.35,.35,3,8),x:x+(i-(4-row)/2)*.75,y:.35+row*.7,z,color:[0x8b5a2b,0x7a4a1b][row%2],rz:Math.PI/2})}}addMerged(P);addCol(x,0,z,4,2.5,1.5)}
+function statueGarden(x,z){const P=[];P.push({geo:new THREE.CylinderGeometry(4,4,.3,20),x,y:.15,z,color:0xa8a8a0});P.push({geo:new THREE.TorusGeometry(4,.3,4,20).rotateX(1.5708),x,y:.35,z,color:0x8a8a82});addMerged(P);for(let i=0;i<3;i++){const a=i/3*6.28;const sx=x+Math.cos(a)*2.4,sz=z+Math.sin(a)*2.4;addMerged([{geo:BOX(1,.4,1),x:sx,y:.5,z:sz,color:0x8a8a8a},{geo:new THREE.SphereGeometry(.35,8,6),x:sx,y:1.1,z:sz,color:0xc0c0b8},{geo:BOX(.6,.8,.4),x:sx,y:1.6,z:sz,color:0xc0c0b8}])}addCol(x,0,z,7,1,7)}
+function potShelf(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];[[-1,-.3],[1,-.3],[-1,.3],[1,.3]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.1,2,.1),x:p[0],y:1,z:p[1],color:0x5a3a1a})});for(let y=0.5;y<=1.8;y+=0.65){P.push({geo:BOX(2.3,.1,.7),x,y,z,color:0x8b5a2b,ry:rot})}addMerged(P);for(let i=0;i<5;i++){const sx=Math.random()*2-1;const sz=(Math.random()-.5)*.4;const sy=[0.7,1.35,2][i%3];const p=T(sx,sz);Mt(new THREE.CylinderGeometry(.15,.2,.3,8),LM([0xa07040,0xd05040,0xa8a8a0,0x8b5a2b][i%4]),p[0],sy,p[1])}addCol(x,0,z,2.5,2,.8)}
+function lanternPost(x,z){addMerged([{geo:new THREE.CylinderGeometry(.15,.2,4.5,6),x,y:2.25,z,color:0x3a2a1a}]);const g=new THREE.Group();g.position.set(x,4.2,z);const box=new THREE.Mesh(BOX(.7,1,.7),LM(0x5a3a1a));g.add(box);const glass=new THREE.Mesh(BOX(.6,.8,.62),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.7}));g.add(glass);const top=new THREE.Mesh(new THREE.ConeGeometry(.55,.3,4),LM(0x3a2a1a));top.position.y=.65;top.rotation.y=Math.PI/4;g.add(top);world.add(g);LANTERNS.push({g,t:Math.random()*6.28});addCol(x,0,z,.5,4.5,.5)}
+function stoneCircle(x,z){const P=[];const r=7;const n=10;for(let i=0;i<n;i++){const a=i/n*6.28;const px=x+Math.cos(a)*r,pz=z+Math.sin(a)*r;const h=2.5+Math.random()*1.5;P.push({geo:BOX(.7,h,.7),x:px,y:h/2,z:pz,color:i%3?0x8a8a82:0x7a7a72,ry:Math.random()*.4});P.push({geo:BOX(.75,.3,.75),x:px,y:h+.1,z:pz,color:0x9a9a92,ry:Math.random()*.4});addCol(px,0,pz,1.2,h,1.2)}P.push({geo:BOX(2.5,.5,2.5),x,y:.25,z,color:0x8a8a82});P.push({geo:BOX(1.8,.8,1.8),x,y:.9,z,color:0x9a9a92});P.push({geo:ICO(.6,1),x,y:1.8,z,color:0x7fd0ff});addMerged(P);Mt(ICO(.6,1),new THREE.MeshBasicMaterial({color:0x7fd0ff,transparent:true,opacity:.7}),x,1.8,z);addCol(x,0,z,2.8,1,2.8)}
+function giantMushroom(x,z,r){r=r||1;addMerged([{geo:new THREE.CylinderGeometry(.5*r,.6*r,3*r,8),x,y:1.5*r,z,color:0xf0e6d0},{geo:new THREE.SphereGeometry(2*r,12,8,0,6.28,0,1.57),x,y:3*r,z,color:0xff5d5d},{geo:new THREE.SphereGeometry(.3*r,6,5),x:x+.8*r,y:3.6*r,z:z+.5*r,color:0xffffff},{geo:new THREE.SphereGeometry(.25*r,6,5),x:x-1.1*r,y:3.4*r,z:z-.3*r,color:0xffffff}]);addCol(x,0,z,1.4*r,3.5*r,1.4*r)}
+function stumpLog(x,z){addMerged([{geo:new THREE.CylinderGeometry(.9,1.1,1.4,10),x,y:.7,z,color:0x5a3a1a},{geo:new THREE.CylinderGeometry(.9,.9,.15,10),x,y:1.5,z,color:0xa07040}]);const g=new THREE.Group();g.position.set(x,1.6,z);g.rotation.y=Math.random()*6.28;const handle=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,1.2,5),LM(0x8b5a2b));handle.rotation.z=Math.PI/2.2;handle.position.x=.5;g.add(handle);const blade=new THREE.Mesh(BOX(.5,.35,.1),LM(0xc0c0b8));blade.position.x=1.05;g.add(blade);world.add(g);addCol(x,0,z,2,1.5,2)}
+function scarecrow(x,z){addMerged([{geo:new THREE.CylinderGeometry(.1,.1,3.5,6),x,y:1.75,z,color:0x8b5a2b},{geo:BOX(3,.15,.15),x,y:2.8,z,color:0x8b5a2b},{geo:BOX(1.6,1.4,.3),x,y:2.2,z,color:0xff8c1a},{geo:BOX(1.6,1.5,.3),x,y:2.2,z:z+.25,color:0xffd23f},{geo:new THREE.SphereGeometry(.5,10,8),x,y:3.4,z,color:0xd4a848},{geo:new THREE.ConeGeometry(.8,.8,6),x,y:4,z,color:0xa04030}]);Mt(ICO(.08,0),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x-.15,3.4,z+.45);Mt(ICO(.08,0),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x+.15,3.4,z+.45);addCol(x,0,z,2,4,2)}
+function beehive(x,z){addMerged([{geo:new THREE.CylinderGeometry(.1,.1,2,6),x,y:1,z,color:0x5a3a1a},{geo:BOX(1.2,.15,1.2),x,y:.1,z,color:0x5a3a1a},{geo:new THREE.CylinderGeometry(.5,.5,.7,10),x,y:2.4,z,color:0xffd23f},{geo:new THREE.CylinderGeometry(.55,.55,.65,10),x,y:2.9,z,color:0xffc020},{geo:new THREE.CylinderGeometry(.45,.45,.55,10),x,y:3.35,z,color:0xffd23f}]);for(let i=0;i<3;i++){const a=i/3*6.28;Mt(BOX(.15,.1,.1),new THREE.MeshBasicMaterial({color:0xffd23f}),x+Math.cos(a)*1.2,3.5,z+Math.sin(a)*1.2)}addCol(x,0,z,1,3,1)}
+function flowerArch(x,z,rot){rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];const P=[];const p1=T(-3,0),p2=T(3,0);P.push({geo:BOX(.8,7,.8),x:p1[0],y:3.5,z:p1[1],color:0xe8e0d0});P.push({geo:BOX(.8,7,.8),x:p2[0],y:3.5,z:p2[1],color:0xe8e0d0});P.push({geo:new THREE.TorusGeometry(3.2,.5,8,20,Math.PI),x,y:7,z,color:0x3aa84a,ry:rot});addMerged(P);const cols=[0xff6688,0xffee55,0xffffff,0xb05dff,0xff8c1a];for(let i=0;i<20;i++){const a=Math.PI*(i/19);const lx=Math.cos(Math.PI-a)*3.2;const ly=Math.sin(a)*3.2;const p=T(lx,0);Mt(ICO(.25,0),LM(cols[i%cols.length],{shininess:30}),p[0],7+ly,p[1])}addCol(x-3,0,z,.8,7,.8);addCol(x+3,0,z,.8,7,.8)}
+function wishingWell(x,z){addMerged([{geo:new THREE.CylinderGeometry(2,2.2,1.5,10),x,y:.75,z,color:0x8a8a82},{geo:new THREE.CylinderGeometry(1.7,1.7,.6,10),x,y:.5,z,color:0x2a6a9a},{geo:BOX(.3,4,.3),x:x-1.6,y:2,z:z-1.6,color:0x8b5a2b},{geo:BOX(.3,4,.3),x:x+1.6,y:2,z:z-1.6,color:0x8b5a2b},{geo:BOX(.3,4,.3),x:x-1.6,y:2,z:z+1.6,color:0x8b5a2b},{geo:BOX(.3,4,.3),x:x+1.6,y:2,z:z+1.6,color:0x8b5a2b},{geo:new THREE.ConeGeometry(3,1.8,4),x,y:5,z,color:0xa04030,ry:Math.PI/4}]);Mt(ICO(.4,0),new THREE.MeshBasicMaterial({color:0xffd23f}),x,.8,z);addCol(x,0,z,4.5,2.5,4.5)}
+function garden(x,z,r){r=r||6;addMerged([{geo:new THREE.CylinderGeometry(r,r,.3,20),x,y:.15,z,color:0xc8b088}]);for(let i=0;i<16;i++){const a=i/16*6.28;const px=x+Math.cos(a)*(r*.7), pz=z+Math.sin(a)*(r*.7);const cols=[0xff6688,0xffee55,0xffffff,0xb05dff,0xff8c1a];Mt(new THREE.CylinderGeometry(.06,.06,.6,4),LM(0x3a7a2f),px,.6,pz);Mt(ICO(.22,0),LM(cols[i%5],{shininess:30}),px,.95,pz)}addCol(x,0,z,r*2,.4,r*2)}
+function statueJello(x,z){addMerged([{geo:BOX(2.5,.6,2.5),x,y:.3,z,color:0x8a8a8a},{geo:BOX(1.8,.8,1.8),x,y:1,z,color:0x9a9a9a},{geo:new THREE.SphereGeometry(1,10,8),x,y:2.4,z,color:0xffd23f},{geo:new THREE.SphereGeometry(.7,8,6),x,y:3.5,z,color:0xff5d5d}]);addCol(x,0,z,3,3,3)}
+function torch(x,z){addMerged([{geo:new THREE.CylinderGeometry(.15,.2,4,6),x,y:2,z,color:0x5a3a1a}]);const fl=new THREE.Mesh(ICO(.4,0),new THREE.MeshBasicMaterial({color:0xff8c1a,transparent:true,opacity:.9}));fl.position.set(x,4.3,z); world.add(fl);const fl2=new THREE.Mesh(ICO(.25,0),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:.95}));fl2.position.set(x,4.6,z); world.add(fl2);FOUNTAINS.push({parts:[{m:fl,baseAng:0,t:0,isFlame:true},{m:fl2,baseAng:1,t:.5,isFlame:true}],x,z,topY:4.3});addCol(x,0,z,.5,4,.5)}
 
-function stonewall(x1,z1,x2,z2){
-  const P=[];const dx=x2-x1,dz=z2-z1;const len=Math.hypot(dx,dz);const n=Math.max(2,Math.floor(len/1.2));const rot=Math.atan2(dx,dz);
-  for(let i=0;i<=n;i++){const t=i/n;const px=x1+dx*t,pz=z1+dz*t;
-    P.push({geo:BOX(.8,.55,.8),x:px,y:.3,z:pz,color:i%2?0x7a7a72:0x8a8a82,ry:rot});
-    P.push({geo:BOX(.85,.5,.85),x:px,y:.85,z:pz,color:i%2?0x8a8a82:0x7a7a72,ry:rot});
-    P.push({geo:BOX(.75,.45,.75),x:px+(i%2?.15:-.15),y:1.35,z:pz,color:i%3?0x6a6a62:0x8a8a82,ry:rot});
-  }
-  addMerged(P);
-  for(let i=0;i<=n;i+=2){const t=i/n;addCol(x1+dx*t,0,z1+dz*t,1.2,2,1.2)}
-}
-function waterwheel(x,z){
-  addMerged([
-    {geo:BOX(.6,3,.6),x:x-2,y:1.5,z,color:0x5a3a1a},
-    {geo:BOX(.6,3,.6),x:x+2,y:1.5,z,color:0x5a3a1a},
-    {geo:BOX(4.5,.5,.5),x,y:3,z,color:0x5a3a1a}
-  ]);
-  const g=new THREE.Group();g.position.set(x,2,z);
-  const ring1=new THREE.Mesh(new THREE.TorusGeometry(1.8,.25,6,16),LM(0x8b5a2b));if(R.shadowMap.enabled)ring1.castShadow=true;g.add(ring1);
-  for(let i=0;i<8;i++){const a=i/8*6.28;const spoke=new THREE.Mesh(BOX(.15,3.4,.15),LM(0x6b4a2b));spoke.rotation.z=a;if(R.shadowMap.enabled)spoke.castShadow=true;g.add(spoke)}
-  for(let i=0;i<8;i++){const a=i/8*6.28;const p=new THREE.Mesh(BOX(.4,.6,.6),LM(0x7a4a1b));p.position.set(Math.cos(a)*1.8,Math.sin(a)*1.8,0);if(R.shadowMap.enabled)p.castShadow=true;g.add(p)}
-  g.rotation.y=Math.PI/2;world.add(g);
-  WATERWHEELS.push({g,t:Math.random()*6.28});
-  addCol(x-2,0,z,.8,3,.8);addCol(x+2,0,z,.8,3,.8);
-}
-function woodenBridge(x,z,rot){
-  rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
-  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
-  const P=[];const len=14,wid=5;
-  for(let i=0;i<14;i++){
-    const t=i/13;const py=Math.sin(t*Math.PI)*.8;
-    const p=T(0,-len/2+t*len);
-    P.push({geo:BOX(wid,.2,len/14+.05),x:p[0],y:.6+py,z:p[1],color:0x8b5a2b,ry:rot});
-  }
-  [-wid/2,wid/2].forEach(xr=>{
-    for(let i=0;i<=6;i++){const t=i/6;const py=Math.sin(t*Math.PI)*.8;const p=T(xr,-len/2+t*len);P.push({geo:BOX(.3,2.5,.3),x:p[0],y:1.5+py,z:p[1],color:0x5a3a1a})}
-    for(let i=0;i<=12;i++){const t=i/12;const py=Math.sin(t*Math.PI)*.8;const p=T(xr,-len/2+t*len);P.push({geo:BOX(.15,.15,len/12+.1),x:p[0],y:2.2+py,z:p[1],color:0x6b4a2b,ry:rot})}
-  });
-  addMerged(P);
-  addCol(x,0,z,wid,.5,len);
-}
-function ruinPillar(x,z){
-  const P=[];
-  P.push({geo:new THREE.CylinderGeometry(1.4,1.6,.5,8),x,y:.25,z,color:0x9a9a8a});
-  P.push({geo:new THREE.CylinderGeometry(1,1.1,4+Math.random()*2,8),x,y:2.5,z,color:0x9a9a8a});
-  if(Math.random()<.6)P.push({geo:new THREE.CylinderGeometry(1.2,1,.4,8),x,y:5.2,z,color:0x9a9a8a});
-  P.push({geo:BOX(.3,.3,.1),x:x+.9,y:3,z:z+.6,color:0x6a6a5a});
-  P.push({geo:BOX(.2,.4,.1),x:x-.8,y:2,z:z-.5,color:0x6a6a5a});
-  addMerged(P);
-  addCol(x,0,z,3,5,3);
-}
-function bellTower(x,z){
-  addMerged([
-    {geo:BOX(4,1,4),x,y:.5,z,color:0x8a8a82},
-    {geo:BOX(3,1,3),x,y:1.5,z,color:0x9a9a92},
-    {geo:BOX(2.5,8,2.5),x,y:6,z,color:0xa8a8a0},
-    {geo:BOX(3.5,.4,3.5),x,y:10.2,z,color:0x8a8a82},
-    {geo:new THREE.ConeGeometry(3,2.5,4),x,y:11.7,z,color:0xa04030,ry:Math.PI/4},
-    {geo:BOX(.4,.4,2.5),x,y:10,z,color:0x5a3a1a}
-  ]);
-  const g=new THREE.Group();g.position.set(x,10,z);
-  const bell=new THREE.Mesh(new THREE.ConeGeometry(.9,1.4,10),LM(0xffd23f,{shininess:60}));
-  if(R.shadowMap.enabled)bell.castShadow=true;
-  bell.position.y=-.9;g.add(bell);
-  const clapper=new THREE.Mesh(ICO(.2,0),LM(0x8b5a2b));clapper.position.y=-1.6;g.add(clapper);
-  world.add(g);
-  BELLS.push({g,t:Math.random()*6.28});
-  addCol(x,0,z,4,10,4);
-}
-function picnicTable(x,z,rot){
-  rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
-  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
-  const P=[];
-  const p1=T(0,0);P.push({geo:BOX(4,.2,1.6),x:p1[0],y:1.2,z:p1[1],color:0x8b5a2b,ry:rot});
-  [[-2.2,0],[2.2,0]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(2,.15,1),x:p[0],y:.7,z:p[1],color:0x8b5a2b,ry:rot})});
-  [[-1.5,-.6],[1.5,-.6],[-1.5,.6],[1.5,.6]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.2,1.3,.2),x:p[0],y:.65,z:p[1],color:0x6b4a2b,ry:rot})});
-  [[-2.2,-.4],[2.2,-.4],[-2.2,.4],[2.2,.4]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.15,.8,.15),x:p[0],y:.4,z:p[1],color:0x6b4a2b,ry:rot})});
-  addMerged(P);
-  addCol(x,0,z,4.5,1.5,2);
-}
-function boat(x,z,rot){
-  rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
-  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
-  const P=[];
-  P.push({geo:BOX(2,.6,4),x,y:.4,z,color:0x8b5a2b,ry:rot});
-  P.push({geo:BOX(2.2,.3,4.2),x,y:.1,z,color:0x5a3a1a,ry:rot});
-  const bow1=T(0,-2);const bow2=T(0,2);
-  P.push({geo:new THREE.ConeGeometry(.8,1,4),x:bow1[0],y:.5,z:bow1[1],color:0x8b5a2b,ry:rot+Math.PI/4});
-  P.push({geo:new THREE.ConeGeometry(.8,1,4),x:bow2[0],y:.5,z:bow2[1],color:0x8b5a2b,ry:rot-Math.PI/4});
-  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(1.8,.15,.4),x:p[0],y:.75,z:p[1],color:0xa07040,ry:rot})});
-  const mastP=T(0,0);P.push({geo:new THREE.CylinderGeometry(.08,.1,3,6),x:mastP[0],y:2.2,z:mastP[1],color:0x5a3a1a});
-  const oarP=T(1.2,0);P.push({geo:new THREE.CylinderGeometry(.1,.1,3,5),x:oarP[0],y:.5,z:oarP[1],color:0x6b4a2b,rx:Math.PI/2,ry:rot});
-  addMerged(P);
-  const g=new THREE.Group();g.position.set(mastP[0],2.5,mastP[1]);g.rotation.y=rot;
-  const sail=new THREE.Mesh(new THREE.PlaneGeometry(1.8,2),new THREE.MeshBasicMaterial({color:0xf0e6d0,side:THREE.DoubleSide}));
-  if(R.shadowMap.enabled)sail.castShadow=true;
-  sail.position.x=.9;g.add(sail);world.add(g);
-  addCol(x,0,z,2.5,1,4.5);
-}
-function beachHut(x,z,rot){
-  rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
-  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
-  const P=[];
-  [[-1.5,-1.5],[1.5,-1.5],[-1.5,1.5],[1.5,1.5]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.2,3,.2),x:p[0],y:1.5,z:p[1],color:0x8b5a2b,ry:rot})});
-  P.push({geo:BOX(3.5,.2,3.5),x,y:.15,z,color:0xa07040,ry:rot});
-  P.push({geo:new THREE.ConeGeometry(3,2,4),x,y:4,z,color:0xd4a848,ry:rot+Math.PI/4});
-  P.push({geo:new THREE.ConeGeometry(3.2,.4,8),x,y:4.9,z,color:0xc09840,ry:rot});
-  P.push({geo:BOX(3.6,.4,3.6),x,y:3,z,color:0xc09840,ry:rot});
-  addMerged(P);
-  addCol(x,0,z,3.5,3,3.5);
-}
-function beachUmbrella(x,z){
-  addMerged([
-    {geo:new THREE.CylinderGeometry(.08,.1,3,6),x,y:1.5,z,color:0x5a3a1a},
-    {geo:new THREE.ConeGeometry(2.5,1,8),x,y:3.2,z,color:0xff5d5d},
-    {geo:new THREE.ConeGeometry(2.5,1,8,0,6.28,0),x,y:3.3,z,color:0xffffff,ry:Math.PI/8}
-  ]);
-  Mt(BOX(1.8,.05,1),LM(0x3d8bff),x+.9,.12,z);
-}
-function logPile(x,z){
-  const P=[];
-  for(let row=0;row<3;row++){
-    for(let i=0;i<5-row;i++){
-      P.push({geo:new THREE.CylinderGeometry(.35,.35,3,8),x:x+(i-(4-row)/2)*.75,y:.35+row*.7,z,color:[0x8b5a2b,0x7a4a1b][row%2],rz:Math.PI/2});
-    }
-  }
-  addMerged(P);
-  addCol(x,0,z,4,2.5,1.5);
-}
-function statueGarden(x,z){
-  const P=[];
-  P.push({geo:new THREE.CylinderGeometry(4,4,.3,20),x,y:.15,z,color:0xa8a8a0});
-  P.push({geo:new THREE.TorusGeometry(4,.3,4,20).rotateX(1.5708),x,y:.35,z,color:0x8a8a82});
-  addMerged(P);
-  for(let i=0;i<3;i++){
-    const a=i/3*6.28;const sx=x+Math.cos(a)*2.4,sz=z+Math.sin(a)*2.4;
-    addMerged([
-      {geo:BOX(1,.4,1),x:sx,y:.5,z:sz,color:0x8a8a8a},
-      {geo:new THREE.SphereGeometry(.35,8,6),x:sx,y:1.1,z:sz,color:0xc0c0b8},
-      {geo:BOX(.6,.8,.4),x:sx,y:1.6,z:sz,color:0xc0c0b8}
-    ]);
-  }
-  addCol(x,0,z,7,1,7);
-}
-function potShelf(x,z,rot){
-  rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
-  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
-  const P=[];
-  [[-1,-.3],[1,-.3],[-1,.3],[1,.3]].forEach(([lx,lz])=>{const p=T(lx,lz);P.push({geo:BOX(.1,2,.1),x:p[0],y:1,z:p[1],color:0x5a3a1a})});
-  for(let y=0.5;y<=1.8;y+=0.65){P.push({geo:BOX(2.3,.1,.7),x,y,z,color:0x8b5a2b,ry:rot})}
-  addMerged(P);
-  for(let i=0;i<5;i++){
-    const sx=Math.random()*2-1;const sz=(Math.random()-.5)*.4;
-    const sy=[0.7,1.35,2][i%3];const p=T(sx,sz);
-    Mt(new THREE.CylinderGeometry(.15,.2,.3,8),LM([0xa07040,0xd05040,0xa8a8a0,0x8b5a2b][i%4]),p[0],sy,p[1]);
-  }
-  addCol(x,0,z,2.5,2,.8);
-}
-function lanternPost(x,z){
-  addMerged([{geo:new THREE.CylinderGeometry(.15,.2,4.5,6),x,y:2.25,z,color:0x3a2a1a}]);
-  const g=new THREE.Group();g.position.set(x,4.2,z);
-  const box=new THREE.Mesh(BOX(.7,1,.7),LM(0x5a3a1a));g.add(box);
-  const glass=new THREE.Mesh(BOX(.6,.8,.62),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.7}));g.add(glass);
-  const top=new THREE.Mesh(new THREE.ConeGeometry(.55,.3,4),LM(0x3a2a1a));top.position.y=.65;top.rotation.y=Math.PI/4;g.add(top);
-  world.add(g);
-  LANTERNS.push({g,t:Math.random()*6.28});
-  addCol(x,0,z,.5,4.5,.5);
-}
-function stoneCircle(x,z){
-  const P=[];
-  const r=7;const n=10;
-  for(let i=0;i<n;i++){
-    const a=i/n*6.28;
-    const px=x+Math.cos(a)*r,pz=z+Math.sin(a)*r;
-    const h=2.5+Math.random()*1.5;
-    P.push({geo:BOX(.7,h,.7),x:px,y:h/2,z:pz,color:i%3?0x8a8a82:0x7a7a72,ry:Math.random()*.4});
-    P.push({geo:BOX(.75,.3,.75),x:px,y:h+.1,z:pz,color:0x9a9a92,ry:Math.random()*.4});
-    addCol(px,0,pz,1.2,h,1.2);
-  }
-  P.push({geo:BOX(2.5,.5,2.5),x,y:.25,z,color:0x8a8a82});
-  P.push({geo:BOX(1.8,.8,1.8),x,y:.9,z,color:0x9a9a92});
-  P.push({geo:ICO(.6,1),x,y:1.8,z,color:0x7fd0ff});
-  addMerged(P);
-  Mt(ICO(.6,1),new THREE.MeshBasicMaterial({color:0x7fd0ff,transparent:true,opacity:.7}),x,1.8,z);
-  addCol(x,0,z,2.8,1,2.8);
-}
-function giantMushroom(x,z,r){
-  r=r||1;
-  addMerged([
-    {geo:new THREE.CylinderGeometry(.5*r,.6*r,3*r,8),x,y:1.5*r,z,color:0xf0e6d0},
-    {geo:new THREE.SphereGeometry(2*r,12,8,0,6.28,0,1.57),x,y:3*r,z,color:0xff5d5d},
-    {geo:new THREE.SphereGeometry(.3*r,6,5),x:x+.8*r,y:3.6*r,z:z+.5*r,color:0xffffff},
-    {geo:new THREE.SphereGeometry(.25*r,6,5),x:x-1.1*r,y:3.4*r,z:z-.3*r,color:0xffffff}
-  ]);
-  addCol(x,0,z,1.4*r,3.5*r,1.4*r);
-}
-function stumpLog(x,z){
-  addMerged([
-    {geo:new THREE.CylinderGeometry(.9,1.1,1.4,10),x,y:.7,z,color:0x5a3a1a},
-    {geo:new THREE.CylinderGeometry(.9,.9,.15,10),x,y:1.5,z,color:0xa07040}
-  ]);
-  const g=new THREE.Group();g.position.set(x,1.6,z);g.rotation.y=Math.random()*6.28;
-  const handle=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,1.2,5),LM(0x8b5a2b));handle.rotation.z=Math.PI/2.2;handle.position.x=.5;g.add(handle);
-  const blade=new THREE.Mesh(BOX(.5,.35,.1),LM(0xc0c0b8));blade.position.x=1.05;g.add(blade);
-  world.add(g);
-  addCol(x,0,z,2,1.5,2);
-}
-function scarecrow(x,z){
-  addMerged([
-    {geo:new THREE.CylinderGeometry(.1,.1,3.5,6),x,y:1.75,z,color:0x8b5a2b},
-    {geo:BOX(3,.15,.15),x,y:2.8,z,color:0x8b5a2b},
-    {geo:BOX(1.6,1.4,.3),x,y:2.2,z,color:0xff8c1a},
-    {geo:BOX(1.6,1.5,.3),x,y:2.2,z:z+.25,color:0xffd23f},
-    {geo:new THREE.SphereGeometry(.5,10,8),x,y:3.4,z,color:0xd4a848},
-    {geo:new THREE.ConeGeometry(.8,.8,6),x,y:4,z,color:0xa04030}
-  ]);
-  Mt(ICO(.08,0),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x-.15,3.4,z+.45);
-  Mt(ICO(.08,0),new THREE.MeshBasicMaterial({color:0x0e1a3a}),x+.15,3.4,z+.45);
-  addCol(x,0,z,2,4,2);
-}
-function beehive(x,z){
-  addMerged([
-    {geo:new THREE.CylinderGeometry(.1,.1,2,6),x,y:1,z,color:0x5a3a1a},
-    {geo:BOX(1.2,.15,1.2),x,y:.1,z,color:0x5a3a1a},
-    {geo:new THREE.CylinderGeometry(.5,.5,.7,10),x,y:2.4,z,color:0xffd23f},
-    {geo:new THREE.CylinderGeometry(.55,.55,.65,10),x,y:2.9,z,color:0xffc020},
-    {geo:new THREE.CylinderGeometry(.45,.45,.55,10),x,y:3.35,z,color:0xffd23f}
-  ]);
-  for(let i=0;i<3;i++){
-    const a=i/3*6.28;
-    Mt(BOX(.15,.1,.1),new THREE.MeshBasicMaterial({color:0xffd23f}),x+Math.cos(a)*1.2,3.5,z+Math.sin(a)*1.2);
-  }
-  addCol(x,0,z,1,3,1);
-}
-function flowerArch(x,z,rot){
-  rot=rot||0;const c=Math.cos(rot),s=Math.sin(rot);
-  const T=(lx,lz)=>[x+c*lx-s*lz,z+s*lx+c*lz];
-  const P=[];
-  const p1=T(-3,0),p2=T(3,0);
-  P.push({geo:BOX(.8,7,.8),x:p1[0],y:3.5,z:p1[1],color:0xe8e0d0});
-  P.push({geo:BOX(.8,7,.8),x:p2[0],y:3.5,z:p2[1],color:0xe8e0d0});
-  P.push({geo:new THREE.TorusGeometry(3.2,.5,8,20,Math.PI),x,y:7,z,color:0x3aa84a,ry:rot});
-  addMerged(P);
-  const cols=[0xff6688,0xffee55,0xffffff,0xb05dff,0xff8c1a];
-  for(let i=0;i<20;i++){
-    const a=Math.PI*(i/19);
-    const lx=Math.cos(Math.PI-a)*3.2;
-    const ly=Math.sin(a)*3.2;
-    const p=T(lx,0);
-    Mt(ICO(.25,0),LM(cols[i%cols.length],{shininess:30}),p[0],7+ly,p[1]);
-  }
-  addCol(x-3,0,z,.8,7,.8);addCol(x+3,0,z,.8,7,.8);
-}
-function wishingWell(x,z){
-  addMerged([
-    {geo:new THREE.CylinderGeometry(2,2.2,1.5,10),x,y:.75,z,color:0x8a8a82},
-    {geo:new THREE.CylinderGeometry(1.7,1.7,.6,10),x,y:.5,z,color:0x2a6a9a},
-    {geo:BOX(.3,4,.3),x:x-1.6,y:2,z:z-1.6,color:0x8b5a2b},
-    {geo:BOX(.3,4,.3),x:x+1.6,y:2,z:z-1.6,color:0x8b5a2b},
-    {geo:BOX(.3,4,.3),x:x-1.6,y:2,z:z+1.6,color:0x8b5a2b},
-    {geo:BOX(.3,4,.3),x:x+1.6,y:2,z:z+1.6,color:0x8b5a2b},
-    {geo:new THREE.ConeGeometry(3,1.8,4),x,y:5,z,color:0xa04030,ry:Math.PI/4}
-  ]);
-  Mt(ICO(.4,0),new THREE.MeshBasicMaterial({color:0xffd23f}),x,.8,z);
-  addCol(x,0,z,4.5,2.5,4.5);
-}
-function garden(x,z,r){
-  r=r||6;
-  addMerged([
-    {geo:new THREE.CylinderGeometry(r,r,.3,20),x,y:.15,z,color:0xc8b088}
-  ]);
-  for(let i=0;i<16;i++){
-    const a=i/16*6.28;
-    const px=x+Math.cos(a)*(r*.7), pz=z+Math.sin(a)*(r*.7);
-    const cols=[0xff6688,0xffee55,0xffffff,0xb05dff,0xff8c1a];
-    Mt(new THREE.CylinderGeometry(.06,.06,.6,4),LM(0x3a7a2f),px,.6,pz);
-    Mt(ICO(.22,0),LM(cols[i%5],{shininess:30}),px,.95,pz);
-  }
-  addCol(x,0,z,r*2,.4,r*2);
-}
-function statueJello(x,z){
-  addMerged([
-    {geo:BOX(2.5,.6,2.5),x,y:.3,z,color:0x8a8a8a},
-    {geo:BOX(1.8,.8,1.8),x,y:1,z,color:0x9a9a9a},
-    {geo:new THREE.SphereGeometry(1,10,8),x,y:2.4,z,color:0xffd23f},
-    {geo:new THREE.SphereGeometry(.7,8,6),x,y:3.5,z,color:0xff5d5d}
-  ]);
-  addCol(x,0,z,3,3,3);
-}
-function torch(x,z){
-  addMerged([
-    {geo:new THREE.CylinderGeometry(.15,.2,4,6),x,y:2,z,color:0x5a3a1a}
-  ]);
-  const fl=new THREE.Mesh(ICO(.4,0),new THREE.MeshBasicMaterial({color:0xff8c1a,transparent:true,opacity:.9}));
-  fl.position.set(x,4.3,z); world.add(fl);
-  const fl2=new THREE.Mesh(ICO(.25,0),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:.95}));
-  fl2.position.set(x,4.6,z); world.add(fl2);
-  FOUNTAINS.push({parts:[{m:fl,baseAng:0,t:0,isFlame:true},{m:fl2,baseAng:1,t:.5,isFlame:true}],x,z,topY:4.3});
-  addCol(x,0,z,.5,4,.5);
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   PAPAN MASUKAN — tiap map punya bentuk sendiri (kecuali balapan)
-   Koordinat lokal papan: lx = kanan, ly = atas, lz = depan (arah hadap).
-   Rumus dunia sama dengan rotation.y Three.js: x+c*lx+s*lz, z-s*lx+c*lz
-   ══════════════════════════════════════════════════════════════════ */
 const BOARDS=[];
 const BOARD_PAL={
   island :{bg:'#f6e7b8',hd:'#2f8fb8',hf:'#fff3b0',tx:'#17506b',ac:'#d2661e',ring:0xffd23f},
-  desert :{bg:'#ead29a',hd:'#8a5a1e',hf:'#ffd23f',tx:'#5a3410',ac:'#1f8f8a',ring:0xffd23f},
-  jungle :{bg:'#d9e6b0',hd:'#2f6b2f',hf:'#e8ffb0',tx:'#1d4a1f',ac:'#c23a2e',ring:0xb6ff5a},
-  snow   :{bg:'#eef7ff',hd:'#3b78b8',hf:'#ffffff',tx:'#17306b',ac:'#d63a3a',ring:0x9fe0ff},
   parkour:{bg:'#0a1030',hd:'#2a6aff',hf:'#e8f4ff',tx:'#bfe4ff',ac:'#ff5db1',ring:0x4adfff},
   boxing :{bg:'#1c1c26',hd:'#c22a2a',hf:'#ffd23f',tx:'#ffffff',ac:'#ffd23f',ring:0xff5a4a}
 };
@@ -559,71 +253,11 @@ function feedbackBoard(x,z,rot,y,style){
     });
     [[2.55,0x9a6a3c],[3.2,0xb08050],[3.85,0xa8794a]].forEach(([ly,col])=>add(BOX(5.0,.7,.2),0,ly-.05,-.06,col));
     add(BOX(5.0,.16,.3),0,4.42,.02,0x5a3a1a);add(BOX(5.0,.16,.3),0,1.98,.02,0x5a3a1a);
-    // pelampung di tiang kiri
     add(new THREE.TorusGeometry(.5,.17,6,12),-2.55,1.3,.4,0xe03a3a);
     [[.5,0],[-.5,0],[0,.5],[0,-.5]].forEach(([a,b])=>add(BOX(.26,.26,.38),-2.55+a,1.3+b,.4,0xffffff));
-    // bendera kecil di tiang kanan
     add(new THREE.CylinderGeometry(.05,.05,1.3,4),2.55,5.35,0,0x6a4a2a);
     add(new THREE.ConeGeometry(.34,1.5,3).rotateZ(-Math.PI/2),3.3,5.7,0,0xff6a3a);
-    // kerang & bintang laut
     add(ICO(.24,0),1.3,.28,1.3,0xff9ec4,{sy:.6});add(ICO(.2,0),-1.1,.26,1.7,0xffd27a,{sy:.55});add(ICO(.18,0),2.2,.25,1.0,0xf6f0e0,{sy:.6});
-    break}
-  case'desert':{
-    add(BOX(6.2,.3,2.4),0,.15,0,0xc9a468);add(BOX(5.6,.3,1.9),0,.45,0,0xd6b078);
-    [-1,1].forEach(k=>{
-      add(BOX(.95,4.5,.95),k*2.55,2.7,0,0xd9b878);
-      add(BOX(1.15,.28,1.15),k*2.55,.74,0,0xb8903f);add(BOX(1.15,.28,1.15),k*2.55,4.85,0,0xb8903f);
-      add(BOX(.98,.16,.98),k*2.55,3.7,0,0x2aa5a0);
-      add(new THREE.ConeGeometry(.78,.95,4),k*2.55,5.45,0,0xffd23f,{ry:rot+Math.PI/4});
-    });
-    add(BOX(4.9,2.6,.36),0,PY,0,0xcfa866);
-    add(BOX(4.95,.24,.4),0,PY+1.2,0,0x2aa5a0);add(BOX(4.95,.2,.4),0,PY-1.2,0,0xffd23f);
-    // matahari bersayap
-    add(new THREE.CylinderGeometry(.55,.55,.16,10).rotateX(Math.PI/2),0,5.2,0,0xffd23f);
-    add(new THREE.CylinderGeometry(.3,.3,.2,10).rotateX(Math.PI/2),0,5.2,0,0xff8c1a);
-    [-1,1].forEach(k=>{add(BOX(1.1,.14,.14),k*1.0,5.3,0,0xffd23f);add(BOX(.9,.12,.14),k*1.0,5.1,0,0x2aa5a0)});
-    // guci tanah liat
-    [-1,1].forEach(k=>{add(new THREE.CylinderGeometry(.38,.3,.8,7),k*1.9,.85,1.0,0xb5532f);add(new THREE.CylinderGeometry(.2,.3,.2,7),k*1.9,1.35,1.0,0x8a3a1f)});
-    break}
-  case'jungle':{
-    [-1,1].forEach(k=>{
-      add(new THREE.CylinderGeometry(.3,.4,4.9,7),k*2.55,2.45,0,0x5a3a22,{rz:k*.05});
-      add(ICO(.55,0),k*2.7,.25,.4,0x3f8a3a,{sy:.5});
-    });
-    // rangka bambu
-    [2.0,4.4].forEach(ly=>add(new THREE.CylinderGeometry(.12,.12,5.3,6).rotateZ(Math.PI/2),0,ly,.05,0xc6b44a));
-    [-1.7,-.57,.57,1.7].forEach(lx=>add(BOX(.07,2.4,.07),lx,PY,-.12,0x8a7a2a));
-    add(BOX(4.7,2.4,.16),0,PY,-.08,0x6a5a22);
-    // atap daun
-    add(slab(5.8,.14,1.8,.5),0,5.05,.8,0x2f7a30);add(slab(5.8,.14,1.8,-.5),0,5.05,-.8,0x3a8d3a);
-    add(new THREE.CylinderGeometry(.1,.1,5.8,5).rotateZ(Math.PI/2),0,5.42,0,0x234f23);
-    // sulur menjuntai
-    [-2.1,-1.85,1.85,2.1].forEach((lx,i)=>add(BOX(.07,.9+(i%2)*.5,.07),lx,4.35-(i%2)*.25,.45,0x2a6a2a));
-    for(let i=-4;i<=4;i++)add(new THREE.ConeGeometry(.24,.75,4).rotateX(Math.PI),i*.7,4.62,1.62,i&1?0x2f7a30:0x3f9a3a,{sx:1.2,sz:.5});
-    // daun besar & jamur
-    add(ICO(.9,0),-3.3,.3,.7,0x2f8a3a,{sx:1.4,sy:.35,sz:.8});add(ICO(.9,0),3.3,.3,.9,0x3fa04a,{sx:1.3,sy:.35,sz:.8});
-    [[1.6,1.1],[2.0,1.4]].forEach(([lx,lz],i)=>{add(new THREE.CylinderGeometry(.08,.1,.4,5),lx,.2,lz,0xf2ead0);add(ICO(.3,0),lx,.5,lz,i?0xe8b020:0xd03a2a,{sy:.6})});
-    break}
-  case'snow':{
-    add(ICO(1.5,0),0,.1,.1,0xffffff,{sx:2.8,sy:.2,sz:1.1});
-    [-1,1].forEach(k=>{
-      add(BOX(.5,4.6,.5),k*2.55,2.3,0,0xb08a5a);
-      add(ICO(.5,0),k*2.55,4.7,0,0xffffff,{sx:1.15,sy:.6,sz:1.15});
-    });
-    add(BOX(5.0,.2,.3),0,1.98,.02,0x8a6a3a);
-    add(BOX(5.5,.42,.9),0,4.52,0,0xffffff);
-    [-1.8,0,1.7].forEach((lx,i)=>add(ICO(.5,0),lx,4.85,0,0xffffff,{sx:1.2,sy:.6+i*.05,sz:.9}));
-    [-2.0,-1.7,-1.4,1.4,1.7,2.0].forEach((lx,i)=>add(new THREE.ConeGeometry(.09,.38+((i&1)?.2:0),4).rotateX(Math.PI),lx,4.2,.34,0xbfe8ff));
-    // manusia salju
-    add(ICO(.55,0),3.7,.55,.7,0xffffff);add(ICO(.4,0),3.7,1.25,.7,0xffffff);add(ICO(.29,0),3.7,1.74,.7,0xffffff);
-    add(new THREE.TorusGeometry(.3,.07,5,8).rotateX(Math.PI/2),3.7,1.5,.7,0xd63a3a);
-    add(new THREE.ConeGeometry(.06,.36,4).rotateX(Math.PI/2),3.7,1.74,1.0,0xff8c1a);
-    add(BOX(.07,.07,.05),3.58,1.84,.97,0x222222);add(BOX(.07,.07,.05),3.82,1.84,.97,0x222222);
-    { const p=W(3.7,.7);addCol(p[0],y,p[1],1.0,1.9,1.0) }
-    // lampu gantung
-    add(BOX(.1,.1,.7),2.55,4.2,.35,0x4a3a2a);
-    const lamp=glow(BOX(.36,.46,.36),2.55,3.85,.7,0xffd96a);
-    ANIM.push(t=>{const f=1+Math.sin(t*9)*.05+Math.sin(t*23)*.03;lamp.scale.setScalar(f)});
     break}
   case'parkour':{
     add(new THREE.CylinderGeometry(3.7,4.0,.2,6),0,.1,.1,0x141c46);
@@ -651,7 +285,6 @@ function feedbackBoard(x,z,rot,y,style){
     add(BOX(4.7,2.3,.14),0,PY,-.05,0x0e0e16);
     [PY+1.2,PY-1.2].forEach(ly=>add(BOX(4.95,.16,.3),0,ly,0,0xffd23f));
     [-2.4,2.4].forEach(lx=>add(BOX(.16,2.5,.3),lx,PY,0,0xffd23f));
-    // sepasang sarung tinju di atas
     [-1,1].forEach(k=>{
       add(ICO(.42,0),k*.65,PY+1.75,0,0xd02a2a,{sx:1,sy:.9,sz:1.1});
       add(ICO(.2,0),k*.65+k*.38,PY+1.65,.18,0xd02a2a);
@@ -662,7 +295,6 @@ function feedbackBoard(x,z,rot,y,style){
   [-2.55,-1.3,0,1.3,2.55].forEach(post);
   addMerged(P);
 
-  // papan teks (tekstur dibuat sesuai palet map)
   const texBoard=tex(256,128,(q,w,h)=>{
     q.fillStyle=K.bg;q.fillRect(0,0,w,h);
     q.fillStyle=K.hd;q.fillRect(0,0,w,22);
@@ -678,7 +310,6 @@ function feedbackBoard(x,z,rot,y,style){
   const signMesh=Mt(new THREE.PlaneGeometry(4.4,PH),new THREE.MeshBasicMaterial({map:texBoard}),fp[0],y+PY,fp[1]);
   signMesh.rotation.y=rot;
 
-  // efek bulat ACT di lantai, tepat di depan papan (tempat pemain berdiri)
   const ix=x+s*2.7,iz=z+c*2.7,mk=(a,b,col,op)=>Mt(new THREE.RingGeometry(a,b,32).rotateX(-1.5708),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}),ix,y+op,iz);
   const ring=mk(.8,1.15,K.ring,.14),ring2=mk(.5,.85,0xffffff,.16),ring3=mk(.35,.55,0xff8c1a,.18);
 
@@ -686,10 +317,6 @@ function feedbackBoard(x,z,rot,y,style){
   return{x,z};
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   ACT — satu tombol untuk semua yang bisa diajak berinteraksi
-   (papan masukan = MASUKAN, jelloger = BICARA). Serang monster tetap tombol HIT.
-   ══════════════════════════════════════════════════════════════════ */
 let nearBoard=null,actTarget=null,_actKey='';
 const ACT_R_BOARD=4.4,ACT_R_JELLO=3.8;
 function updateBoards(now){
@@ -737,8 +364,6 @@ function updateBoards(now){
   }
 }
 
-// Posisikan bubble ACT di layar tepat di atas target (proyeksi 3D -> 2D).
-// Dipanggil dari frame() SETELAH kamera diposisikan, supaya bubble tidak telat satu frame.
 const _actV=new THREE.Vector3();
 function placeActBubble(){
   const ab=$('act');
@@ -747,16 +372,16 @@ function placeActBubble(){
   _actV.set(actTarget.x,actTarget.y,actTarget.z).project(cam);
   const W=innerWidth,H=innerHeight;
   let x=W/2,y=H*.36;
-  if(_actV.z>-1&&_actV.z<1){x=(_actV.x*.5+.5)*W;y=(-_actV.y*.5+.5)*H}   // target di depan kamera
-  x=Math.max(90,Math.min(W-195,x));                                     // minimap kanan-atas (~135px) tidak tertutup
-  y=Math.max(175,Math.min(H-175,y));                                    // di bawah HP bar/toast, di atas bar emote & joystick
+  if(_actV.z>-1&&_actV.z<1){x=(_actV.x*.5+.5)*W;y=(-_actV.y*.5+.5)*H}
+  x=Math.max(90,Math.min(W-195,x));
+  y=Math.max(175,Math.min(H-175,y));
   ab.style.left=x+'px';ab.style.top=y+'px';
 }
 
 function talkTo(j){
   const line=j.lines[j.lineIdx%j.lines.length];
   j.lineIdx++;
-  j.talkT=4;j.tr=Math.atan2(pl.x-j.x,pl.z-j.z);                         // jelloger berhenti & menoleh ke pemain
+  j.talkT=4;j.tr=Math.atan2(pl.x-j.x,pl.z-j.z);
   for(let k=0;k<8;k++){const a=k/8*6.28;puff(j.x+Math.cos(a)*.6,j.z+Math.sin(a)*.6,1,'#ffd23f',2,1.5)}
   say(j,line);
   if(j.secret&&j.lineIdx===1)toast('Kamu menemukan jelloger rahasia: '+j._jname);
@@ -778,7 +403,7 @@ async function submitFeedback(){
   const msg=($('fbi').value||'').trim();
   if(!msg){toast('Tulis masukanmu dulu');return}
   if(msg.length<3){toast('Masukan terlalu pendek');return}
-  if(!DISCORD_WEBHOOK){toast('Webhook Discord belum diatur di game.js');return}
+  if(!DISCORD_WEBHOOK){toast('Webhook Discord belum diatur');return}
   const name=cfg.name||'Pemain';
   const btn=$('fbs');btn.disabled=true;btn.textContent='Mengirim...';
   try{
@@ -955,49 +580,6 @@ for(let s=0;s<NS;s++){const k=s/(NS-1),zn=Math.floor(s/7)%6,n=6+Math.floor(s/5),
  x*=.5;y+=s%2?0:.5;const f=s==NS-1;P(x,y,z,f?8:10,f?8:10,f?3:0,0,0,0,zn);
  if(ev)PKZ.push({z0:zs,z1:z,t:ev,dir:s%2?1:-1})}})();
 
-const SAFE_STRUCTS=[
-  ['windmill',125,55],['barn',88,48],['haystack',108,35],['haystack',113,42],
-  ['scarecrow',75,55],['beehive',80,48],['beehive',100,58],
-  ['fence',65,30,65,68],['fence',65,30,115,30],['fence',115,30,115,68],
-  ['crates',72,72],['crates',95,72],
-  ['stumplog',118,75],['logpile',130,35],
-  ['marketstall',100,-20,.5],['marketstall',110,-30,-.3],['marketstall',115,-45,.8],
-  ['barrels',120,-20],['barrels',90,-40],
-  ['crates',95,-55],['potshelf',105,-60],
-  ['lanternpost',95,-30],['lanternpost',112,-35],
-  ['stonecircle',-115,-95],['ruinpillar',-100,-75],['ruinpillar',-130,-80],
-  ['ruinpillar',-105,-110],['obelisk',-110,-10,0xa89868],
-  ['statuegarden',-105,-60],['totem',-105,105],
-  ['boat',45,-180,Math.PI/6],['boat',-35,-185,-Math.PI/4],
-  ['beachhut',55,-165,Math.PI/3],['beachhut',-50,-165,-Math.PI/3],
-  ['beachumbrella',30,-172],['beachumbrella',-35,-175],['beachumbrella',65,-148],
-  ['waterwheel',140,65],['woodenbridge',145,80,Math.PI/2],
-  ['belltower',150,30],['stonewall',135,25,135,60],
-  ['picnictable',120,-95],['picnictable',105,-100],
-  ['windmill',-125,-55],['watertower',-145,30],
-  ['stonewall',-135,-35,-135,-75],['belltower',-150,65],
-  ['picnictable',-120,95],['picnictable',-130,85],
-  ['flagpole',125,-65],['flagpole',-125,-65],
-  ['pond',60,125,6],['pond',-60,125,6],['pond',135,-105,5],
-  ['rockformation',60,-125],['rockformation',-60,-125],
-  ['rockformation',160,15],['rockformation',-160,15],
-  ['rockformation',105,145],['rockformation',-105,-145],
-  ['flowerbed',42,95,2.5],['flowerbed',-42,95,2.5],
-  ['flowerbed',42,-95,2.5],['flowerbed',-42,-95,2.5],
-  ['flowerbed',85,95,2.5],['flowerbed',-85,-95,2.5],
-  ['crates',145,-85],['crates',-145,-85],
-  ['archway',110,65,0],['archway',-110,65,0],
-  ['giantmushroom',-95,65,.8],['giantmushroom',-90,70,.6],['giantmushroom',-100,70,.7],
-  ['logpile',155,115],['logpile',-155,115],
-  ['stumplog',-85,-35],['stumplog',160,-35],
-  ['flowerarch',138,-55,0],['flowerarch',-138,-55,0],
-  ['wishingwell',45,-70],['wishingwell',-45,-70],
-  ['garden',90,42,5],['garden',-90,42,5],['garden',90,-48,5],['garden',-90,-48,5],
-  ['statuejello',75,-30],['statuejello',-75,-30],['statuejello',75,30],['statuejello',-75,30],
-  ['torch',55,15],['torch',-55,15],['torch',55,-15],['torch',-55,-15],
-  ['torch',15,55],['torch',-15,55],['torch',15,-55],['torch',-15,-55]
-];
-
 const LAYOUTS={
   island:{
     sky:[0x5ba8ff,0xfff4c2],edge:0x2d7a3a,roadFill:0xe8d8b8,roadTrim:0x8b6a4b,plaza:20,
@@ -1016,62 +598,6 @@ const LAYOUTS={
     battleRing:[-115,-105,12],
     lamps:[[0,55],[0,105],[-60,-8],[60,-8],[-40,48],[40,48],[0,-115],[42,-42],[-42,-42]],
     ambient:['butterflies','birds','clouds','petals','bubbles','dust','wind']
-  },
-  desert:{
-    sky:[0xf5d99a,0xfff4c2],edge:0xc99a5b,roadFill:0xe6d6b0,roadTrim:0xa88850,plaza:18,
-    hills:[{x:0,z:230,r:70,h:14},{x:180,z:170,r:58,h:12},{x:-180,z:170,r:58,h:12},{x:210,z:-20,r:55,h:10},{x:-210,z:-20,r:55,h:10},{x:180,z:-170,r:55,h:11},{x:-180,z:-170,r:55,h:11},{x:0,z:-230,r:65,h:12}],
-    roads:[{w:7,pts:[[0,18],[10,55],[20,90]]},{w:6,pts:[[18,0],[55,-5],[100,0]]},{w:6,pts:[[-18,0],[-55,-8],[-95,-5]]},{w:6,pts:[[12,12],[45,50],[75,80]]},{w:5,pts:[[-12,12],[-45,50],[-75,80]]},{w:5,pts:[[0,-18],[-5,-60],[-10,-100]]},{w:5,pts:[[12,-12],[45,-45],[75,-75]]},{w:5,pts:[[-12,-12],[-45,-45],[-75,-75]]},{w:5,pts:[[30,30],[60,60],[95,95],[125,125],[142,144]]}],
-    oasis:{x:105,z:0,r:28},
-    treeZones:[{type:'palm',cx:105,cz:0,r:22,count:14},{type:'cactus',cx:55,cz:55,r:40,count:20},{type:'cactus',cx:-55,cz:-55,r:40,count:20},{type:'dead',cx:110,cz:90,r:35,count:14},{type:'dead',cx:-110,cz:90,r:35,count:14},{type:'cactus',cx:145,cz:-40,r:32,count:14},{type:'dead',cx:-145,cz:-40,r:32,count:14},{type:'cactus',cx:0,cz:125,r:40,count:18},{type:'dead',cx:0,cz:-140,r:38,count:14},{type:'cactus',cx:75,cz:-100,r:35,count:16},{type:'cactus',cx:-75,cz:-100,r:35,count:16},{type:'dead',cx:80,cz:80,r:32,count:14},{type:'dead',cx:-80,cz:80,r:32,count:14}],
-    grassCount:120,flowerCount:0,rockCount:22,
-    landmarks:[
-      ['obelisk',0,0,0xb8a878],['obelisk',-140,0,0xa89868],['obelisk',130,105,0xa89868],['watchtower',-110,-95],['shrine',60,-110,0x8a8a7a],['well',105,-36],['well',140,-32],['well',22,22],['well',-22,-22],['gazebo',-65,70],['camp',85,60],['camp',-90,-40],['camp',150,-50],['bench',16,8,0],['bench',-16,-8,0],['statue',-30,55]
-    ],
-    structures:[['marketstall',-100,-45,0.1],['marketstall',-88,-45,-0.1],['marketstall',-76,-45,0.1],['marketstall',-64,-45,-0.1],['marketstall',-52,-45,0.1],['barrels',-100,-58],['crates',-82,-58],['potshelf',-66,-58],['lanternpost',-92,-38],['lanternpost',-58,-38],['stonecircle',-115,85],['ruinpillar',-95,70],['ruinpillar',-135,72],['ruinpillar',-95,105],['ruinpillar',-135,108],['ruinpillar',-115,60],['archway',0,62,0],['archway',0,-62,1.57],['totem',60,-100],['totem',-60,115],['statuegarden',-130,-95],['stonewall',-150,-10,-150,35],['stonewall',140,70,140,110],['wishingwell',105,35],['rockformation',70,100],['rockformation',-30,-130],['rockformation',160,-20],['rockformation',-160,60],['rockformation',10,135],['crates',130,-70],['barrels',140,-62],['flagpole',45,0],['flagpole',-45,0],['stumplog',150,10],['haystack',70,60],['haystack',76,66],['torch',26,0],['torch',13,23],['torch',-13,23],['torch',-26,0],['torch',-13,-23],['torch',13,-23]],
-    extras:[['hotairballoon',-130,50],['campfire',-40,25],['campfire',60,-60],['campfire',140,40]],
-    animals:[['sheep',70,20,12,.6],['cow',-70,20,12,.5],['chicken',60,0,4,.9],['chicken',-60,0,4,.9],['horse',130,-20,14,.7]],
-    waterfalls:[],
-    swings:[[-35,-70,0]],
-    battleRing:[0,-142,12],
-    lamps:[[0,55],[-60,-8],[60,-8],[40,45],[-40,45],[0,-115],[40,-40],[-40,-40]],
-    ambient:['birds','clouds','dust','wind']
-  },
-  jungle:{
-    sky:[0x3a6a4a,0x8fd0a0],edge:0x1f5a2a,roadFill:0xb09068,roadTrim:0x6a5040,plaza:16,
-    hills:[{x:0,z:230,r:80,h:32},{x:180,z:170,r:70,h:28},{x:-180,z:170,r:70,h:28},{x:210,z:-20,r:65,h:24},{x:-210,z:-20,r:65,h:24},{x:180,z:-170,r:65,h:24},{x:-180,z:-170,r:65,h:24},{x:0,z:-230,r:75,h:26}],
-    roads:[{w:6,pts:[[0,16],[8,55],[0,100]]},{w:6,pts:[[16,0],[55,10],[95,45]]},{w:6,pts:[[-16,0],[-55,15],[-90,60]]},{w:5,pts:[[10,10],[45,55],[60,80]]},{w:5,pts:[[-10,10],[-45,55],[-70,75]]},{w:5,pts:[[0,-16],[-15,-55],[-30,-95]]},{w:5,pts:[[10,-10],[45,-45],[70,-70]]},{w:5,pts:[[-10,-10],[-45,-45],[-70,-70]]},{w:5,pts:[[28,28],[58,58],[95,95],[125,125],[142,144]]}],
-    treeZones:[{type:'pine',cx:55,cz:-55,r:38,count:22},{type:'pine',cx:-55,cz:-55,r:38,count:22},{type:'pine',cx:55,cz:55,r:38,count:20},{type:'pine',cx:-55,cz:55,r:38,count:20},{type:'birch',cx:100,cz:80,r:35,count:17},{type:'birch',cx:-100,cz:80,r:35,count:17},{type:'pine',cx:100,cz:-80,r:35,count:18},{type:'pine',cx:-100,cz:-80,r:35,count:18},{type:'pine',cx:0,cz:135,r:50,count:26},{type:'birch',cx:0,cz:-160,r:45,count:22},{type:'pine',cx:150,cz:0,r:35,count:16},{type:'pine',cx:-150,cz:0,r:35,count:16},{type:'pine',cx:0,cz:-55,r:26,count:14},{type:'birch',cx:60,cz:35,r:28,count:14},{type:'pine',cx:-60,cz:35,r:28,count:14}],
-    grassCount:260,flowerCount:80,rockCount:24,
-    landmarks:[
-      ['statue',0,0],['shrine',120,100,0x7a7a6a],['shrine',-100,-110,0x8a8a7a],['watchtower',-60,100],['hut',-110,45,1.5,0x6b4a2b,0x2f5a2a],['hut',100,-45,2.2,0x8b5a2b,0x8b3030],['hut',130,10,-1.6,0x7a5030,0x2f5a2a],['gazebo',55,-95],['camp',-130,-5],['camp',45,60],['well',28,-28],['well',-28,28],['bench',16,8,0],['bench',-16,-8,0]
-    ],
-    structures:[['giantmushroom',100,-105,0.8],['giantmushroom',108,-98,0.6],['giantmushroom',94,-96,0.7],['giantmushroom',-60,-90,0.9],['giantmushroom',-68,-84,0.6],['giantmushroom',-52,-82,0.7],['giantmushroom',20,125,0.8],['totem',75,15],['totem',-75,-15],['totem',15,-75],['totem',-30,-120],['stonecircle',120,100],['ruinpillar',100,85],['ruinpillar',140,88],['ruinpillar',100,120],['ruinpillar',140,122],['waterwheel',-150,-40],['woodenbridge',-142,-12,0],['stumplog',-80,70],['stumplog',60,40],['logpile',-95,95],['logpile',150,-65],['beehive',-100,30],['beehive',-108,36],['beehive',-95,40],['pond',60,105,6],['pond',-95,115,5],['pond',-10,-100,5],['flowerarch',0,60,0],['wishingwell',-45,70],['statuegarden',45,-70],['picnictable',100,50],['rockformation',-150,70],['rockformation',150,-100],['rockformation',0,-140],['crates',70,-60],['flagpole',-120,-70],['archway',-60,35,0.8],['torch',24,0],['torch',7,23],['torch',-19,14],['torch',-19,-14],['torch',7,-23]],
-    extras:[['hotairballoon',50,100],['campfire',-50,-50],['campfire',85,-25],['campfire',-110,70]],
-    animals:[['chicken',60,10,4,.9],['chicken',-60,10,4,.9],['pig',80,-25,10,.45],['pig',-80,-25,10,.45],['cow',100,20,12,.5]],
-    waterfalls:[['jungle_wf',-185,-60,24,8]],
-    swings:[[75,20,0],[-45,-30,0]],
-    battleRing:[-115,100,12],
-    lamps:[[0,45],[0,-105],[45,5],[-45,5],[40,40],[-40,40]],
-    ambient:['butterflies','leaves','clouds','fireflies','bubbles','dust','wind']
-  },
-  snow:{
-    sky:[0xdcecff,0xf0f6ff],edge:0xcfe4ff,roadFill:0xdee6ee,roadTrim:0xa8b8c8,plaza:18,
-    hills:[{x:0,z:230,r:75,h:30},{x:180,z:170,r:65,h:26},{x:-180,z:170,r:65,h:26},{x:210,z:-20,r:58,h:22},{x:-210,z:-20,r:58,h:22},{x:180,z:-170,r:62,h:24},{x:-180,z:-170,r:62,h:24}],
-    roads:[{w:6,pts:[[0,18],[8,55],[0,95]]},{w:6,pts:[[18,0],[55,-5],[100,5]]},{w:6,pts:[[-18,0],[-55,-5],[-100,5]]},{w:6,pts:[[12,12],[45,50],[70,75]]},{w:5,pts:[[-12,12],[-45,50],[-70,75]]},{w:5,pts:[[0,-18],[-5,-55],[-10,-85]]},{w:5,pts:[[12,-12],[45,-45],[70,-75]]},{w:5,pts:[[-12,-12],[-45,-45],[-70,-75]]},{w:5,pts:[[30,30],[60,60],[95,95],[125,125],[142,144]]}],
-    lake:{x:0,z:-115,r:38},
-    treeZones:[{type:'snowpine',cx:60,cz:-60,r:38,count:22},{type:'snowpine',cx:-60,cz:-60,r:38,count:22},{type:'snowpine',cx:60,cz:60,r:38,count:22},{type:'snowpine',cx:-60,cz:60,r:38,count:22},{type:'snowpine',cx:0,cz:140,r:50,count:26},{type:'snowpine',cx:0,cz:-170,r:42,count:20},{type:'snowpine',cx:135,cz:-90,r:35,count:17},{type:'snowpine',cx:-135,cz:-90,r:35,count:17},{type:'snowpine',cx:135,cz:90,r:35,count:17},{type:'snowpine',cx:-135,cz:90,r:35,count:17},{type:'snowpine',cx:0,cz:60,r:28,count:14},{type:'snowpine',cx:60,cz:0,r:26,count:13},{type:'snowpine',cx:-60,cz:0,r:26,count:13}],
-    grassCount:0,flowerCount:0,rockCount:24,
-    landmarks:[
-      ['igloo',-60,-30],['igloo',-75,-45],['igloo',-90,-25],['igloo',60,70],['igloo',80,85],['igloo',95,65],['igloo',-30,95],['hut',-115,15,1.2,0x6b4a2b,0x5a3050],['hut',110,-15,-1.2,0x8b5a2b,0x503020],['watchtower',125,-70],['shrine',-85,-90,0xc8d0dc],['gazebo',0,-62],['statue',-18,30],['camp',70,-120],['camp',-100,60],['well',24,24],['well',-24,-24],['bench',16,8,0],['bench',-16,-8,0]
-    ],
-    structures:[['belltower',45,-55],['watertower',-125,75],['windmill',135,95],['logpile',60,-35],['logpile',-110,-60],['logpile',-95,95],['logpile',110,45],['stonewall',-145,85,-145,130],['stonewall',100,100,150,100],['lanternpost',30,70],['lanternpost',-30,60],['lanternpost',70,30],['picnictable',-60,75],['picnictable',-48,82],['flagpole',90,-45],['statuegarden',115,-90],['rockformation',-155,-30],['rockformation',150,30],['rockformation',40,-140],['rockformation',-45,135],['pond',-75,115,6],['pond',60,125,5],['crates',122,38],['barrels',132,48],['crates',-135,-80],['marketstall',-30,115,0.3],['marketstall',-45,120,-0.2],['marketstall',-18,122,0.5],['archway',60,0,1.57],['wishingwell',-70,10],['beehive',100,70],['torch',30,0],['torch',21,21],['torch',0,30],['torch',-21,21],['torch',-30,0],['torch',-21,-21],['torch',0,-30],['torch',21,-21]],
-    extras:[['hotairballoon',-120,115],['campfire',0,0],['campfire',-80,-35],['campfire',75,78]],
-    animals:[['cow',70,0,12,.5],['sheep',-70,0,12,.6],['chicken',60,15,4,.9],['chicken',-60,15,4,.9],['horse',130,-20,14,.7]],
-    waterfalls:[],
-    swings:[[-20,45,0],[35,-45,0]],
-    battleRing:[-125,-70,12],
-    lamps:[[0,55],[-55,-8],[55,-8],[40,48],[-40,48],[0,-115],[42,-42],[-42,-42]],
-    ambient:['snow','clouds','dust','wind']
   },
   builds: {
     sky:[0x87c8ff,0xfff4c2],edge:0x3a8d3a,roadFill:0x5cb85c,roadTrim:0x4a9a4a,plaza:10,
@@ -1110,90 +636,6 @@ const JELLOGER_DEFS={
     {n:'DANIS Jelloger',    c1:'#ff00ff', c2:'#660066', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Halo saya danis, ini game buatanku']},
     {n:'Cepu Jelloger',     c1:'#ffff00', c2:'#666600', x:130,z:-130, r:2, spd:0, secret:true, lines:['ada 3 jelloger rahasia di sini selain saya']},
     {n:'Weird Jelloger',    c1:'#ff0000', c2:'#330000', x:-130,z:130, r:2, spd:0, secret:true, lines:['jangan']}
-  ],
-  desert:[
-    {n:'Pedagang Permadani',c1:'#c0501a', c2:'#7a2a00', x:117,z:-43, r:5, spd:.35,lines:['Permadani ini ditenun oleh nenekku, kualitasnya terbaik!']},
-    {n:'Penenun Jelloger',  c1:'#b05dff', c2:'#5a1a8b', x:105,z:-35, r:4, spd:.25,lines:['Kain ini dibuat dari bulu unta asli']},
-    {n:'Pembuat Tembikar',  c1:'#a07040', c2:'#5a3a1b', x:100,z:-13, r:4, spd:.25,lines:['Hati-hati, tembikar ini mudah pecah']},
-    {n:'Penjaga Oasis',     c1:'#3aa0d0', c2:'#1a6080', x:118,z:0,   r:5, spd:.3, lines:['Oasis ini adalah sumber kehidupan kami']},
-    {n:'Penjual Air',       c1:'#7fd0ff', c2:'#3a80b0', x:118,z:18,  r:4, spd:.4, lines:['Air! Air segar! Hanya 5 koin!']},
-    {n:'Penunggang Unta',   c1:'#d4a848', c2:'#8b6010', x:125,z:-20, r:6, spd:.55,lines:['Untaku bernama Jelly, dia suka meludah ke orang asing']},
-    {n:'Penggali Sumur',    c1:'#8b5a2b', c2:'#5a3a1b', x:42, z:18,  r:3, spd:.25,lines:['Aku menggali 30 meter, belum ketemu air juga']},
-    {n:'Penjaga Piramida',  c1:'#c8a878', c2:'#7a5a30', x:5,  z:108, r:3, spd:.2, lines:['Jangan masuk! Kutukan akan menimpamu']},
-    {n:'Prajurit Firaun',   c1:'#ffd23f', c2:'#8b6010', x:-100,z:-10,r:4, spd:.3, lines:['Firaun memerintahkan aku berjaga di sini']},
-    {n:'Penjaga Kuil',      c1:'#c8a878', c2:'#7a5a30', x:-18,z:-105,r:4, spd:.2, lines:['Kuil ini berumur 5000 tahun']},
-    {n:'Pemburu Harta',     c1:'#ffd23f', c2:'#8b6a10', x:75, z:-78, r:5, spd:.6, lines:['Aku dengar ada emas di piramida tua itu']},
-    {n:'Penambang Emas',    c1:'#ffd23f', c2:'#8b6010', x:-115,z:-10,r:5, spd:.3, lines:['Aku cari emas di tambang itu, sumpah!']},
-    {n:'Penari Perut',      c1:'#ff90b8', c2:'#8b3060', x:65, z:40,  r:4, spd:.55,lines:['Ayo lihat tarianku! Hanya 10 koin!']},
-    {n:'Penyanyi Jelloger', c1:'#ff8c1a', c2:'#d05000', x:-65,z:40,  r:4, spd:.3, lines:['Dengarkan suaraku! Aku penyanyi terbaik!']},
-    {n:'Pembuat Roti',      c1:'#d4a848', c2:'#8b6010', x:45, z:-40, r:3, spd:.25,lines:['Roti baru keluar dari oven!']},
-    {n:'Ahli Bintang',      c1:'#3a3a8a', c2:'#101040', x:-25,z:55,  r:4, spd:.2, lines:['Bintang-bintang di gurun lebih terang dari di kota']},
-    {n:'Pengembara Pasir',  c1:'#d4a848', c2:'#8b6010', x:140,z:60,  r:8, spd:.55,lines:['Aku sudah 3 hari berjalan tanpa air, tolong...']},
-    {n:'Kurir Jelloger',    c1:'#ff5d5d', c2:'#8b1a1a', x:25, z:-65, r:5, spd:.8, lines:['Permisi! Aku sedang buru-buru!']},
-    {n:'Penggembala Kambing',c1:'#c8a878',c2:'#7a5a30', x:128,z:52,  r:6, spd:.4, lines:['Kambing-kambingku suka kabur kalau tidak dijaga']},
-    {n:'Pelukis Pasir',     c1:'#ffb84a', c2:'#8b6010', x:88, z:72,  r:4, spd:.3, lines:['Aku melukis dengan pasir, seni unik bukan?']},
-    {n:'Penjaga Gerbang',   c1:'#8a8a82', c2:'#3a3a32', x:-10,z:10,  r:3, spd:.2, lines:['Selamat datang di kota gurun!']},
-    {n:'Penjaga Harta',     c1:'#ffd23f', c2:'#8b6010', x:-148,z:-45,r:5, spd:.25,lines:['Harta ini tidak boleh disentuh siapapun!']},
-    {n:'Firaun Jelloger',   c1:'#ffd700', c2:'#8b6010', x:130,z:130, r:2, spd:0, secret:true, lines:['Piramida itu bukan milikku, tapi aku yang membuatnya']},
-    {n:'Pedagang Unta J.',  c1:'#c0501a', c2:'#5a1a00', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Untaku bernama Jelly, dia suka meludah ke orang']},
-    {n:'Mumi Jelloger',     c1:'#e0d8b0', c2:'#8a8050', x:130,z:-130, r:2, spd:0, secret:true, lines:['Aku sudah tidur 3000 tahun, jangan bangunkan aku']},
-    {n:'Fatamorgana J.',    c1:'#ffffff', c2:'#ffd23f', x:-130,z:130, r:2, spd:0, secret:true, lines:['Aku tidak ada di sini, kamu hanya berhalusinasi']}
-  ],
-  jungle:[
-    {n:'Penjaga Candi',     c1:'#8a8a82', c2:'#3a3a32', x:8,  z:108, r:3, spd:.2, lines:['Candi ini dibangun oleh jello kuno 10000 tahun lalu']},
-    {n:'Dukun Jelloger',    c1:'#b05dff', c2:'#5a1a8b', x:-95,z:60,  r:5, spd:.25,lines:['Ramuan ini bisa menyembuhkan segala penyakit']},
-    {n:'Pemanjat Pohon',    c1:'#5a3a1b', c2:'#2a1a00', x:65, z:80,  r:4, spd:.4, lines:['Aku bisa memanjat pohon tertinggi dalam 10 detik']},
-    {n:'Pengumpul Buah',    c1:'#ffe27a', c2:'#b08b20', x:-95,z:-30, r:6, spd:.4, lines:['Buah durian di pohon itu sudah matang!']},
-    {n:'Penebang Kayu',     c1:'#8b5a2b', c2:'#5a3a1b', x:95, z:50,  r:5, spd:.4, lines:['Kayu jati dari hutan ini paling kuat']},
-    {n:'Penari Hutan',      c1:'#ff90b8', c2:'#8b3060', x:-30,z:30,  r:4, spd:.55,lines:['Aku menari untuk roh hutan']},
-    {n:'Pemusik Tradisional',c1:'#ffd23f',c2:'#8b6a10', x:-25,z:60,  r:4, spd:.3, lines:['Aku mainkan alat musik dari bambu']},
-    {n:'Penjaga Api Unggun',c1:'#ff5d1a', c2:'#8b1a00', x:50, z:-45, r:3, spd:.25,lines:['Api ini tidak boleh padam, ini penjaga malam']},
-    {n:'Penjaga Sungai',    c1:'#3aa0d0', c2:'#1a6080', x:45, z:-85, r:5, spd:.3, lines:['Jangan buang sampah ke sungai!']},
-    {n:'Pemandu Air Terjun',c1:'#3aa0d0', c2:'#1a6080', x:-150,z:-40,r:5, spd:.35,lines:['Air terjun di utara sangat indah!']},
-    {n:'Penjaga Mata Air',  c1:'#7fd0ff', c2:'#3a80b0', x:25, z:60,  r:4, spd:.3, lines:['Mata air ini suci, jangan dikotori']},
-    {n:'Penjaga Goa',       c1:'#5a5a52', c2:'#2a2a22', x:135,z:-58, r:4, spd:.25,lines:['Di dalam goa itu ada kelelawar raksasa']},
-    {n:'Penjaga Hutan',     c1:'#1a5a2a', c2:'#0a2a10', x:65, z:65,  r:5, spd:.35,lines:['Hutan ini adalah rumah bagi ribuan makhluk']},
-    {n:'Pemburu Jelloger',  c1:'#5a3a1b', c2:'#2a1a00', x:-65,z:65,  r:6, spd:.5, lines:['Aku melihat jejak jaguar tadi malam']},
-    {n:'Pawang Ular',       c1:'#3fbf5f', c2:'#1a6a2a', x:75, z:-52, r:4, spd:.35,lines:['Ular-ular di sini jinak, tenang saja']},
-    {n:'Ahli Herbal',       c1:'#4fa040', c2:'#1a3a10', x:-85,z:35,  r:4, spd:.3, lines:['Daun ini bisa jadi obat, daun itu racun']},
-    {n:'Penjaga Satwa',     c1:'#ff8c1a', c2:'#d05000', x:60, z:-85, r:5, spd:.4, lines:['Jangan ganggu hewan-hewan di sini!']},
-    {n:'Pembuat Perahu',    c1:'#8b5a2b', c2:'#5a3a1b', x:-115,z:-75,r:5, spd:.3, lines:['Perahu ini akan kupakai menyusuri sungai']},
-    {n:'Pengrajin Bambu',   c1:'#4fa040', c2:'#1a3a10', x:95, z:-38, r:4, spd:.3, lines:['Bambu ini bisa jadi apa saja!']},
-    {n:'Pengrajin Anyaman', c1:'#d4a848', c2:'#8b6010', x:-105,z:-5, r:4, spd:.3, lines:['Anyaman bambu ini tahan air loh']},
-    {n:'Petani Karet',      c1:'#c8a878', c2:'#7a5a30', x:-105,z:-75,r:5, spd:.35,lines:['Getah karet ini bisa jadi ban mobil']},
-    {n:'Pengembara Rimba',  c1:'#3fbf5f', c2:'#1a6a2a', x:130,z:80,  r:8, spd:.6, lines:['Aku tersesat 3 hari di hutan ini']},
-    {n:'Dewa Rimba',        c1:'#3fbf5f', c2:'#0a2a10', x:130,z:130, r:2, spd:0, secret:true, lines:['Hutan ini menyimpan rahasia yang tidak boleh kau ketahui']},
-    {n:'Orang Utan J.',     c1:'#c0501a', c2:'#5a1a00', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Ugh ugh ugh, aku bukan monyet, aku jello']},
-    {n:'Penjaga Candi Kuno',c1:'#c8a878', c2:'#7a5a30', x:130,z:-130, r:2, spd:0, secret:true, lines:['Candi ini menyimpan kekuatan jello purba']},
-    {n:'Ratu Lebah',        c1:'#ffd23f', c2:'#8b6a10', x:-130,z:130, r:2, spd:0, secret:true, lines:['Lebah-lebahku membuat madu terbaik di dunia']}
-  ],
-  snow:[
-    {n:'Penjaga Igloo',     c1:'#f0f8ff', c2:'#a8b8c8', x:65, z:80,  r:4, spd:.3, lines:['Igloo ini hangat di dalam, percaya deh']},
-    {n:'Pembuat Salju',     c1:'#ffffff', c2:'#c0c0c0', x:-55,z:60,  r:4, spd:.25,lines:['Aku membuat boneka salju setiap hari']},
-    {n:'Nelayan Es',        c1:'#7fd0ff', c2:'#3a80b0', x:15, z:-115,r:5, spd:.35,lines:['Aku memancing di bawah es, dingin sekali']},
-    {n:'Penjaga Danau',     c1:'#aee0ff', c2:'#5a90b0', x:-20,z:-118,r:4, spd:.25,lines:['Danau ini membeku sepanjang tahun']},
-    {n:'Pemancing Es',      c1:'#7fd0ff', c2:'#3a80b0', x:18, z:-100,r:4, spd:.3, lines:['Ikan di bawah es sangat besar']},
-    {n:'Penjaga Api',       c1:'#ff5d1a', c2:'#8b1a00', x:55, z:-55, r:3, spd:.3, lines:['Api ini tidak boleh padam, ini nyawa kami']},
-    {n:'Pembuat Pakaian',   c1:'#b05dff', c2:'#5a1a8b', x:105,z:-5,  r:4, spd:.3, lines:['Mantel bulu ini hangat sekali']},
-    {n:'Pengukir Es',       c1:'#aee0ff', c2:'#5a90b0', x:80, z:80,  r:4, spd:.25,lines:['Ukiran es ini akan bertahan sampai musim panas']},
-    {n:'Penjaga Mercusuar Es',c1:'#f4f4f4',c2:'#8a8a8a', x:8,  z:140, r:4, spd:.2, lines:['Cahaya ini menuntun kapal di badai salju']},
-    {n:'Penjaga Hutan Pinus',c1:'#2f6b3a',c2:'#1a3a20', x:65, z:65,  r:5, spd:.35,lines:['Pohon pinus ini berumur 200 tahun']},
-    {n:'Pemburu Anjing Laut',c1:'#5a5a52',c2:'#2a2a22', x:-65,z:-65, r:5, spd:.5, lines:['Anjing laut di sini sangat lincah']},
-    {n:'Penggembala Rusa',  c1:'#8b5a2b', c2:'#5a3a1b', x:125,z:-22, r:6, spd:.4, lines:['Rusa-rusa ini suka makan wortel']},
-    {n:'Pemanjat Gunung',   c1:'#3a3a8a', c2:'#101040', x:-105,z:5,  r:6, spd:.55,lines:['Aku sudah mendaki 3 gunung tertinggi!']},
-    {n:'Pengembara Salju',  c1:'#dcecff', c2:'#8aa8c8', x:-150,z:80, r:8, spd:.6, lines:['Aku berjalan 100 km untuk sampai sini']},
-    {n:'Ahli Cuaca',        c1:'#3aa0d0', c2:'#1a6080', x:-25,z:55,  r:4, spd:.2, lines:['Besok akan turun salju lebih lebat']},
-    {n:'Pembuat Sepatu Salju',c1:'#8b5a2b',c2:'#5a3a1b', x:-130,z:25,r:4, spd:.3, lines:['Sepatu ini bisa dipakai di salju tebal']},
-    {n:'Penjaga Goa Es',    c1:'#aee0ff', c2:'#5a90b0', x:135,z:62,  r:4, spd:.25,lines:['Di dalam goa itu suhunya -40 derajat']},
-    {n:'Pemusik Es',        c1:'#7fd0ff', c2:'#3a80b0', x:-35,z:35,  r:4, spd:.3, lines:['Aku main seruling dari tulang']},
-    {n:'Penjual Coklat',    c1:'#8b5a2b', c2:'#5a3a1b', x:25, z:25,  r:4, spd:.25,lines:['Coklat panas! Coklat panas!']},
-    {n:'Kurir Salju',       c1:'#ff5d5d', c2:'#8b1a1a', x:25, z:-60, r:5, spd:.8, lines:['Permisi! Aku antar paket!']},
-    {n:'Penjaga Ski',       c1:'#3a8dff', c2:'#1a4a9a', x:95, z:-95, r:5, spd:.5, lines:['Jalur ski di sini paling menantang']},
-    {n:'Penjaga Perbatasan',c1:'#8a8a82', c2:'#3a3a32', x:-8, z:95,  r:4, spd:.2, lines:['Berhenti! Siapa kau?']},
-    {n:'Yeti Jelloger',     c1:'#f0f8ff', c2:'#7fa0c0', x:130,z:130, r:2, spd:0, secret:true, lines:['Aku bukan monster, aku hanya kesepian']},
-    {n:'Santa Jelloger',    c1:'#ff0000', c2:'#8b0000', x:-130,z:-130,r:2,spd:0, secret:true, lines:['Ho ho ho, apa kamu sudah jadi anak baik tahun ini?']},
-    {n:'Penguin Jelloger',  c1:'#1a1a2a', c2:'#ffffff', x:130,z:-130, r:2, spd:0, secret:true, lines:['Aku bisa berenang lebih cepat dari kamu']},
-    {n:'Ratu Es Jelloger',  c1:'#aee0ff', c2:'#5a90b0', x:-130,z:130, r:2, spd:0, secret:true, lines:['Sentuh aku dan kau akan membeku']}
   ],
   builds:[]
 };
@@ -1415,25 +857,12 @@ function monStep(dt,now){
 function climateStructure(n){
   const P=[],bx=(x,z,w,d,h,c,y0)=>{y0=y0||0;P.push({geo:BOX(w,h,d),x,y:y0+h/2,z,color:c});addCol(x,y0,z,w,h,d)},
     pil=(x,z,w,h,c)=>{bx(x,z,w,w,h,c);P.push({geo:BOX(w*1.4,.5,w*1.4),x,y:h+.25,z,color:c+0x101010})};
-  if(n=='island'){
-    for(let i=0;i<8;i++){const a=i/8*6.283+.2,x=Math.cos(a)*150,z=Math.sin(a)*150,t=a+Math.PI/2,dx=Math.cos(t)*4,dz=Math.sin(t)*4;
-      pil(x+dx,z+dz,2.4,9,0x8a8f96);pil(x-dx,z-dz,2.4,9,0x8a8f96);P.push({geo:BOX(10,1.6,2.4),x,y:9.8,z,ry:-t,color:0x9aa0a8})}
-  }else if(n=='desert'){
-    [[0,-120],[-105,70],[105,70]].forEach(([x,z])=>pyramid(x,z,26,8,0xd9b86a,0x7fd0ff));
-    for(const sx of[-1,1])for(let k=0;k<5;k++)bx(150+sx*9,-40+k*20,6,18,7+k%2*3,0xc79a5a);
-  }else if(n=='jungle'){
-    for(let k=0;k<3;k++){const w=34-k*10;bx(-115,-105,w,w,3,k%2?0x7a8a6a:0x6b7a5a,k*3)}
-    [[-128,-118],[-102,-118],[-128,-92],[-102,-92]].forEach(([x,z])=>pil(x,z,3,14,0x6b7a5a));
-    for(let k=0;k<7;k++)for(const sz of[-1,1])pil(-60+k*22,95+sz*9,2.6,11,0x5f6f4f)
-  }else if(n=='snow'){
-    const g=[[1,1,1,0,1],[0,0,1,0,1],[1,0,0,0,1],[1,1,1,0,0],[0,0,1,1,1]];
-    g.forEach((r,i)=>r.forEach((v,j)=>{if(v)bx(70+j*16,-150+i*16,15,15,7,0xbfe4ff)}));
-    for(let i=0;i<9;i++){const a=i*.7,x=-110+Math.cos(a)*18,z=-100+Math.sin(a)*18;P.push({geo:new THREE.ConeGeometry(2+i%3,10+i%4*3,5),x,y:6,z,color:0xe8f6ff});addCol(x,0,z,3,9,3)}
-  }
+  for(let i=0;i<8;i++){const a=i/8*6.283+.2,x=Math.cos(a)*150,z=Math.sin(a)*150,t=a+Math.PI/2,dx=Math.cos(t)*4,dz=Math.sin(t)*4;
+    pil(x+dx,z+dz,2.4,9,0x8a8f96);pil(x-dx,z-dz,2.4,9,0x8a8f96);P.push({geo:BOX(10,1.6,2.4),x,y:9.8,z,ry:-t,color:0x9aa0a8})}
   addMerged(P)}
 const ANIM=[];
 function pyramid(x,z,base,tiers,col,gc){const P=[],h=2;for(let k=0;k<tiers;k++){const w=base*(1-k/tiers*.85);P.push({geo:BOX(w,h,w),x,y:k*h+h/2,z,color:k%2?col:col+0x101008});addCol(x,k*h,z,w,h,w)}addMerged(P);ANIM.push(glowAt(x,tiers*h+1.2,z,gc,1.1))}
-function glowAt(x,y,z,c,r){const m=Mt(ICO(r,1),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.8}),x,y,z);return(dt,t)=>{const k=Math.sin(t/300+x);m.material.opacity=.6+k*.3;m.material.scale?m.scale.setScalar(1+k*.12):m.scale.setScalar(1+k*.12)}}
+function glowAt(x,y,z,c,r){const m=Mt(ICO(r,1),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.8}),x,y,z);return(dt,t)=>{const k=Math.sin(t/300+x);m.material.opacity=.6+k*.3;m.scale.setScalar(1+k*.12)}}
 function enrich(n,tc,dr,hh,bz){
   const lv=FXL(),lim=LIM-14,K=[.6,1,1.4,1.8][lv],placed=[];
   const spot=(r0,r1,pad)=>{for(let i=0;i<30;i++){const a=Math.random()*6.28,d=r0+Math.random()*(Math.min(r1,lim)-r0),x=Math.cos(a)*d,z=Math.sin(a)*d;if(!tc(x,z,pad)&&dr(x,z)>2&&!hh(x,z,0)&&!placed.some(p=>Math.hypot(p[0]-x,p[1]-z)<pad+p[2])){placed.push([x,z,pad]);return[x,z]}}return null};
@@ -1444,23 +873,8 @@ function enrich(n,tc,dr,hh,bz){
   const big=(need,zs)=>{const c=[];for(let x=-175;x<=175;x+=5)for(let z=-175;z<=175;z+=5){if(zs&&z*zs<=0)continue;const r=Math.hypot(x,z);if(r>lim-need*.5||r<50||dr(x,z)<6||hh(x,z,6)||placed.some(p=>Math.hypot(p[0]-x,p[1]-z)<need+p[2]))continue;let f=1e9;for(const b of bz)if(!b.j)f=Math.min(f,Math.hypot(x-b.x,z-b.z)-b.r);if(f>=need)c.push([f,x,z])}if(!c.length)return null;c.sort((a,b)=>b[0]-a[0]);const q=c[Math.floor(Math.random()*Math.min(8,c.length))];placed.push([q[1],q[2],need]);return[q[1],q[2]]},bigZ=need=>big(need,1)||big(need);
   const chest=(x,z,y,jb)=>{addMerged([{geo:BOX(1.2,.7,.8),x,y:y+.35,z,color:0x8b5a2b},{geo:BOX(1.25,.2,.85),x,y:y+.8,z,color:0xffd23f}]);let open=false;ANIM.push(glowAt(x,y+1.5,z,0xffd23f,.3));ANIM.push(()=>{if(!open&&Math.hypot(pl.x-x,pl.z-z)<2&&Math.abs(pl.y-y)<2.5){open=true;cfg.jb+=jb;sv();$('jbn').textContent=cfg.jb+' JB';me&&me.update({jb:cfg.jb});toast('Peti harta! +'+jb+' JB');for(let i=0;i<40;i++)puff(x+(Math.random()-.5)*2,z+(Math.random()-.5)*2,1,['#ffd23f','#fff3a0'][i%2],5,y+.8+Math.random()*2);ring(x,z,'#ffd23f',y+.2,1)}})};
   const beam=(x,z,y,c)=>{if(lv<1)return;const m=Mt(new THREE.CylinderGeometry(.7,1.8,70,8,1,true),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.14,side:THREE.DoubleSide,depthWrite:false}),x,y+35,z);ANIM.push((dt,t)=>{m.material.opacity=.1+Math.sin(t/700)*.05;m.rotation.y+=dt*.5})};
-  if(n=='desert'){const p=bigZ(34);if(p){const[x,z]=p,B=52,T=24,P=[];
-    for(let k=0;k<T;k++){const w=B*(1-k/T*.92);P.push({geo:BOX(w,1,w),x,y:k+.5,z,color:k%2?0xd9b86a:0xcaa85a});addCol(x,k,z,w,1,w)}
-    P.push({geo:BOX(8,8,1),x,y:4,z:z-B/2-.1,color:0x1a1208},{geo:new THREE.ConeGeometry(1.8,3,4),x:x-2,y:T+1.5,z,color:0xffd23f});
-    for(const a of[-1,1])for(const c of[-1,1])P.push({geo:BOX(2,12,2),x:x+a*(B/2+5),y:6,z:z+c*(B/2+5),color:0xc8a878});
-    addMerged(P);ANIM.push(glowAt(x-2,T+4,z,0xffe27a,1.3));glow(x-5,3,z-B/2-2,0xff8c1a,.4);glow(x+5,3,z-B/2-2,0xff8c1a,.4);beam(x,z,T,0xffe27a);chest(x+2,z+1,T,80);
-    monAt('golem_pasir',x,z-B/2-10);monAt('mumi',x-8,z-B/2-14);monAt('mumi',x+8,z-B/2-14)}}
-  if(n=='jungle'){const p=bigZ(30);if(p){const[x,z]=p,P=[],rock=0x6a7468;
-    for(const[a,b,w,h,d]of[[-12.5,0,5,16,26],[12.5,0,5,16,26],[0,10.5,30,16,5]]){P.push({geo:BOX(w,h,d),x:x+a,y:h/2,z:z+b,color:rock});addCol(x+a,0,z+b,w,h,d)}
-    P.push({geo:BOX(30,4,26),x,y:14,z,color:0x5a6458});addCol(x,12,z,30,4,26);
-    for(let i=0;i<6;i++)P.push({geo:ICO(4+Math.random()*3,1),x:x+(Math.random()-.5)*24,y:16.5,z:z+(Math.random()-.5)*20,sx:1.4,sy:.6,color:i%2?0x4a7a3a:rock});
-    for(let i=0;i<7;i++){const h=2.2*(i+1);P.push({geo:BOX(3.4,h,6),x:x-15-3.4*i,y:h/2,z:z+4,color:i%2?0x5a6a52:rock});addCol(x-15-3.4*i,0,z+4,3.4,h,6)}
-    for(let i=0;i<14;i++)P.push({geo:new THREE.ConeGeometry(.6,2.5,5),x:x+(Math.random()-.5)*18,y:10.5,z:z+(Math.random()-.5)*20,rx:3.1416,color:0x7a8a7a});
-    for(let i=0;i<9;i++){const c=i%2?0x00e5ff:0xff5dff,cx=x+(Math.random()-.5)*16,cz=z+(Math.random()-.5)*16;P.push({geo:ICO(.6,0),x:cx,y:1.1,z:cz,sy:2,color:c});if(i%3==0)glow(cx,2.4,cz,c,.35)}
-    addMerged(P);glow(x-6,9,z,0x00e5ff,.5);glow(x+6,9,z+4,0xff5dff,.5);chest(x,z+6,0,60);
-    if(lv>=1)ANIM.push(()=>{if(Math.random()<.05)puff(x+(Math.random()-.5)*16,z+(Math.random()-.5)*16,1,'#7fe8ff',-1.5,11)});
-    monAt('golem_lumut',x,z-22);monAt('ular',x-6,z-26)}}
-  if(n=='island'){const p=big(28);if(p){const[x,z]=p,P=[];
+  const p=big(28);
+  if(p){const[x,z]=p,P=[];
     P.push({geo:new THREE.CylinderGeometry(3.6,5,26,8),x,y:13,z,color:0x7a4a22});addCol(x,0,z,8,26,8);
     for(let i=0;i<5;i++){const a=i*1.26;P.push({geo:ICO(1.8,0),x:x+Math.cos(a)*5.5,y:.4,z:z+Math.sin(a)*5.5,sx:1.8,sy:.4,ry:-a,color:0x6a3a1a})}
     for(let i=0;i<14;i++){const a=i*.72,px=x+Math.cos(a)*7.2,pz=z+Math.sin(a)*7.2,py=1.6+i*1.75;P.push({geo:BOX(5.4,.6,5.4),x:px,y:py,z:pz,color:i%2?0x8b5a2b:0x9a6a3a});addCol(px,py-.3,pz,5.4,.6,5.4);if(i%3==2)glow(px,py+1.6,pz,0xffe27a,.3)}
@@ -1468,17 +882,9 @@ function enrich(n,tc,dr,hh,bz){
     for(const[a,b,w,d]of[[-6.5,0,.4,10],[6.5,0,.4,10],[0,6.5,10,.4]])P.push({geo:BOX(w,3,d),x:x+a,y:25.6,z:z+b,color:0xc8a878});
     P.push({geo:new THREE.ConeGeometry(7,3,4),x,y:28.6,z,ry:.785,color:0xc84a2a},{geo:BOX(.15,5,.15),x:x-5,y:27,z:z-5,color:0xdddddd},{geo:BOX(1.4,.8,.05),x:x-4.3,y:28.8,z:z-5,color:0xff5db1});
     for(const[a,b,r,h]of[[0,0,11,31],[9,3,7,28],[-8,-4,7,28],[2,-9,6,27],[-3,9,6,29]])P.push({geo:ICO(r,1),x:x+a,y:h,z:z+b,sx:1.2,sy:.8,sz:1.2,color:0x2f8a3a});
-    addMerged(P);chest(x+3,z-3,24.1,60);glow(x,24.2+3,z,0xffe27a,.4);
-    monAt('raja_kepiting',x+10,z-10);monAt('kepiting',x-10,z-9)}}
-  if(n=='snow'){const p=bigZ(36);if(p){const[x,z]=p,P=[],ice=0xbfeaff,ice2=0x8fd8ff;
-    for(const[a,b,w,d]of[[-12.5,-20,15,2],[12.5,-20,15,2],[0,20,40,2],[-20,0,2,40],[20,0,2,40]]){P.push({geo:BOX(w,9,d),x:x+a,y:4.5,z:z+b,color:ice});addCol(x+a,0,z+b,w,9,d)}
-    for(const a of[-1,1])for(const c of[-1,1]){const tx=x+a*20,tz=z+c*20;P.push({geo:BOX(6,24,6),x:tx,y:12,z:tz,color:ice2},{geo:new THREE.ConeGeometry(4.6,8,6),x:tx,y:28,z:tz,color:0x5fb8ff});addCol(tx,0,tz,6,24,6);glow(tx,33,tz,0xcff4ff,.6)}
-    P.push({geo:BOX(22,8,16),x,y:4,z:z+6,color:ice});addCol(x,0,z+6,22,8,16);P.push({geo:BOX(8,18,8),x,y:17,z:z+8,color:ice2},{geo:new THREE.ConeGeometry(6,9,6),x,y:30.5,z:z+8,color:0x5fb8ff});addCol(x,8,z+8,8,18,8);
-    for(let i=0;i<8;i++){const sz=z-17+i*2;P.push({geo:BOX(10,i+1,2),x,y:(i+1)/2,z:sz,color:i%2?0xdff6ff:ice});addCol(x,0,sz,10,i+1,2)}
-    for(const a of[-1,1])P.push({geo:new THREE.OctahedronGeometry(1.4),x:x+a*10,y:3,z:z-10,sy:2,color:0x9fe8ff},{geo:BOX(1.2,6,1.2),x:x+a*7,y:3,z:z-22,color:ice2});
-    addMerged(P);glow(x,36,z+8,0xffffff,.8);glow(x-7,6.5,z-22,0xcff4ff,.4);glow(x+7,6.5,z-22,0xcff4ff,.4);chest(x+6,z+3,8,70);
-    monAt('golem_es',x,z-30);monAt('yeti',x-10,z-30);monAt('serigala',x+10,z-32)}}
-  const TH={island:{w:0x8b5a2b,r:0xc84a2a},desert:{w:0xb08a58,r:0xd9b86a},jungle:{w:0x6a4a2a,r:0x3a8a3a},snow:{w:0x9a8a7a,r:0xdce8f4}}[n];
+    addMerged(P);chest(x+3,z-3,24.1,60);glow(x,27,z,0xffe27a,.4);
+    monAt('raja_kepiting',x+10,z-10);monAt('kepiting',x-10,z-9)}
+  const TH={island:{w:0x8b5a2b,r:0xc84a2a}}[n];
   const ROLES=[[/koki|roti|coklat/,'kitchen'],[/dokter|herbal|dukun/,'clinic'],[/petani|peternak|penggembala|karet|satwa|rusa/,'farm'],[/kayu|penebang|perahu|pengukir|bambu|anyaman/,'wood'],[/pedagang|penjual|pengrajin|pakaian|sepatu|kurir|permadani|penenun|tembikar/,'stall'],[/penambang|harta|penggali|gunung/,'mine'],[/guru|cuaca|bintang/,'school'],[/pemusik|penyanyi|penari/,'stage'],[/seniman|pelukis/,'easel'],[/pendeta|kuil|candi|dewa|goa/,'shrine'],[/prajurit|gerbang|perbatasan|firaun|ski|pemburu|penjaga hutan|pawang|sungai/,'post'],[/api/,'fire'],[/nelayan|pemancing|pelaut|danau|air/,'dock'],[/mercusuar/,'light'],[/pemandu|petualang|pengembara|pemanjat|pengumpul/,'sign']];
   const workplace=(k,x,z)=>{const P=[],W=TH.w,R=TH.r,b=(w,h,d,lx,lz,c,y0,col)=>{P.push({geo:BOX(w,h,d),x:x+lx,y:(y0||0)+h/2,z:z+lz,color:c});if(col)addCol(x+lx,y0||0,z+lz,w,h,d)},ic=(r,lx,y,lz,c,o)=>P.push(Object.assign({geo:ICO(r,0),x:x+lx,y,z:z+lz,color:c},o||{})),roof=(w,d,lz,y,c)=>{b(.2,y,.2,-w/2+.2,lz-d/2+.2,W);b(.2,y,.2,w/2-.2,lz-d/2+.2,W);b(w,.2,d,0,lz,c,y)};
     switch(k){
@@ -1502,38 +908,14 @@ function enrich(n,tc,dr,hh,bz){
   const tiers=[0,3,6,9,12,16,20,26,32,40,50,60];
   for(const d of JELLOGER_DEFS[n]||[]){const o=Object.assign({},d);if(!d.secret&&d.spd!==0){let ok=null;for(const t of tiers){for(let k=0;k<(t?10:1)&&!ok;k++){const a=k/10*6.283+Math.random()*.3,x=d.x+Math.cos(a)*t,z=d.z+Math.sin(a)*t;if(!tcN(x,z,t>26?3.5:4.5)&&dr(x,z)>2&&!hh(x,z,2)&&Math.hypot(x,z)<lim-4&&!placed.some(q=>Math.hypot(q[0]-x,q[1]-z)<(t>26?4:5)+q[2]))ok=[x,z]}if(ok)break}
       if(ok){o.x=ok[0];o.z=ok[1];placed.push([o.x,o.z,3.5]);o.r=Math.min(d.r||4,2.6);workplace((ROLES.find(r=>r[0].test(d.n.toLowerCase()))||[0,'bench'])[1],o.x,o.z)}}JDR.push(o)}
-  const MS={island:[['kepiting',7,60,185],['tengkorak',4,95,185]],desert:[['kalajengking',7,60,185],['mumi',5,90,185]],jungle:[['laba',7,60,185],['ular',6,60,185]],snow:[['serigala',7,60,185],['yeti',5,95,185]]}[n];
-  if(MS)for(const[t,c,r0,r1]of MS)for(let i=0;i<c;i++){const p=spot(r0,r1,6);if(p)monAt(t,p[0],p[1])}
-  if(n=='island'){
-    for(let k=0;k<3;k++){const m=Mt(new THREE.RingGeometry(226+k*5,228.5+k*5,72).rotateX(-1.5708),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}),0,.12,0);ANIM.push((dt,t)=>{const u=(t/2400+k*.33)%1;m.scale.setScalar(1+u*.05);m.material.opacity=.55*(1-u)})}
-    const dp=[{geo:ICO(1,1),sx:2.2,sy:.8,sz:.8,color:0x7aa0c0},{geo:new THREE.ConeGeometry(.5,1.4,4),x:-2.4,rz:1.5708,color:0x7aa0c0},{geo:new THREE.ConeGeometry(.3,.8,3),x:.2,y:.8,color:0x5a80a0},{geo:ICO(.7,0),sx:1.6,sy:.5,sz:.6,x:1.8,y:-.15,color:0xe8f0f8}];
-    for(let i=0;i<[2,3,4,5][lv];i++){const d=mesh(dp),R=255+i*14,dir=i%2?1:-1;let last=0;ANIM.push((dt,t)=>{const a=t/9000*dir+i*2,u=(t/2600+i*.31)%1,x=Math.cos(a)*R,z=Math.sin(a)*R;d.position.set(x,Math.sin(u*Math.PI)*7-1.5,z);d.rotation.y=Math.atan2(-dir*Math.cos(a),-dir*Math.sin(a));d.rotation.z=.9*Math.cos(u*Math.PI);if(u<last){ring(x,z,'#ffffff',.12,2);puff(x,z,8,'#cfeaff',3,.2)}last=u})}
-    if(lv>=2)for(let i=0;i<[0,0,4,7][lv];i++){const kk=mesh([{geo:BOX(1.4,1.4,.05),rz:.785,color:[0xff5db1,0xffd23f,0x3fbf5f,0x3d8bff][i%4]},{geo:BOX(.12,.12,.12),y:-1.4,color:0xffffff},{geo:BOX(.12,.12,.12),y:-2,color:0xff5d5d}]),R=50+i*14;ANIM.push((dt,t)=>{const a=t/7000+i*1.3;kk.position.set(Math.cos(a)*R,34+Math.sin(t/900+i)*4,Math.sin(a)*R);kk.rotation.y=-a;kk.rotation.z=Math.sin(t/500+i)*.2})}
-    many(6,170,205,5,(x,z)=>beachUmbrella(x,z));many(3,40,100,6,(x,z)=>flowerArch(x,z,Math.random()*6));
-    many(12,25,160,3,(x,z)=>{Mt(new THREE.CylinderGeometry(.12,.15,3.2,5),LM(0x3a8a3a),x,1.6,z);const g=new THREE.Group();g.position.set(x,3.3,z);Mt(new THREE.CylinderGeometry(.9,.9,.2,12).rotateX(1.5708),LM(0xffd23f),0,0,0,g);Mt(new THREE.CylinderGeometry(.45,.45,.25,10).rotateX(1.5708),LM(0x5a3a1a),0,0,.05,g);world.add(g);ANIM.push((dt,t)=>{g.rotation.y=Math.sin(t/2000+x)*.5;g.rotation.x=Math.sin(t/1500+z)*.08})});
-  }
-  if(n=='desert'){
-    many(2,70,165,24,(x,z)=>pyramid(x,z,22+Math.random()*8,7,0xd9b86a,0x7fd0ff));
-    many(8,45,170,14,(x,z)=>hill(x,z,10+Math.random()*8,2.5+Math.random()*3,0xc99a5b,0xe6c88a));
-    for(let i=0;i<Math.round(6*K);i++){const w=Mt(ICO(.9,1),LM(0x9a7a4a),0,.9,0);let x=-lim+Math.random()*lim*2,z=(Math.random()-.5)*lim*1.6,sp=5+Math.random()*4;ANIM.push((dt,t)=>{x+=sp*dt;z+=Math.sin(t/3000+i)*dt*2;if(x>lim)x=-lim;w.position.set(x,.9+Math.abs(Math.sin(t/260+i))*1.1,z);w.rotation.z-=dt*sp*.6;w.rotation.x+=dt*2;if(lv>=3&&Math.random()<dt*8)puff(x,z,1,'#e6c88a',1,.4)})}
-    many(8,30,170,3,(x,z)=>{addMerged([{geo:new THREE.CylinderGeometry(.5,.6,2.6,6),x,y:1.3,z,color:0xb8884a},{geo:ICO(.8,0),x,y:3,z,color:0xff5d3a}]);glow(x,3,z,0xff8c1a,.45)});
-  }
-  if(n=='jungle'){
-    many(1,70,150,20,(x,z)=>pyramid(x,z,20,6,0x6b7a5a,0x5fff9a));
-    many(16,30,170,3,(x,z)=>{const c=[0x5ff0ff,0xff7aff,0x9fff6a][(Math.random()*3)|0];addMerged([{geo:new THREE.CylinderGeometry(.25,.35,1.6,6),x,y:.8,z,color:0xe8e0c8},{geo:ICO(1,0),x,y:1.8,z,sx:1.3,sy:.6,sz:1.3,color:c}]);glow(x,2.5,z,c,.3);addCol(x,0,z,.7,1.6,.7)});
-    many(22,20,175,3,(x,z)=>{const P=[];for(let k=0;k<4;k++){const a=k*1.57+Math.random();P.push({geo:ICO(1,0),x:x+Math.cos(a)*1.3,y:.9,z:z+Math.sin(a)*1.3,sx:1.8,sy:.12,sz:.9,ry:-a,rz:.35,color:k%2?0x2f8a3a:0x3aa84a})}addMerged(P)});
-    if(lv>=1)for(let i=0;i<[0,5,8,12][lv];i++){const a=Math.random()*6.28,d=15+Math.random()*130,m=Mt(new THREE.ConeGeometry(6,40,10,1,true),new THREE.MeshBasicMaterial({color:0xffffa0,transparent:true,opacity:.08,side:THREE.DoubleSide,depthWrite:false}),Math.cos(a)*d,20,Math.sin(a)*d);ANIM.push((dt,t)=>{m.material.opacity=.07+Math.sin(t/1800+i)*.04;m.rotation.z=Math.sin(t/3000+i)*.04})}
-  }
-  if(n=='snow'){
-    many(1,15,70,12,(x,z)=>{const P=[{geo:BOX(1.2,2,1.2),x,y:1,z,color:0x7a4a22}];[[6,5,0x2f8a4a],[5,5,0x3a9a55],[4,5,0x46aa60],[3,4,0x52ba6a]].forEach(([r,h,c],i)=>P.push({geo:new THREE.ConeGeometry(r,h,8),x,y:3.5+i*3.2,z,color:c}));P.push({geo:ICO(.7,0),x,y:17,z,color:0xffd23f});addMerged(P);addCol(x,0,z,1.4,2.2,1.4);glow(x,17,z,0xffe27a,.9);
-      const o=[];for(let i=0;i<26;i++){const a=i*2.4,h=2.5+i*.5,r=Math.max(1.6,6.2-i*.22),m=Mt(ICO(.25,0),new THREE.MeshBasicMaterial({color:[0xff4d4d,0x3d8bff,0xffd23f,0xff5db1][i%4],transparent:true}),x+Math.cos(a)*r,h,z+Math.sin(a)*r);o.push(m)}ANIM.push((dt,t)=>{o.forEach((m,i)=>m.material.opacity=.45+.55*Math.abs(Math.sin(t/300+i)))})});
-    many(10,20,150,3,(x,z)=>{addMerged([{geo:BOX(.25,4,.25),x,y:2,z,color:0x333344},{geo:BOX(.9,.9,.9),x,y:4.4,z,color:0xffe9a0}]);glow(x,4.4,z,0xffe9a0,.55)});
-    if(lv>=2)ANIM.push((dt)=>{if(Math.random()<dt*7)puff(pl.x+(Math.random()-.5)*50,pl.z+(Math.random()-.5)*50,1,'#ffffff',.6,.3+Math.random()*3)});
-    many(10,30,170,4,(x,z)=>{addMerged([{geo:new THREE.SphereGeometry(1.2,8,6),x,y:1.1,z,color:0xffffff},{geo:new THREE.SphereGeometry(.9,8,6),x,y:2.8,z,color:0xffffff},{geo:new THREE.SphereGeometry(.65,8,6),x,y:4,z,color:0xffffff},{geo:new THREE.ConeGeometry(.12,.8,4),x,y:4,z:z+.7,rx:1.5708,color:0xff8c1a},{geo:BOX(.12,.12,.1),x:x-.25,y:4.2,z:z+.6,color:0x111111},{geo:BOX(.12,.12,.1),x:x+.25,y:4.2,z:z+.6,color:0x111111},{geo:new THREE.CylinderGeometry(.5,.5,.7,8),x,y:4.9,z,color:0x222233},{geo:new THREE.CylinderGeometry(.75,.75,.08,8),x,y:4.55,z,color:0x222233}]);addCol(x,0,z,2.4,5,2.4)});
-    many(12,45,180,4,(x,z)=>{const s=1+Math.random();addMerged([{geo:new THREE.OctahedronGeometry(1),x,y:s*1.4,z,sx:.8*s,sy:1.6*s,sz:.8*s,color:0x9fe8ff},{geo:new THREE.OctahedronGeometry(1),x:x+1.2,y:.8,z:z+.5,sx:.5,sy:1,sz:.5,color:0xcff4ff}]);glow(x,s*1.4,z,0xcff4ff,.35);addCol(x,0,z,1.8,s*3,1.8)});
-    many(6,40,170,16,(x,z)=>hill(x,z,8+Math.random()*7,2+Math.random()*2.5,0xdcecff,0xffffff));
-    for(let i=0;i<(lv>=2?2:1);i++){const a=i*2.1,m=Mt(new THREE.PlaneGeometry(520,80),new THREE.MeshBasicMaterial({color:0x66ffcc,transparent:true,opacity:.2,side:THREE.DoubleSide,depthWrite:false,fog:false}),Math.cos(a)*270,105,Math.sin(a)*270);m.lookAt(0,105,0);ANIM.push((dt,t)=>{m.material.color.setHSL(.42+Math.sin(t/3000+i)*.15,.9,.6);m.material.opacity=.16+Math.sin(t/1400+i*2)*.08;m.scale.y=1+Math.sin(t/1700+i)*.2})}
-  }
+  const MS=[['kepiting',7,60,185],['tengkorak',4,95,185]];
+  for(const[t,c,r0,r1]of MS)for(let i=0;i<c;i++){const p=spot(r0,r1,6);if(p)monAt(t,p[0],p[1])}
+  for(let k=0;k<3;k++){const m=Mt(new THREE.RingGeometry(226+k*5,228.5+k*5,72).rotateX(-1.5708),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}),0,.12,0);ANIM.push((dt,t)=>{const u=(t/2400+k*.33)%1;m.scale.setScalar(1+u*.05);m.material.opacity=.55*(1-u)})}
+  const dp=[{geo:ICO(1,1),sx:2.2,sy:.8,sz:.8,color:0x7aa0c0},{geo:new THREE.ConeGeometry(.5,1.4,4),x:-2.4,rz:1.5708,color:0x7aa0c0},{geo:new THREE.ConeGeometry(.3,.8,3),x:.2,y:.8,color:0x5a80a0},{geo:ICO(.7,0),sx:1.6,sy:.5,sz:.6,x:1.8,y:-.15,color:0xe8f0f8}];
+  for(let i=0;i<[2,3,4,5][lv];i++){const d=mesh(dp),R=255+i*14,dir=i%2?1:-1;let last=0;ANIM.push((dt,t)=>{const a=t/9000*dir+i*2,u=(t/2600+i*.31)%1,x=Math.cos(a)*R,z=Math.sin(a)*R;d.position.set(x,Math.sin(u*Math.PI)*7-1.5,z);d.rotation.y=Math.atan2(-dir*Math.cos(a),-dir*Math.sin(a));d.rotation.z=.9*Math.cos(u*Math.PI);if(u<last){ring(x,z,'#ffffff',.12,2);puff(x,z,8,'#cfeaff',3,.2)}last=u})}
+  if(lv>=2)for(let i=0;i<[0,0,4,7][lv];i++){const kk=mesh([{geo:BOX(1.4,1.4,.05),rz:.785,color:[0xff5db1,0xffd23f,0x3fbf5f,0x3d8bff][i%4]},{geo:BOX(.12,.12,.12),y:-1.4,color:0xffffff},{geo:BOX(.12,.12,.12),y:-2,color:0xff5d5d}]),R=50+i*14;ANIM.push((dt,t)=>{const a=t/7000+i*1.3;kk.position.set(Math.cos(a)*R,34+Math.sin(t/900+i)*4,Math.sin(a)*R);kk.rotation.y=-a;kk.rotation.z=Math.sin(t/500+i)*.2})}
+  many(6,170,205,5,(x,z)=>beachUmbrella(x,z));many(3,40,100,6,(x,z)=>flowerArch(x,z,Math.random()*6));
+  many(12,25,160,3,(x,z)=>{Mt(new THREE.CylinderGeometry(.12,.15,3.2,5),LM(0x3a8a3a),x,1.6,z);const g=new THREE.Group();g.position.set(x,3.3,z);Mt(new THREE.CylinderGeometry(.9,.9,.2,12).rotateX(1.5708),LM(0xffd23f),0,0,0,g);Mt(new THREE.CylinderGeometry(.45,.45,.25,10).rotateX(1.5708),LM(0x5a3a1a),0,0,.05,g);world.add(g);ANIM.push((dt,t)=>{g.rotation.y=Math.sin(t/2000+x)*.5;g.rotation.x=Math.sin(t/1500+z)*.08})});
 }
 
 function build(n){
@@ -1550,7 +932,7 @@ function build(n){
   const L=LAYOUTS[n];
   const skyCols=L?L.sky:(n=='speedrace'?(THEMES[rtrack]||THEMES.drag).sky:[0x87c8ff,0xfff4c2]);
   makeSky(skyCols[0],skyCols[1]);
-  sc.background=new THREE.Color(sk);sc.children[0].color.set(n=='snow'?0xdfeeff:0xffffff);
+  sc.background=new THREE.Color(sk);sc.children[0].color.set(0xffffff);
   sc.fog=new THREE.Fog(sk,cfg.rd,cfg.rd*1.6);setRD();
   {const RT=n=='speedrace'?THEMES[rtrack]:null;if(RT&&RT.scene){const fc=new THREE.Color(RT.sky[0]).lerp(new THREE.Color(RT.sky[1]),.5);sc.background=fc;sc.fog.color.copy(fc);if(skyDome)skyDome.material.fog=false;if(sunMesh){sunMesh.material.fog=false;sunMesh.material.color.set(RT.sun||0xfff4c2);sunMesh.scale.setScalar(RT.sunS||1)}}}
   const disc=(r,c,y,x=0,z=0)=>{const m=Mt(new THREE.CircleGeometry(r,32).rotateX(-1.5708),(r<300?LM(0xffffff,{map:tex(TXS(),TXS(),(q,w,h)=>noise(q,w,h,'#'+c.toString(16).padStart(6,'0'),w*h/6,.3),r/12,r/12)}):LM(c)),x||0,y,z||0);if(R.shadowMap.enabled)m.receiveShadow=true;return m};
@@ -1558,7 +940,7 @@ function build(n){
   pool('clouds',new THREE.SphereGeometry(6,7,5),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.85}),16);
   pool('birds',new THREE.SphereGeometry(.5,5,4),new THREE.MeshBasicMaterial({color:0x1a1a1a}),10);
   pool('butterflies',BOX(.6,.1,.7),new THREE.MeshBasicMaterial({color:0xffe27a}),25);
-  pool('snow',BOX(.25,.25,.25),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9}),n=='snow'?170:80);
+  pool('snow',BOX(.25,.25,.25),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9}),80);
   pool('leaves',BOX(.5,.06,.5),new THREE.MeshBasicMaterial({color:0x4fa040}),30);
   pool('petals',BOX(.4,.05,.4),new THREE.MeshBasicMaterial({color:0xffb0d0}),25);
   pool('smokes',new THREE.SphereGeometry(.5,6,5),new THREE.MeshBasicMaterial({color:0xcccccc,transparent:true,opacity:.5}),30);
@@ -1626,7 +1008,7 @@ function build(n){
     if(FXL()>=2)for(let i=3;i<PARKOUR.length;i+=3){const p=PARKOUR[i];SPIN.push(Mt(new THREE.TorusGeometry(3.2,.12,4,20),new THREE.MeshBasicMaterial({color:[0x7fd0ff,0xff5db1,0xffd23f][i%3]}),p[0],p[1]+4,p[2]))}
     for(let i=0;i<80;i++)spawnAmb('stars',{x:(Math.random()-.5)*400,y:20+Math.random()*40,z:Math.random()*500});
     for(let i=0;i<30;i++)spawnAmb('orbs',{x:(Math.random()-.5)*200,y:3+Math.random()*25,z:Math.random()*500,ph:Math.random()*6.28});
-    feedbackBoard(-4.6,-4,Math.atan2(4.6,4),1,'parkour'); // pojok belakang platform start (bukan tepi/tengah)
+    feedbackBoard(-4.6,-4,Math.atan2(4.6,4),1,'parkour');
     spawnJBs();return;
   }
 
@@ -1635,11 +1017,11 @@ function build(n){
 
   if(n=='builds'){disc(500,0x5cb85c,0);spawnJBs();return}
 
-  if(n=='island'){disc(320,0x2a7fd0,0);disc(210,gr,.02)}else if(n=='desert'){disc(210,0xc99a5b,0);disc(185,gr,.05)}else disc(210,gr,0);
+  disc(320,0x2a7fd0,0);disc(210,gr,.02);
   const gg=new THREE.CylinderGeometry(215,225,12,48,1,true),pp=gg.attributes.position;
   for(let i=0;i<pp.count;i++){const x=pp.getX(i),z=pp.getZ(i),a=Math.atan2(z,x),k=1+Math.sin(a*9)*.03;pp.setX(i,x*k);pp.setZ(i,z*k);if(pp.getY(i)>0)pp.setY(i,6+Math.abs(Math.sin(a*6))*3)}
   gg.computeVertexNormals();
-  const cliff=Mt(gg,LM({desert:0xc99a5b,jungle:0x1f4d2a,snow:0xcfeaff,island:0x3a8d3a}[n]||0x3a8d3a,{side:THREE.DoubleSide}),0,5.8,0);
+  const cliff=Mt(gg,LM(0x3a8d3a,{side:THREE.DoubleSide}),0,5.8,0);
   if(R.shadowMap.enabled){cliff.castShadow=true;cliff.receiveShadow=true}
 
   climateStructure(n);
@@ -1674,19 +1056,15 @@ function build(n){
   for(const r of L.roads){const safePts=r.pts.filter(([px,pz])=>!hitsHill(px,pz,-4));if(safePts.length<2)continue;roadData.push(road(safePts,r.w,L.roadFill,L.roadTrim))}
   plaza(L.plaza,L.roadFill,L.roadTrim);
 
-
   if(L.oasis)oasis(L.oasis.x,L.oasis.z,L.oasis.r);
   if(L.lake)frozenLake(L.lake.x,L.lake.z,L.lake.r);
 
   const distToRoad=(x,z)=>{let m=Infinity;for(const rd of roadData){const w2=rd.width*0.5+3.0;for(let i=0;i<rd.points.length-1;i++){const p1=rd.points[i],p2=rd.points[i+1];const dx=p2.x-p1.x,dz=p2.z-p1.z;const l2=dx*dx+dz*dz;if(l2<1e-6)continue;let t=((x-p1.x)*dx+(z-p1.z)*dz)/l2;t=Math.max(0,Math.min(1,t));const px=p1.x+dx*t,pz=p1.z+dz*t;const d=Math.hypot(x-px,z-pz)-w2;if(d<m)m=d}}const dP=Math.hypot(x,z)-L.plaza-3.0;if(dP<m)m=dP;return m};
   const tooClose=(x,z,r)=>{for(const b of buildingZones){if(Math.hypot(x-b.x,z-b.z)<b.r+r)return true}return false};
 
-  // ── Papan masukan untuk map hangout: cari spot LEGA otomatis ──
-  // Sapu titik di sekitar plaza, ambil yang paling jauh dari jalan, bangunan/landmark, bukit,
-  // collider & tepi map. Deterministik (bukan acak) supaya posisinya konsisten tiap masuk map.
   {
     const clearance=(x,z)=>{
-      let m=Math.min(distToRoad(x,z)+3,LIM-8-Math.hypot(x,z));         // distToRoad sudah termasuk margin 3
+      let m=Math.min(distToRoad(x,z)+3,LIM-8-Math.hypot(x,z));
       for(const b of buildingZones)m=Math.min(m,Math.hypot(x-b.x,z-b.z)-b.r);
       for(const h of hillData)m=Math.min(m,Math.hypot(x-h.x,z-h.z)-h.r);
       for(const c of cols){if(c.type==='dome'){m=Math.min(m,Math.hypot(x-c.x,z-c.z)-c.radius);continue}
@@ -1695,11 +1073,11 @@ function build(n){
     let best=null;
     for(let r=L.plaza+8;r<=L.plaza+60;r+=3)for(let d=0;d<360;d+=6){
       const a=d*Math.PI/180,x=Math.cos(a)*r,z=Math.sin(a)*r,c=Math.min(clearance(x,z),9);
-      const sc2=c-r*.06;                                             // sedikit condong ke dekat plaza/spawn
+      const sc2=c-r*.06;
       if(!best||sc2>best.s)best={s:sc2,x,z}}
     const bx=best?best.x:0,bz=best?best.z:-(L.plaza+14);
     feedbackBoard(bx,bz,Math.atan2(-bx,-bz),0,n);
-    buildingZones.push({x:bx,z:bz,r:9});                             // pohon/dekor acak jangan menutupi papan
+    buildingZones.push({x:bx,z:bz,r:9});
   }
 
   const trees={};
@@ -1719,7 +1097,7 @@ function build(n){
   }
 
   const grasses=[],flowers=[],rocks=[];
-  const grassType=n=='desert'?'grassDry':n=='snow'?'snowMound':'grassTuft';
+  const grassType='grassTuft';
   const spreadGrass=(arr,count)=>{
     for(let i=0;i<count;i++){
       let x,z;const mode=Math.random();
@@ -1753,7 +1131,7 @@ function build(n){
     else if(t=='gazebo')gazebo(lm[1],lm[2]);
     else if(t=='statue')statue(lm[1],lm[2]);
   }
-  if(n=='island')dock(0,-180,20,8);
+  dock(0,-180,20,8);
   if(L.lamps)for(const[x,z]of L.lamps)lamp(x,z);
   if(L.swings)for(const[x,z,r]of L.swings)addSwing(x,z,r||0);
   if(L.battleRing)addRing(L.battleRing[0],L.battleRing[1],L.battleRing[2]);
@@ -2026,12 +1404,6 @@ function trail(x,z,c){
 }
 
 const AURA=[];
-
-/* ═══ game.js — bagian 2/2 ═══
-   State pemain, UI/menu, jaringan (Firebase), kontrol, loop utama, PWA.
-   Butuh world.js dimuat lebih dulu. ═══ */
-
-
 let me,base,rid,host=false,playing=false,joined=false,pl=null,P={},cy=0,zd=10,pitch=.6,keys={},ix=0,iy=0,run=false,jmp=false,last=performance.now(),selMap='island',roomMap='island';
 let lastRoom={},raceEnd=0,srvOff=0,soloRace=false;const CDMS=7000,srvNow=()=>Date.now()+srvOff;
 let raceTimer=0,raceRunning=false,raceFinished=false,raceArmed=false,raceCd=0,goT=0;
@@ -2054,7 +1426,6 @@ const SHAPES=['Setengah','Kotak','Segitiga','Bola','Silinder','Piramida','Permat
 const shGrid=$('shapes');
 SHAPES.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;b.className=cfg.sh==i?'on':'';b.onclick=()=>{cfg.sh=i;sv();setSelf();[...shGrid.children].forEach((x,j)=>x.classList.toggle('on',j==i))};shGrid.append(b)});
 
-/* ═══ HATS dengan harga ═══ */
 const hGrid=$('hats');
 function refreshHatUI(){
   [...hGrid.children].forEach((b,i)=>{
@@ -2100,7 +1471,6 @@ const FONTS=['monospace','sans-serif','serif','cursive','Impact','Georgia','Verd
 const fGrid=$('fonts');
 FONTS.forEach(n=>{const b=document.createElement('button');b.textContent=n;b.style.fontFamily=n;b.className=cfg.nf==n?'on':'';b.onclick=()=>{cfg.nf=n;sv();setSelf();[...fGrid.children].forEach(x=>x.classList.toggle('on',x.textContent==n))};fGrid.append(b)});
 
-/* ═══ CSS Color Picker (c1, c2, nc) ═══ */
 function buildColorGrid(containerId,key){
   const grid=$(containerId);
   if(!grid)return;
@@ -2124,7 +1494,6 @@ buildColorGrid('c1grid','c1');
 buildColorGrid('c2grid','c2');
 buildColorGrid('ncgrid','nc');
 
-/* ═══════════════════ KENDARAAN ═══════════════════ */
 function drawCarPreview(cv,C){
   const x=cv.getContext('2d'),W=cv.width,H=cv.height;
   x.imageSmoothingEnabled=false;
@@ -2266,7 +1635,6 @@ function selectCar(C){
   refreshCarUI();
 })();
 
-/* ═══════════ VOUCHER ═══════════ */
 (function initVoucher(){
   const menu=$('menu'),ttl=menu&&menu.querySelector('.ttl'),vi=$('vi');if(!ttl||!vi)return;
   const CODES={PLSJB:100000};
@@ -2307,15 +1675,12 @@ function selectCar(C){
 
 const MICON={
 island:'<rect x="0" y="9" width="12" height="3" fill="#3d8bff"/><rect x="3" y="8" width="6" height="1" fill="#f2d68a"/><rect x="6" y="4" width="1" height="4" fill="#8b5a2b"/><rect x="4" y="3" width="5" height="1" fill="#3aa84a"/><rect x="3" y="4" width="2" height="1" fill="#3aa84a"/><rect x="8" y="4" width="2" height="1" fill="#3aa84a"/><rect x="9" y="1" width="2" height="2" fill="#ffd23f"/>',
-desert:'<rect x="0" y="10" width="12" height="2" fill="#e0c070"/><rect x="5" y="4" width="2" height="1" fill="#d8a850"/><rect x="4" y="5" width="4" height="1" fill="#d8a850"/><rect x="3" y="6" width="6" height="1" fill="#c99a5b"/><rect x="2" y="7" width="8" height="1" fill="#d8a850"/><rect x="1" y="8" width="10" height="2" fill="#c99a5b"/><rect x="9" y="1" width="2" height="2" fill="#ff8c1a"/>',
-jungle:'<rect x="0" y="10" width="12" height="2" fill="#2f6b3a"/><rect x="5" y="7" width="2" height="3" fill="#6b4a2b"/><rect x="4" y="1" width="4" height="1" fill="#3aa84a"/><rect x="2" y="2" width="8" height="2" fill="#3aa84a"/><rect x="1" y="4" width="10" height="2" fill="#2f8a3a"/><rect x="3" y="6" width="6" height="1" fill="#2f8a3a"/>',
-snow:'<rect x="0" y="10" width="12" height="2" fill="#f4f8ff"/><rect x="5" y="2" width="2" height="1" fill="#ffffff"/><rect x="4" y="3" width="4" height="1" fill="#ffffff"/><rect x="3" y="4" width="6" height="2" fill="#8aa8c8"/><rect x="2" y="6" width="8" height="2" fill="#6a88a8"/><rect x="1" y="8" width="10" height="2" fill="#8aa8c8"/>',
 parkour:'<rect x="0" y="9" width="4" height="2" fill="#5cb85c"/><rect x="4" y="6" width="4" height="2" fill="#3d8bff"/><rect x="8" y="3" width="4" height="2" fill="#ff8c1a"/><rect x="1" y="7" width="2" height="2" fill="#7fd0ff"/>',
 boxing:'<rect x="3" y="1" width="6" height="1" fill="#17306b"/><rect x="2" y="2" width="8" height="5" fill="#ff5d5d"/><rect x="3" y="2" width="3" height="1" fill="#ff9a9a"/><rect x="1" y="3" width="1" height="3" fill="#17306b"/><rect x="10" y="3" width="1" height="3" fill="#17306b"/><rect x="2" y="7" width="8" height="1" fill="#b32b30"/><rect x="3" y="8" width="6" height="3" fill="#ffffff"/><rect x="3" y="11" width="6" height="1" fill="#17306b"/>',
 speedrace:'<rect x="1" y="6" width="10" height="3" fill="#ff5d5d"/><rect x="3" y="4" width="6" height="2" fill="#7fd0ff"/><rect x="2" y="8" width="3" height="3" fill="#17306b"/><rect x="7" y="8" width="3" height="3" fill="#17306b"/><rect x="5" y="2" width="2" height="2" fill="#ffd23f"/>',
 builds:'<rect x="1" y="1" width="4" height="4" fill="#5cb85c"/><rect x="7" y="1" width="4" height="4" fill="#3d8bff"/><rect x="1" y="7" width="4" height="4" fill="#ffd23f"/><rect x="7" y="7" width="4" height="4" fill="#ff5d5d"/>'};
 const micon=k=>'<svg class="mi" viewBox="0 0 12 12">'+(MICON[k]||'')+'</svg>';
-const MU_HANGOUT=[['island','Pulau'],['desert','Gurun'],['jungle','Jungle'],['snow','Salju']];
+const MU_HANGOUT=[['island','Pulau']];
 const MU_FUN=[['parkour','Parkour'],['speedrace','Balapan'],['boxing','Boxing'],['builds','Builds']];
 const MU=[...MU_HANGOUT,...MU_FUN];
 
@@ -2332,7 +1697,6 @@ const TRACKS=[['drag','Drag','Lurus, 4 zona cuaca','#5ab05a',1],['rally','Rally'
 function trkPreview(k,c){const x=c.getContext('2d'),S=48;x.fillStyle='#17306b';x.fillRect(0,0,S,S);setTrack(k);const b=TRK.bb,kz=(S-8)/Math.max(b.h,1),kx=kz*Math.min(8,(S-12)/Math.max(1,b.w*kz)),ox=S/2-(b.w/2)*kx,X=p=>ox+(p.x-b.x0)*kx,Y=p=>S-4-(p.z-b.z0)*kz;x.strokeStyle='#7fd0ff';x.lineWidth=2;x.beginPath();TRK.pts.forEach((p,i)=>i?x.lineTo(X(p),Y(p)):x.moveTo(X(p),Y(p)));x.stroke();const a=TRK.pts[0],e=TRK.pts[TRK.pts.length-1];x.fillStyle='#3fbf5f';x.fillRect(X(a)-3,Y(a)-3,6,5);x.fillStyle='#ffd23f';x.fillRect(X(e)-3,Y(e)-1,6,5)}
 function pickTrack(){return new Promise(res=>{const d=document.createElement('div');d.className='ui';d.innerHTML='<div class="card tkc" style="pointer-events:auto"><div class="lbl">Pilih Trek</div><div class="grid tkg"></div><button class="s">Kembali</button></div>';const g=d.querySelector('.grid');TRACKS.forEach(([k,n,t,col,df])=>{const b=document.createElement('button');b.className='tk';b.style.setProperty('--c',col);b.innerHTML='<canvas width="48" height="48"></canvas><span class="tt"><b>'+n+'</b><small>'+t+'</small><em class="dif">'+[1,2,3,4,5].map(i=>'<i'+(i<=df?' class="on"':'')+'></i>').join('')+'</em></span>';trkPreview(k,b.firstChild);b.onclick=()=>{d.remove();res(k)};g.append(b)});d.querySelector('.s').onclick=()=>{d.remove();res(null)};document.body.append(d)})}
 
-/* ═══ Play Maps (2 group) ═══ */
 const ppGridHangout=$('playMapsHangout');
 const ppGridFun=$('playMapsFun');
 async function startFromPlay(k){
@@ -2396,7 +1760,6 @@ $('sb').onclick=()=>{$('set').classList.add('hide');playing?$('pause').classList
 $('ms').onclick=()=>{show('skin');window.refreshCarUI&&window.refreshCarUI()};$('mr').onclick=()=>show('croom');$('mt').onclick=()=>show('set');
 $('mp').onclick=()=>show('playpick');
 
-/* ══════ PWA INSTALL ══════ */
 let dp=null;
 const mdBtn=$('md');
 const setMdLabel=(t,d)=>{if(mdBtn){mdBtn.textContent=t;mdBtn.disabled=!!d}};
@@ -2427,7 +1790,6 @@ function start(map,solo){
   soloRace=!!solo;if(solo)raceEnd=0;if(map=='speedrace')setTrack(rtrack);racePrg=0;build(map);clearBots();
   if(map=='speedrace'&&solo)mkBots();
   world.visible=true;menuG.visible=false;sc.add(pl.root);playing=true;
-  
   if(map=='builds') {
       document.getElementById('hud').classList.add('hide');
       document.getElementById('build-ui').classList.remove('hide');
@@ -2436,22 +1798,17 @@ function start(map,solo){
       document.getElementById('build-ui').classList.add('hide');
       document.getElementById('hud').classList.remove('hide');
   }
-
   document.body.classList.toggle('racing',map=='speedrace');
   document.body.classList.toggle('pkr',map=='parkour');
   document.body.classList.toggle('bxm',map=='boxing');
-  
   pl.boostMul=1;pl.boostTime=0;pl.boostCooldown=0;pl.sitting=null;pl.balloon=null;pl.hp=pl.maxHp;pl.inRing=false;pl.koTimer=0;pl.invuln=0;pl._prevJump=false;
-  
   if(map=='speedrace'){pl.x=((uid||'ab').charCodeAt(1)%5-2)*3;pl.z=-6;pl.y=0}
   else if(map=='parkour'){pl.x=0;pl.z=0;pl.y=1}
   else if(map=='boxing'){pl.x=0;pl.z=-16;pl.y=0}
   else if(map=='builds'){pl.x=0;pl.z=0;pl.y=0}
   else{pl.x=6;pl.z=-8;pl.y=0}
-  
   pl.vx=pl.vz=pl.vy=0;pl.r=0;raceTimer=0;raceRunning=false;raceFinished=false;raceArmed=true;
   ['menu','playpick','lobby'].forEach(i=>$(i).classList.add('hide'));
-  
   zd=12;cp=null;pf=false;
   if(map!='speedrace'&&map!='parkour'&&map!='boxing'&&map!='builds')setTimeout(()=>toast('Monster menyerang! Tekan F atau tombol HIT untuk melawan'),1500);
   if(map=='speedrace'){const ids=Object.keys(lastRoom).sort(),ln=solo?0:[-5,0,5][Math.max(0,ids.indexOf(uid))%3],q=trkAt(-6,ln);pl.x=q.x;pl.z=q.z;pl.y=0;pl.r=q.h;cy=Math.PI+q.h;pitch=.4;zd=9;TRK.ci=TRK.loop?Math.floor((TRK.len-6)/4):0;lastS=TRK.loop?TRK.len-6:-6;raceDist=-6;myFt=0;raceCd=raceEnd?Math.max(.01,(raceEnd-srvNow())/1000):3.99;car.sp=0;car.st=0;hideWin();toast(matchMedia('(pointer:coarse)').matches?'Trek 5000J! Kiri: panah atas/bawah = gas/rem · Kanan: panah kiri/kanan = belok':'Trek 5000J! Panah atas/bawah = gas/rem, kiri/kanan = belok (W/A/S/D juga bisa)')}else{cam.fov=60;cam.updateProjectionMatrix();if(map=='parkour'){cy=Math.PI;pitch=.5}if(map=='boxing'){cy=Math.PI;pitch=.45;bxStart()}}
@@ -2473,7 +1830,6 @@ function send(){if(!pl)return;const t=$('ci').value.trim();if(t){say(pl,t);me&&m
 $('cb').onclick=()=>{$('chat').classList.toggle('hide');$('ci').focus()};
 $('cs').onclick=send;$('ci').onkeydown=e=>{if(e.key=='Enter')send()};
 
-/* ═══ Keydown: Skip INPUT/TEXTAREA, tambah key E untuk action, ESC tutup feedback ═══ */
 addEventListener('keydown',e=>{
   if(e.code=='Escape'&&!$('fb').classList.contains('hide')){closeFeedback();e.preventDefault();return}
   if(e.target.tagName=='INPUT'||e.target.tagName=='TEXTAREA')return;
@@ -2488,7 +1844,6 @@ addEventListener('keyup',e=>keys[e.code]=0);
 let ds=0,lx=0,ly=0,cvT={};
 const look=(dx,dy)=>{cy-=dx*.008;pitch=Math.min(1.35,Math.max(.05,pitch+dy*.006))};
 let clk=null;cv.onmousedown=e=>{ds=1;lx=e.clientX;ly=e.clientY;clk={t:performance.now(),x:e.clientX,y:e.clientY}};
-/* ═══ Mouseup: boxing punch ATAU action button ═══ */
 addEventListener('mouseup',e=>{
   ds=0;
   if(clk&&playing&&e.button===0&&performance.now()-clk.t<230&&Math.hypot(e.clientX-clk.x,e.clientY-clk.y)<7){
@@ -2524,7 +1879,6 @@ $('jb').addEventListener('touchend',()=>{if(jbHoldTimer){clearTimeout(jbHoldTime
 $('rb').addEventListener('touchstart',()=>{if(pl&&pl.balloon){mobileDown=true}},{capture:true});
 $('rb').addEventListener('touchend',()=>{mobileDown=false},{capture:true});
 
-/* ═══ Bind Action Button & Feedback ═══ */
 const actBtn=$('act');
 if(actBtn){
   let actDown=false;
@@ -3166,7 +2520,6 @@ function frame(now){
         if(curMap=='boxing')boxStep(dt,now);
         if(curMap=='speedrace'&&BOTS.length)botsStep(dt,now);
         raceHud(dt);
-        /* ═══ Update papan masukan ═══ */
         updateBoards(now);
         if(MON.on)monStep(dt,now);
         for(const a of ANIM)a(dt,now);
@@ -3225,7 +2578,6 @@ function frame(now){
   for(let i=jbPops.length-1;i>=0;i--){const p=jbPops[i];p.l-=dt;p.sp.position.y+=dt*2.2;p.sp.material.opacity=Math.max(0,p.l);if(p.l<=0){sc.remove(p.sp);jbPops.splice(i,1)}}
   if(playing){
     if(curMap=='builds'){
-        // Kamera dihandle oleh updateBuildMode
     } else {
         const cp=Math.cos(pitch);
         cam.position.set(pl.x+Math.sin(cy)*cp*zd,pl.y+1+Math.sin(pitch)*zd,pl.z+Math.cos(cy)*cp*zd);
@@ -3285,7 +2637,6 @@ setInterval(()=>{
     setLoad('Siap!',1);finishBoot(300);
   }catch(e){console.error('Bootstrap:',e);setLoad('Error — lanjut offline',0.8);finishBoot(500)}
 })();
-
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{

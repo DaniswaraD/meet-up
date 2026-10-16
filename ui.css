@@ -84,7 +84,7 @@ input:focus{background:#fffbe0;box-shadow:var(--bd),0 0 0 8px #ffd23f66}
 .grid.map button.jc.on{box-shadow:var(--bd),0 0 0 8px var(--y),inset 0 0 0 4px #fff;translate:0 -4px}
 .grid.map button.jc.on::after{content:'PILIH';position:absolute;top:8px;left:8px;width:auto;height:auto;padding:3px 5px;background:var(--y);color:var(--k);font-size:7px;transform:none;animation:none}
 [data-map=island]{--c:#3d8bff;--c2:#7be08a}[data-map=desert]{--c:#f0a940;--c2:#ffe39a}[data-map=jungle]{--c:#23803c;--c2:#8be08a}
-[data-map=snow]{--c:#7ab8ff;--c2:#f4f9ff}[data-map=parkour]{--c:#8f5cff;--c2:#ff5db1}[data-map=speedrace]{--c:#ff7a3a;--c2:#ffd23f}[data-map=boxing]{--c:#ff3a5a;--c2:#ffb02a}
+[data-map=snow]{--c:#7ab8ff;--c2:#f4f9ff}[data-map=parkour]{--c:#8f5cff;--c2:#ff5db1}[data-map=speedrace]{--c:#ff7a3a;--c2:#ffd23f}[data-map=boxing]{--c:#ff3a5a;--c2:#ffb02a}[data-map=builds]{--c:#5cb85c;--c2:#8fd08f}
 .grid.map button[data-map=snow]{--lo:#c3d6f3}
 .tkg button.tk.jc{background:#e8f2ff}
 
@@ -301,6 +301,46 @@ body.bxm #toast{top:104px}body.racing #toast{top:92px}
 #vtr.out i{animation-name:vtOut}
 @keyframes vtIn{to{transform:scale(1.05)}}
 @keyframes vtOut{from{transform:scale(1.05)}to{transform:scale(0)}}
+
+/* ===== Build Mode UI ===== */
+#build-ui { z-index: 20; pointer-events: none; }
+#build-ui > * { pointer-events: auto; }
+
+.build-toolbar {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px; background: #17306b; padding: 10px;
+    box-shadow: var(--bd), 0 0 0 3px #fff, 0 8px 0 6px #0004;
+}
+.build-tool {
+    width: 60px; height: 60px; font-size: 20px; flex-direction: column;
+    background: linear-gradient(#fff, #e3eeff); color: var(--k);
+    --lo: #c3d6f3; --hi: #fff; padding: 0; margin: 0;
+}
+.build-tool span { font-size: 8px; margin-top: 2px; }
+.build-tool.on { background: #ffe27a; box-shadow: 0 0 0 3px var(--k), 0 0 0 6px #ffd23f; transform: translateY(-4px); }
+.build-tool.d { background: #ff5d5d; color: #fff; --lo: #b32b30; --hi: #ff9a9a; }
+
+.popup {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: #f4f9ff; padding: 20px; box-shadow: var(--bd), inset 0 -4px 0 #cfe0f7, inset 0 4px 0 #fff;
+    display: flex; flex-direction: column; gap: 12px; z-index: 21; width: min(92vw, 400px);
+    max-height: 80vh; overflow-y: auto;
+}
+.popup-title { font-size: 14px; text-align: center; color: var(--k); letter-spacing: 2px; border-bottom: 4px dashed #3d8bff33; padding-bottom: 8px; }
+.popup-hint { font-size: 8px; text-align: center; opacity: 0.6; }
+.divider { height: 4px; background: repeating-linear-gradient(90deg, #3d8bff 0 8px, transparent 8px 16px); opacity: 0.3; }
+
+#part-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+#part-grid button { font-size: 9px; padding: 10px 4px; min-height: 50px; white-space: normal; }
+#part-grid button.on { background: #ffd23f; color: #17306b; --lo: #d4b23a; --hi: #fff8d0; }
+
+.inspector-row { display: flex; align-items: center; gap: 10px; }
+.inspector-row label { font-size: 10px; width: 40px; text-align: right; }
+.inspector-row input[type=range] { flex: 1; }
+
+#save-panel input[type=text] { width: 100%; margin: 0; }
+#save-panel button { margin: 0; }
+#save-panel select { width: 100%; margin: 0; padding: 10px; font-size: 10px; }
 
 @media(max-height:430px){
   .grid.map{gap:10px}.grid.map button.jc{min-height:104px}.grid.map button.jc svg.mi{top:14px;width:34px;height:34px;margin-left:-17px}

@@ -655,7 +655,7 @@ function buildCurved(){
 function buildDrag(){
   const LL=TRK.len,T=TXS(),lv=FXL(),W=RW;
   const gw=180,gh=LL+120;
-  Mt(new THREE.PlaneGeometry(gw,gh).rotateX(-1.5708),LM(0xffffff,{map:tex(T,T,(x,w,h)=>{noise(x,w,h,'#4a8f4a',w*h/5,.3)},gw/12,gh/12)),0,-.05,LL/2);
+  Mt(new THREE.PlaneGeometry(gw,gh).rotateX(-1.5708),LM(0xffffff,{map:tex(T,T,(x,w,h)=>{noise(x,w,h,'#4a8f4a',w*h/5,.3)},gw/12,gh/12)}),0,-.05,LL/2);
   ribbon(-W/2,W/2,.04,8,LM(0xffffff,{map:tex(64,64,(x,w,h)=>{noise(x,w,h,'#2a2a32',w*h/3,.3);x.fillStyle='#fff';x.fillRect(1,0,2,h);x.fillRect(w-3,0,2,h);x.fillStyle='#ffd23f';x.fillRect(w/2-1,0,2,h/2)},1,LL/8)}));
   const cb=tex(8,16,(x,w,h)=>{x.fillStyle='#e33';x.fillRect(0,0,w,h/2);x.fillStyle='#fff';x.fillRect(0,h/2,w,h/2)},1,LL/2);
   ribbon(W/2,W/2+1.2,.1,2,new THREE.MeshBasicMaterial({map:cb}));ribbon(-W/2-1.2,-W/2,.1,2,new THREE.MeshBasicMaterial({map:cb}));

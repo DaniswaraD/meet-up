@@ -505,7 +505,14 @@ let racePrg=0,raceDist=0,lastS=0,myFt=0;
 const DRAG_LENGTHS={drag250:250,drag500:500,drag1000:1000,drag5000:5000};
 const CIRCUIT_LEN=4500,CIRCUIT_LAPS=2;
 const TPAR={drag:[250,300,400],rally:[280,340,450],neon:[270,330,440],beach:[270,330,440],canyon:[290,350,460],jelly:[280,340,450],circuit1:[260,320,420],circuit2:[260,320,420],circuit3:[270,330,440],circuit4:[280,340,450]};
-const LOOPS={rally2:{h:[[3,.15,.6],[5,.11,1.3],[7,.07,.2],[10,.03,2.1]],sx:1.35,sz:.8},neon2:{h:[[2,.2,.4],[3,.1,1.1],[5,.05,2.2]],sx:1.5,sz:.85},
+const LOOPS={
+  rally2:{h:[[3,.15,.6],[5,.11,1.3],[7,.07,.2],[10,.03,2.1]],sx:1.35,sz:.8},
+  neon2:{h:[[2,.2,.4],[3,.1,1.1],[5,.05,2.2]],sx:1.5,sz:.85},
+  rally:{h:[[3,.16,.5],[4,.11,1.4],[6,.08,.3],[9,.035,2.2]],sx:1.45,sz:.78},
+  neon:{h:[[2,.28,.4],[4,.14,1.2],[7,.06,2.3],[11,.03,.5]],sx:1.62,sz:.86},
+  beach:{h:[[2,.1,.8],[3,.18,.2],[6,.09,1.5],[9,.04,2.6]],sx:1.5,sz:.72},
+  canyon:{h:[[2,.13,.2],[4,.17,1.6],[6,.09,.9],[10,.04,2.4]],sx:1.42,sz:.95},
+  jelly:{h:[[2,.24,.5],[3,.16,1.2],[5,.09,.1],[8,.05,2.0],[13,.03,.7]],sx:1.28,sz:1.02},
   circuit1:{h:[[2,.22,.4],[3,.12,1.1],[5,.06,2.2]],sx:1.4,sz:.85},
   circuit2:{h:[[3,.18,.5],[4,.1,1.3],[6,.06,2.0],[9,.03,.3]],sx:1.5,sz:.9},
   circuit3:{h:[[2,.2,.7],[4,.12,1.2],[5,.06,2.4]],sx:1.3,sz:.95},
@@ -583,7 +590,7 @@ function setTrack(k){
     for(let i=1;i<=n;i++)P.push({x:0,z:i*4,h:0,s:i*4});
     if(P[P.length-1].z<len)P.push({x:0,z:len,h:0,s:len});
   } else {
-    const key=circ?k:'rally2';
+    const key=LOOPS[k]?k:'rally2';
     const c=LOOPS[key]||LOOPS.rally2;const M=4000,L=circ?CIRCUIT_LEN:5000,N=1250,raw=[],cum=[0];
     for(let i=0;i<M;i++){const t=i/M*6.2832;let r=1;for(const[n,a,p]of c.h)r+=a*Math.cos(n*t+p);raw.push([Math.cos(t)*r*c.sx,Math.sin(t)*r*c.sz])}
     let len=0;for(let i=1;i<=M;i++){const a=raw[i-1],b=raw[i%M];len+=Math.hypot(b[0]-a[0],b[1]-a[1]);cum.push(len)}
@@ -1162,36 +1169,125 @@ function drawCarPreview(cv,C){
   const c1='#'+C.col.toString(16).padStart(6,'0');
   const c2='#'+C.col2.toString(16).padStart(6,'0');
   const r=(x0,y0,w,h,c)=>{x.fillStyle=c;x.fillRect(x0,y0,w,h)};
-  if(C.cat==='drag'){
-    r(cx-24,cy-7,48,7,c1);r(cx-18,cy-13,32,6,c1);
-    r(cx-14,cy-12,26,4,'#1a1a1a');r(cx+2,cy-11,10,3,'#0a0a0a');
-    r(cx-22,cy-15,20,2,c2);r(cx-3,cy-15,6,2,'#222');
-    r(cx-16,cy-3,9,8,'#1a1a1f');r(cx-14,cy-2,5,5,'#c0c8d0');
-    r(cx+8,cy-3,9,8,'#1a1a1f');r(cx+10,cy-2,5,5,'#c0c8d0');
-    r(cx+22,cy-6,2,2,'#fff3a0');r(cx-24,cy-6,2,2,'#ff2d2d');
-    r(cx-22,cy-4,3,1,'#888');
-  }else if(C.cat==='rally'){
-    r(cx-22,cy-8,44,8,c1);r(cx-14,cy-16,28,9,c1);
-    r(cx-12,cy-15,24,6,'#223344');r(cx-12,cy-15,1,6,'#0a1520');r(cx+9,cy-15,1,6,'#0a1520');
-    r(cx-24,cy-14,12,2,c2);r(cx-6,cy-19,4,4,'#ffffff');
-    r(cx-16,cy-4,8,7,'#1a1a1f');r(cx-14,cy-2,4,5,'#c0c8d0');
-    r(cx+8,cy-4,8,7,'#1a1a1f');r(cx+10,cy-2,4,5,'#c0c8d0');
-    r(cx+21,cy-6,2,2,'#fff3a0');r(cx-23,cy-6,2,2,'#ff2d2d');
-    r(cx-11,cy-1,5,1,c2);r(cx+6,cy-1,5,1,c2);
-  }else if(C.cat==='circuit'){
-    r(cx-26,cy-7,52,6,c1);r(cx+8,cy-10,18,3,c1);
-    r(cx-12,cy-13,20,6,c1);r(cx-10,cy-12,16,4,'#223344');
-    r(cx-28,cy-15,14,2,c2);r(cx-26,cy-13,1,6,c2);
-    r(cx-18,cy-3,8,7,'#1a1a1f');r(cx-16,cy-2,4,5,'#c8d0e0');
-    r(cx+10,cy-3,8,7,'#1a1a1f');r(cx+12,cy-2,4,5,'#c8d0e0');
-    r(cx+25,cy-6,3,2,'#fff3a0');r(cx-27,cy-6,2,2,'#ff2d2d');
-    r(cx-4,cy-9,8,1,c2);
-  }else{
-    r(cx-24,cy-6,36,3,c1);r(cx+12,cy-5,12,2,c1);r(cx+22,cy-6,4,2,c1);
-    r(cx-26,cy-9,12,7,c1);r(cx-4,cy-12,8,3,c2);r(cx-28,cy-17,16,2,c2);
-    r(cx-22,cy-15,1,6,'#333');r(cx-24,cy-8,4,4,'#111');
-    r(cx-25,cy-4,8,8,'#1a1a1f');r(cx-23,cy-2,4,4,'#cfd6e0');
-    r(cx+12,cy-4,8,8,'#1a1a1f');r(cx+14,cy-2,4,4,'#888');
+  switch(C.id){
+    case 'f1':
+      r(cx-14,cy-5,28,4,c1);r(cx-6,cy-9,12,4,c1);r(cx-4,cy-8,8,3,'#111');
+      r(cx-16,cy-3,10,4,'#1a1a1f');r(cx-14,cy-1,4,3,'#c8d0d8');
+      r(cx+6,cy-3,10,4,'#1a1a1f');r(cx+8,cy-1,4,3,'#c8d0d8');
+      r(cx-12,cy-6,24,1,c2);r(cx-10,cy-12,20,1,c2);
+      r(cx-13,cy-10,2,3,'#111');r(cx+11,cy-10,2,3,'#111');
+      break;
+    case 'demon':
+      r(cx-22,cy-7,44,7,c1);r(cx-14,cy-14,26,7,c1);r(cx-12,cy-13,22,5,'#1a1a1a');
+      r(cx-24,cy-9,6,3,c1);r(cx+18,cy-9,6,3,c1);
+      r(cx-20,cy-4,9,7,'#1a1a1f');r(cx-18,cy-2,5,4,'#b8bcc0');
+      r(cx+11,cy-4,9,7,'#1a1a1f');r(cx+13,cy-2,5,4,'#b8bcc0');
+      r(cx-22,cy-8,4,1,c2);r(cx-18,cy-10,12,2,'#111');
+      r(cx-22,cy-6,2,2,'#ff2d2d');r(cx+20,cy-6,2,2,'#ff2d2d');
+      break;
+    case 'copo':
+      r(cx-20,cy-6,40,6,c1);r(cx-13,cy-13,24,7,c1);r(cx-11,cy-12,20,5,'#1a1a1a');
+      r(cx-19,cy-3,8,6,'#1a1a1f');r(cx-17,cy-1,4,4,'#c0c4c8');
+      r(cx+11,cy-3,8,6,'#1a1a1f');r(cx+13,cy-1,4,4,'#c0c4c8');
+      r(cx-6,cy-12,12,3,'#111');r(cx-4,cy-14,8,2,'#2a2a2a');
+      r(cx-18,cy-7,2,2,'#fff3a0');r(cx+16,cy-7,2,2,'#fff3a0');
+      break;
+    case 'supra':
+      r(cx-20,cy-6,40,6,c1);r(cx-13,cy-12,22,6,c1);r(cx-11,cy-11,18,4,'#223344');
+      r(cx-18,cy-3,8,6,'#1a1a1f');r(cx-16,cy-1,4,4,'#c8ccd0');
+      r(cx+10,cy-3,8,6,'#1a1a1f');r(cx+12,cy-1,4,4,'#c8ccd0');
+      r(cx-17,cy-14,34,2,c2);r(cx-14,cy-12,2,2,'#111');r(cx+12,cy-12,2,2,'#111');
+      r(cx-18,cy-7,2,2,'#fff3a0');r(cx+16,cy-7,2,2,'#fff3a0');
+      break;
+    case 'gtr':
+      r(cx-21,cy-7,42,7,c1);r(cx-13,cy-13,26,6,c1);r(cx-11,cy-12,22,4,'#223344');
+      r(cx-18,cy-3,9,6,'#1a1a1f');r(cx-16,cy-1,5,4,'#b8bcc0');
+      r(cx+9,cy-3,9,6,'#1a1a1f');r(cx+11,cy-1,5,4,'#b8bcc0');
+      r(cx-20,cy-8,40,1,c2);
+      r(cx-7,cy-6,2,2,'#ff2d2d');r(cx-4,cy-6,2,2,'#ff2d2d');
+      r(cx+2,cy-6,2,2,'#ff2d2d');r(cx+5,cy-6,2,2,'#ff2d2d');
+      break;
+    case 'cobra':
+      r(cx-21,cy-6,42,6,c1);r(cx-13,cy-13,24,7,c1);r(cx-11,cy-12,20,5,'#1a1a1a');
+      r(cx-6,cy-15,12,3,'#2a2a2a');r(cx-4,cy-17,8,2,'#1a1a1a');
+      r(cx-19,cy-3,8,6,'#1a1a1f');r(cx-17,cy-1,4,4,'#b8bcc0');
+      r(cx+11,cy-3,8,6,'#1a1a1f');r(cx+13,cy-1,4,4,'#b8bcc0');
+      r(cx-18,cy-14,34,1,c2);
+      r(cx-18,cy-7,2,2,'#fff3a0');r(cx+16,cy-7,2,2,'#fff3a0');
+      break;
+    case 'wrx':
+      r(cx-20,cy-6,40,6,c1);r(cx-12,cy-13,24,7,c1);r(cx-10,cy-12,20,5,'#223344');
+      r(cx-3,cy-15,6,2,'#111');
+      r(cx-17,cy-14,34,2,c2);r(cx-15,cy-12,2,3,'#111');r(cx+13,cy-12,2,3,'#111');
+      r(cx-18,cy-3,8,6,'#1a1a1f');r(cx-16,cy-1,4,4,'#c8ccd0');
+      r(cx+10,cy-3,8,6,'#1a1a1f');r(cx+12,cy-1,4,4,'#c8ccd0');
+      r(cx-18,cy-7,2,2,'#fff3a0');r(cx+16,cy-7,2,2,'#fff3a0');
+      break;
+    case 'evo':
+      r(cx-20,cy-6,40,6,c1);r(cx-12,cy-13,24,7,c1);r(cx-10,cy-12,20,5,'#223344');
+      r(cx-15,cy-13,30,1,c2);r(cx-13,cy-11,2,2,'#111');r(cx+11,cy-11,2,2,'#111');
+      r(cx-18,cy-3,8,6,'#1a1a1f');r(cx-16,cy-1,4,4,'#c8ccd0');
+      r(cx+10,cy-3,8,6,'#1a1a1f');r(cx+12,cy-1,4,4,'#c8ccd0');
+      r(cx-18,cy-7,2,2,'#fff3a0');r(cx+16,cy-7,2,2,'#fff3a0');
+      break;
+    case 'quattro':
+      r(cx-19,cy-6,38,6,c1);r(cx-13,cy-12,24,6,c1);r(cx-11,cy-11,20,4,'#223344');
+      r(cx-20,cy-9,4,3,c1);r(cx+16,cy-9,4,3,c1);
+      r(cx-17,cy-3,8,6,'#1a1a1f');r(cx-15,cy-1,4,4,'#c8ccd0');
+      r(cx+9,cy-3,8,6,'#1a1a1f');r(cx+11,cy-1,4,4,'#c8ccd0');
+      r(cx-16,cy-13,32,1,c2);
+      break;
+    case 'delta':
+      r(cx-18,cy-6,36,6,c1);r(cx-12,cy-12,22,6,c1);r(cx-10,cy-11,18,4,'#223344');
+      r(cx-19,cy-4,2,3,'#111');r(cx+17,cy-4,2,3,'#111');
+      r(cx-16,cy-3,8,6,'#1a1a1f');r(cx-14,cy-1,4,4,'#c8ccd0');
+      r(cx+8,cy-3,8,6,'#1a1a1f');r(cx+10,cy-1,4,4,'#c8ccd0');
+      r(cx-15,cy-13,30,1,c2);
+      break;
+    case 'celica':
+      r(cx-19,cy-6,38,6,c1);r(cx-12,cy-12,22,6,c1);r(cx-10,cy-11,18,4,'#223344');
+      r(cx-16,cy-13,32,1,c2);r(cx-14,cy-11,2,2,'#111');r(cx+12,cy-11,2,2,'#111');
+      r(cx-17,cy-3,8,6,'#1a1a1f');r(cx-15,cy-1,4,4,'#c8ccd0');
+      r(cx+9,cy-3,8,6,'#1a1a1f');r(cx+11,cy-1,4,4,'#c8ccd0');
+      break;
+    case 'ctr':
+      r(cx-18,cy-6,36,6,c1);r(cx-12,cy-12,22,6,c1);r(cx-10,cy-11,18,4,'#223344');
+      r(cx-17,cy-14,34,2,c2);r(cx-15,cy-12,2,3,'#111');r(cx+13,cy-12,2,3,'#111');
+      r(cx-16,cy-3,8,6,'#1a1a1f');r(cx-14,cy-1,4,4,'#c8ccd0');
+      r(cx+8,cy-3,8,6,'#1a1a1f');r(cx+10,cy-1,4,4,'#c8ccd0');
+      r(cx-18,cy-7,2,2,'#fff3a0');r(cx+16,cy-7,2,2,'#fff3a0');
+      break;
+    case 'gt3':
+      r(cx-20,cy-6,40,6,c1);r(cx-11,cy-12,20,6,c1);r(cx-9,cy-11,16,4,'#223344');
+      r(cx-19,cy-3,8,6,'#1a1a1f');r(cx-17,cy-1,4,4,'#d0d4d8');
+      r(cx+11,cy-3,8,6,'#1a1a1f');r(cx+13,cy-1,4,4,'#d0d4d8');
+      r(cx-16,cy-14,32,2,c2);r(cx-14,cy-12,2,3,'#111');r(cx+12,cy-12,2,3,'#111');
+      break;
+    case 'senna':
+      r(cx-20,cy-5,40,5,c1);r(cx-11,cy-11,18,5,c1);r(cx-9,cy-10,14,3,'#223344');
+      r(cx-19,cy-2,8,5,'#1a1a1f');r(cx-17,cy,4,3,'#c8ccd0');
+      r(cx+11,cy-2,8,5,'#1a1a1f');r(cx+13,cy,4,3,'#c8ccd0');
+      r(cx-16,cy-13,32,1,c2);
+      r(cx-17,cy-6,2,2,'#fff3a0');r(cx+15,cy-6,2,2,'#fff3a0');
+      break;
+    case 'radical':
+      r(cx-12,cy-5,24,4,c1);r(cx-7,cy-10,14,4,c1);r(cx-5,cy-9,10,3,'#111');
+      r(cx-3,cy-12,6,3,c1);
+      r(cx-14,cy-2,8,5,'#1a1a1f');r(cx-12,cy,4,3,'#d8d8d8');
+      r(cx+6,cy-2,8,5,'#1a1a1f');r(cx+8,cy,4,3,'#d8d8d8');
+      r(cx-13,cy-7,26,1,c2);
+      break;
+    case 'fxxk':
+      r(cx-21,cy-6,42,5,c1);r(cx-11,cy-12,20,5,c1);r(cx-9,cy-11,16,3,'#223344');
+      r(cx-22,cy-2,12,3,'#1a1a1f');r(cx+10,cy-2,12,3,'#1a1a1f');
+      r(cx-18,cy,4,3,'#c8ccd0');r(cx+14,cy,4,3,'#c8ccd0');
+      r(cx-16,cy-14,32,2,c2);r(cx-14,cy-12,2,4,'#111');r(cx+12,cy-12,2,4,'#111');
+      r(cx-17,cy-7,2,2,'#fff3a0');r(cx+15,cy-7,2,2,'#fff3a0');
+      break;
+    default:
+      r(cx-20,cy-5,40,5,c1);r(cx-12,cy-11,24,6,c1);r(cx-10,cy-10,20,4,'#223344');
+      r(cx-18,cy-3,8,6,'#1a1a1f');r(cx-16,cy-1,4,4,'#c8ccd0');
+      r(cx+10,cy-3,8,6,'#1a1a1f');r(cx+12,cy-1,4,4,'#c8ccd0');
   }
 }
 function refreshCarUI(){const g=$('cars');if(!g)return;[...g.querySelectorAll('button.car')].forEach(b=>{const C=carOf(b.dataset.car);b.classList.toggle('on',cfg.car===C.id);const pr=b.querySelector('.cp');const owned=(cfg.cars||['f1']).includes(C.id);if(C.price===0){pr.textContent='GRATIS';pr.className='cp owned'}else if(owned){pr.textContent='DIMILIKI';pr.className='cp owned'}else{pr.textContent=C.price+' JB';pr.className='cp lock'}})}
@@ -1210,7 +1306,6 @@ const MU_FUN=[['parkour','Parkour'],['speedrace','Balapan'],['boxing','Boxing'],
 const MU=[...MU_HANGOUT,...MU_FUN];
 const mGridHangout=$('mapsHangout');
 const mGridFun=$('mapsFun');
-const mGrid=mGridHangout;
 const mkMapBtn=(k,l,host)=>{const b=document.createElement('button');b.innerHTML=micon(k)+'<span>'+l+'</span>';b.className=selMap==k?'on':'';b.dataset.map=k;b.onclick=()=>{selMap=k;[...mGridHangout.children,...mGridFun.children].forEach(x=>x.classList.toggle('on',x.dataset.map===k))};return b};
 MU_HANGOUT.forEach(([k,l])=>mGridHangout.append(mkMapBtn(k,l)));
 MU_FUN.forEach(([k,l])=>mGridFun.append(mkMapBtn(k,l)));
@@ -1353,96 +1448,269 @@ const car={sp:0,st:0};
 function mkCar(c,type){
   type=type||'f1';
   const CFG=carOf(type);
-  const body=CFG.col,trim=CFG.col2,cat=CFG.cat;
+  const body=CFG.col,trim=CFG.col2;
   const g=new THREE.Group(),w=[],P=[],put=(geo,col,x,y,z,o)=>P.push(Object.assign({geo,color:col,x,y,z},o||{}));
   const addWheel=(x,z,r,wd,rimC)=>{const wg=new THREE.Group();wg.position.set(x,r+.05,z);const tire=new THREE.Mesh(new THREE.CylinderGeometry(r,r,wd,12).rotateZ(1.5708),LM(0x1a1a1f));const rim=new THREE.Mesh(BOX(r*1.35,.15,wd*1.1),LM(rimC||0xcfd6e0));if(R.shadowMap.enabled){tire.castShadow=true;rim.castShadow=true}wg.add(tire,rim);g.add(wg);w.push(wg)};
-  if(cat==='drag'){
-    put(BOX(2.0,.7,4.6),body,0,.75,0);
-    put(BOX(1.85,.35,2.0),body,0,1.15,-.3);
-    put(BOX(1.7,.35,1.4),0x1a1a1a,0,1.4,-.4);
-    put(BOX(1.75,.28,.06),0x223344,0,1.25,.35);
-    put(BOX(1.75,.28,.06),0x223344,0,1.25,-1.2);
-    put(BOX(1.9,.1,.5),trim,0,.78,2.1);
-    put(BOX(1.6,.35,.5),body,0,1.05,1.85);
-    put(BOX(1.5,.15,.1),trim,0,.82,2.28);
-    put(BOX(.7,.25,.7),0x111111,0,1.35,-1.0);
-    put(BOX(.08,.9,.6),0x1a1a1a,-1.05,.75,-1.3);
-    put(BOX(.08,.9,.6),0x1a1a1a,1.05,.75,-1.3);
-    put(BOX(.55,.15,.08),0xfff3a0,-.65,.9,2.28);
-    put(BOX(.55,.15,.08),0xfff3a0,.65,.9,2.28);
-    put(BOX(.6,.18,.08),0xff2d2d,-.65,.95,-2.28);
-    put(BOX(.6,.18,.08),0xff2d2d,.65,.95,-2.28);
-    put(new THREE.CylinderGeometry(.09,.09,.3,8).rotateX(1.5708),0x888888,-.5,.6,-2.35);
-    put(new THREE.CylinderGeometry(.09,.09,.3,8).rotateX(1.5708),0x888888,.5,.6,-2.35);
-    put(BOX(1.9,.08,.5),0x1a1a1a,0,1.75,-2.15);
-    put(BOX(.1,.5,.3),0x1a1a1a,-.85,1.5,-2.15);
-    put(BOX(.1,.5,.3),0x1a1a1a,.85,1.5,-2.15);
-    addWheel(-1.0,1.4,.42,.5,0xd8d8d8);addWheel(1.0,1.4,.42,.5,0xd8d8d8);
-    addWheel(-1.05,-1.55,.5,.55,0xd8d8d8);addWheel(1.05,-1.55,.5,.55,0xd8d8d8);
-  }else if(cat==='rally'){
-    put(BOX(1.9,.7,3.6),body,0,.75,0);
-    put(BOX(1.82,.5,1.8),body,0,1.3,-.1);
-    put(BOX(1.72,.35,1.4),0x1a1a1a,0,1.7,-.15);
-    put(BOX(1.78,.38,1.5),0x223344,0,1.5,-.15);
-    put(BOX(1.82,.42,.06),0x223344,0,1.45,.72);
-    put(BOX(1.82,.42,.06),0x223344,0,1.45,-1.02);
-    put(BOX(1.75,.12,.6),trim,0,1.15,1.5);
-    put(BOX(1.4,.15,.1),trim,0,1.95,-1.75);
-    put(BOX(.1,.35,.1),0x1a1a1a,-.6,1.8,-1.75);
-    put(BOX(.1,.35,.1),0x1a1a1a,.6,1.8,-1.75);
-    put(BOX(1.3,.4,.4),body,0,1.55,-1.55);
-    put(BOX(.35,.15,.08),0xfff3a0,-.65,1.0,1.9);
-    put(BOX(.35,.15,.08),0xfff3a0,.65,1.0,1.9);
-    put(BOX(.5,.2,.08),0xff2d2d,-.6,1.0,-1.9);
-    put(BOX(.5,.2,.08),0xff2d2d,.6,1.0,-1.9);
-    put(BOX(.9,.3,.4),0x1a1a1a,-1.15,.5,.5);
-    put(BOX(.9,.3,.4),0x1a1a1a,1.15,.5,.5);
-    put(BOX(.9,.3,.4),0x1a1a1a,-1.15,.5,-.5);
-    put(BOX(.9,.3,.4),0x1a1a1a,1.15,.5,-.5);
-    put(BOX(.9,.15,.5),0x1a1a1a,-1.15,.85,1.3);
-    put(BOX(.9,.15,.5),0x1a1a1a,1.15,.85,1.3);
-    put(BOX(.9,.15,.5),0x1a1a1a,-1.15,.85,-1.3);
-    put(BOX(.9,.15,.5),0x1a1a1a,1.15,.85,-1.3);
-    addWheel(-.95,1.2,.48,.42,0xc0c8d0);addWheel(.95,1.2,.48,.42,0xc0c8d0);
-    addWheel(-.95,-1.25,.48,.42,0xc0c8d0);addWheel(.95,-1.25,.48,.42,0xc0c8d0);
-  }else if(cat==='circuit'){
-    put(BOX(2.0,.42,4.6),body,0,.62,0);
-    put(BOX(1.7,.32,1.2),body,0,.5,2.1);
-    put(BOX(1.9,.1,.5),trim,0,.4,2.6);
-    put(BOX(1.6,.4,1.8),body,0,1.0,-.3);
-    put(BOX(1.5,.3,1.1),0x223344,0,1.15,-.05);
-    put(BOX(1.5,.3,1.5),body,0,.95,-1.6);
-    put(BOX(.08,.7,1.8),trim,0,1.45,-1.75);
-    put(BOX(.3,.5,1.2),trim,-1.05,.7,-1.4);
-    put(BOX(.3,.5,1.2),trim,1.05,.7,-1.4);
-    put(BOX(1.8,.1,.5),0x111111,0,.45,-2.5);
-    put(BOX(1.6,.08,.08),0xff2d2d,0,.85,-2.48);
-    put(BOX(.45,.1,.1),0xf0f4ff,-.7,.72,2.42);
-    put(BOX(.45,.1,.1),0xf0f4ff,.7,.72,2.42);
-    put(new THREE.CylinderGeometry(.08,.08,.3,8).rotateX(1.5708),0x888888,-.4,.55,-2.55);
-    put(new THREE.CylinderGeometry(.08,.08,.3,8).rotateX(1.5708),0x888888,.4,.55,-2.55);
-    addWheel(-1.0,1.5,.42,.5,0xd8d8d8);addWheel(1.0,1.5,.42,.5,0xd8d8d8);
-    addWheel(-1.05,-1.5,.48,.52,0xd8d8d8);addWheel(1.05,-1.5,.48,.52,0xd8d8d8);
-  }else{
-    put(BOX(.9,.4,3.6),body,0,.55,0);
-    put(BOX(.55,.3,1.2),body,0,.45,1.6);
-    put(new THREE.ConeGeometry(.28,.5,4).rotateX(-1.5708),body,0,.45,2.35);
-    put(BOX(.4,.22,1.4),body,-1.0,.55,-.5);
-    put(BOX(.4,.22,1.4),body,1.0,.55,-.5);
-    put(BOX(.7,.35,.7),0x111111,0,.85,-.2);
-    put(new THREE.TorusGeometry(.4,.05,4,10).rotateX(1.5708),0x222222,0,1.1,-.2);
-    put(BOX(.5,.35,.5),body,0,1.05,-1.15);
-    put(BOX(2.3,.1,.65),body,0,.4,2.05);
-    put(BOX(2.1,.08,.15),trim,0,.36,2.35);
-    put(BOX(.12,.5,.6),0x111111,-1.05,.6,2.05);
-    put(BOX(.12,.5,.6),0x111111,1.05,.6,2.05);
-    put(BOX(1.7,.1,.55),body,0,1.55,-2.05);
-    put(BOX(1.5,.08,.12),trim,0,1.6,-1.75);
-    put(BOX(.1,.9,.1),0x111111,-.7,1.1,-2.05);
-    put(BOX(.1,.9,.1),0x111111,.7,1.1,-2.05);
-    put(BOX(1.1,.08,.7),body,0,.4,-2.05);
-    addWheel(-1.05,1.4,.36,.5,0xcfd6e0);addWheel(1.05,1.4,.36,.5,0xcfd6e0);
-    addWheel(-1.15,-1.5,.5,.55,0x888888);addWheel(1.15,-1.5,.5,.55,0x888888);
+  switch(type){
+    case 'f1':
+      put(BOX(1.0,.32,4.2),body,0,.42,0);
+      put(BOX(.85,.42,1.6),body,0,.82,-.3);
+      put(BOX(.75,.3,1.0),0x111111,0,1.05,-.3);
+      put(BOX(.7,.25,.7),0x222222,0,1.25,-.9);
+      put(BOX(2.3,.06,.55),trim,0,.26,2.25);
+      put(BOX(.1,.5,.55),0x111111,-1.1,.42,2.25);
+      put(BOX(.1,.5,.55),0x111111,1.1,.42,2.25);
+      put(BOX(1.4,.06,.55),trim,0,.82,-2.2);
+      put(BOX(.08,.55,.55),0x111111,-.7,.62,-2.2);
+      put(BOX(.08,.55,.55),0x111111,.7,.62,-2.2);
+      addWheel(-.95,1.5,.4,.45,0xd8d8d8);addWheel(.95,1.5,.4,.45,0xd8d8d8);
+      addWheel(-1.0,-1.5,.46,.5,0xd8d8d8);addWheel(1.0,-1.5,.46,.5,0xd8d8d8);
+      break;
+    case 'demon':
+      put(BOX(2.1,.55,4.8),body,0,.7,.1);
+      put(BOX(1.85,.5,1.9),body,0,1.2,-.6);
+      put(BOX(1.75,.32,1.3),0x1a1a1a,0,1.55,-.6);
+      put(BOX(1.9,.12,.9),0x223344,0,1.42,-.55);
+      put(BOX(1.0,.25,.5),0x111111,0,1.1,1.4);
+      put(BOX(.5,.2,.3),0x222222,0,1.3,1.4);
+      put(BOX(1.6,.1,.4),0xff2d2d,0,.6,-2.4);
+      put(BOX(.4,.15,.1),0xfff3a0,-.7,.65,2.42);
+      put(BOX(.4,.15,.1),0xfff3a0,.7,.65,2.42);
+      put(BOX(2.0,.08,.35),trim,0,.75,-2.35);
+      put(BOX(2.15,.12,.5),0x111111,0,.5,-2.32);
+      addWheel(-1.05,1.5,.5,.55,0xb8bcc0);addWheel(1.05,1.5,.5,.55,0xb8bcc0);
+      addWheel(-1.05,-1.55,.5,.6,0xb8bcc0);addWheel(1.05,-1.55,.5,.6,0xb8bcc0);
+      break;
+    case 'copo':
+      put(BOX(2.0,.5,4.7),body,0,.65,0);
+      put(BOX(1.8,.55,1.8),body,0,1.2,-.5);
+      put(BOX(1.7,.35,1.3),0x1a1a1a,0,1.55,-.5);
+      put(BOX(1.85,.15,.9),0x223344,0,1.4,-.45);
+      put(BOX(.9,.4,.6),0x111111,0,1.05,1.3);
+      put(BOX(.85,.08,.5),0x2a2a2a,0,1.28,1.3);
+      put(BOX(.4,.12,.1),0xfff3a0,-.75,.6,2.37);
+      put(BOX(.4,.12,.1),0xfff3a0,.75,.6,2.37);
+      put(BOX(1.4,.1,.4),0xff2d2d,0,.55,-2.35);
+      put(BOX(1.8,.4,.15),trim,0,1.05,-1.95);
+      addWheel(-1.0,1.45,.48,.55,0xc0c4c8);addWheel(1.0,1.45,.48,.55,0xc0c4c8);
+      addWheel(-1.0,-1.5,.5,.6,0xc0c4c8);addWheel(1.0,-1.5,.5,.6,0xc0c4c8);
+      break;
+    case 'supra':
+      put(BOX(1.9,.45,4.6),body,0,.62,0);
+      put(BOX(1.6,.55,1.6),body,0,1.15,-.4);
+      put(BOX(1.5,.35,1.2),0x1a1a1a,0,1.5,-.4);
+      put(BOX(1.65,.1,.8),0x223344,0,1.35,-.4);
+      put(BOX(1.0,.12,.6),0x1a1a1a,0,.9,1.6);
+      put(BOX(.15,.7,.5),0x111111,-.9,.95,-2.05);
+      put(BOX(.15,.7,.5),0x111111,.9,.95,-2.05);
+      put(BOX(1.85,.08,.5),trim,0,1.3,-2.05);
+      put(BOX(.4,.15,.1),0xfff3a0,-.7,.7,2.32);
+      put(BOX(.4,.15,.1),0xfff3a0,.7,.7,2.32);
+      put(BOX(1.4,.12,.1),0xff2d2d,0,.7,-2.32);
+      addWheel(-.95,1.45,.45,.5,0xc8ccd0);addWheel(.95,1.45,.45,.5,0xc8ccd0);
+      addWheel(-.95,-1.5,.48,.55,0xc8ccd0);addWheel(.95,-1.5,.48,.55,0xc8ccd0);
+      break;
+    case 'gtr':
+      put(BOX(2.0,.55,4.7),body,0,.7,0);
+      put(BOX(1.75,.55,2.0),body,0,1.25,-.3);
+      put(BOX(1.65,.35,1.5),0x1a1a1a,0,1.6,-.3);
+      put(BOX(1.8,.1,.9),0x223344,0,1.45,-.3);
+      put(BOX(1.85,.15,.5),0x111111,0,.62,2.1);
+      put(BOX(.6,.15,.1),0xfff3a0,-.65,.75,2.35);
+      put(BOX(.6,.15,.1),0xfff3a0,.65,.75,2.35);
+      for(const sx of[-.7,-.35,.35,.7])put(new THREE.CylinderGeometry(.12,.12,.1,8).rotateX(1.5708),0xff2d2d,sx,.75,-2.4);
+      put(BOX(1.9,.06,.4),0x1a1a1a,0,1.0,-2.3);
+      put(BOX(2.0,.12,.6),0x111111,0,.55,-2.32);
+      addWheel(-1.0,1.5,.48,.55,0xb8bcc0);addWheel(1.0,1.5,.48,.55,0xb8bcc0);
+      addWheel(-1.0,-1.55,.5,.6,0xb8bcc0);addWheel(1.0,-1.55,.5,.6,0xb8bcc0);
+      break;
+    case 'cobra':
+      put(BOX(2.05,.5,4.75),body,0,.68,0);
+      put(BOX(1.8,.5,1.9),body,0,1.2,-.55);
+      put(BOX(1.7,.3,1.3),0x1a1a1a,0,1.5,-.55);
+      put(BOX(1.9,.1,.9),0x223344,0,1.38,-.5);
+      put(BOX(1.1,.25,.7),0x111111,0,1.0,1.3);
+      put(BOX(.6,.5,.5),0x2a2a2a,0,1.35,1.3);
+      put(BOX(.7,.15,.6),0x1a1a1a,0,1.65,1.3);
+      put(BOX(1.6,.1,.4),0xff2d2d,0,.55,-2.4);
+      put(BOX(2.0,.1,.5),trim,0,1.1,-2.15);
+      put(BOX(.12,.4,.5),0x111111,-.9,.9,-2.15);
+      put(BOX(.12,.4,.5),0x111111,.9,.9,-2.15);
+      put(BOX(.4,.12,.1),0xfff3a0,-.7,.6,2.38);
+      put(BOX(.4,.12,.1),0xfff3a0,.7,.6,2.38);
+      addWheel(-1.05,1.5,.5,.55,0xb8bcc0);addWheel(1.05,1.5,.5,.55,0xb8bcc0);
+      addWheel(-1.05,-1.55,.52,.6,0xb8bcc0);addWheel(1.05,-1.55,.52,.6,0xb8bcc0);
+      break;
+    case 'wrx':
+      put(BOX(1.9,.5,4.4),body,0,.65,0);
+      put(BOX(1.7,.55,2.2),body,0,1.2,-.2);
+      put(BOX(1.6,.35,1.8),0x1a1a1a,0,1.55,-.2);
+      put(BOX(1.7,.1,1.2),0x223344,0,1.4,-.2);
+      put(BOX(.5,.1,.4),0x111111,0,1.85,-.3);
+      put(BOX(.8,.1,.4),0x111111,0,.9,1.5);
+      put(BOX(1.9,.12,.6),trim,0,1.25,-2.0);
+      put(BOX(.12,.5,.6),0x111111,-.85,.95,-2.0);
+      put(BOX(.12,.5,.6),0x111111,.85,.95,-2.0);
+      put(BOX(1.4,.1,.15),0xff2d2d,0,.7,-2.22);
+      put(BOX(.4,.12,.1),0xfff3a0,-.65,.7,2.22);
+      put(BOX(.4,.12,.1),0xfff3a0,.65,.7,2.22);
+      addWheel(-.95,1.4,.45,.5,0xc8ccd0);addWheel(.95,1.4,.45,.5,0xc8ccd0);
+      addWheel(-.95,-1.45,.48,.55,0xc8ccd0);addWheel(.95,-1.45,.48,.55,0xc8ccd0);
+      break;
+    case 'evo':
+      put(BOX(1.9,.5,4.4),body,0,.65,0);
+      put(BOX(1.7,.55,2.2),body,0,1.2,-.2);
+      put(BOX(1.6,.35,1.8),0x1a1a1a,0,1.55,-.2);
+      put(BOX(1.7,.1,1.2),0x223344,0,1.4,-.2);
+      put(BOX(.8,.1,.4),0x111111,0,.9,1.5);
+      put(BOX(1.6,.1,.5),trim,0,1.05,-2.0);
+      put(BOX(.1,.3,.5),0x111111,-.75,.9,-2.0);
+      put(BOX(.1,.3,.5),0x111111,.75,.9,-2.0);
+      put(BOX(.4,.12,.1),0xfff3a0,-.65,.65,2.22);
+      put(BOX(.4,.12,.1),0xfff3a0,.65,.65,2.22);
+      put(BOX(1.3,.1,.15),0xff2d2d,0,.65,-2.22);
+      addWheel(-.95,1.4,.45,.5,0xc8ccd0);addWheel(.95,1.4,.45,.5,0xc8ccd0);
+      addWheel(-.95,-1.45,.48,.55,0xc8ccd0);addWheel(.95,-1.45,.48,.55,0xc8ccd0);
+      break;
+    case 'quattro':
+      put(BOX(1.95,.6,4.0),body,0,.72,0);
+      put(BOX(1.85,.55,1.6),body,0,1.25,-.5);
+      put(BOX(1.75,.35,1.3),0x1a1a1a,0,1.6,-.5);
+      put(BOX(1.85,.1,.9),0x223344,0,1.45,-.5);
+      put(BOX(.6,.1,.4),0x111111,0,.95,1.4);
+      for(const sx of[-1,1])put(BOX(.3,.4,2.4),body,sx*.9,.55,0);
+      put(BOX(1.4,.1,.2),0xff2d2d,0,.8,-2.02);
+      put(BOX(.4,.15,.1),0xfff3a0,-.65,.8,2.02);
+      put(BOX(.4,.15,.1),0xfff3a0,.65,.8,2.02);
+      put(BOX(1.9,.12,.4),trim,0,1.1,-1.9);
+      addWheel(-1.0,1.3,.45,.5,0xc8ccd0);addWheel(1.0,1.3,.45,.5,0xc8ccd0);
+      addWheel(-1.0,-1.35,.48,.55,0xc8ccd0);addWheel(1.0,-1.35,.48,.55,0xc8ccd0);
+      break;
+    case 'delta':
+      put(BOX(1.9,.55,3.9),body,0,.7,0);
+      put(BOX(1.8,.55,1.8),body,0,1.25,-.35);
+      put(BOX(1.7,.35,1.5),0x1a1a1a,0,1.6,-.35);
+      put(BOX(1.8,.1,1.1),0x223344,0,1.45,-.35);
+      for(const sx of[-1,1]){put(BOX(.35,.5,2.2),body,sx*.92,.6,0);put(BOX(.32,.15,.1),0x111111,sx*.98,.85,1.4);}
+      put(BOX(.7,.1,.4),0x111111,0,.9,1.3);
+      put(BOX(1.7,.1,.4),trim,0,1.1,-1.85);
+      put(BOX(.4,.12,.1),0xfff3a0,-.65,.65,1.97);
+      put(BOX(.4,.12,.1),0xfff3a0,.65,.65,1.97);
+      put(BOX(1.3,.1,.15),0xff2d2d,0,.65,-1.97);
+      addWheel(-1.0,1.25,.45,.5,0xc8ccd0);addWheel(1.0,1.25,.45,.5,0xc8ccd0);
+      addWheel(-1.0,-1.3,.48,.55,0xc8ccd0);addWheel(1.0,-1.3,.48,.55,0xc8ccd0);
+      break;
+    case 'celica':
+      put(BOX(1.85,.5,4.3),body,0,.65,0);
+      put(BOX(1.65,.5,1.8),body,0,1.18,-.5);
+      put(BOX(1.55,.3,1.4),0x1a1a1a,0,1.5,-.5);
+      put(BOX(1.65,.1,.9),0x223344,0,1.36,-.5);
+      put(BOX(.7,.1,.4),0x111111,0,.88,1.4);
+      put(BOX(1.6,.12,.5),trim,0,1.15,-2.0);
+      put(BOX(.1,.4,.5),0x111111,-.75,.95,-2.0);
+      put(BOX(.1,.4,.5),0x111111,.75,.95,-2.0);
+      put(BOX(.4,.12,.1),0xfff3a0,-.6,.7,2.17);
+      put(BOX(.4,.12,.1),0xfff3a0,.6,.7,2.17);
+      put(BOX(1.3,.1,.15),0xff2d2d,0,.7,-2.17);
+      addWheel(-.92,1.35,.44,.5,0xc8ccd0);addWheel(.92,1.35,.44,.5,0xc8ccd0);
+      addWheel(-.92,-1.4,.47,.55,0xc8ccd0);addWheel(.92,-1.4,.47,.55,0xc8ccd0);
+      break;
+    case 'ctr':
+      put(BOX(1.85,.55,3.9),body,0,.7,0);
+      put(BOX(1.7,.55,1.7),body,0,1.25,-.3);
+      put(BOX(1.6,.35,1.4),0x1a1a1a,0,1.6,-.3);
+      put(BOX(1.7,.1,1.0),0x223344,0,1.45,-.3);
+      put(BOX(.6,.1,.4),0x111111,0,.95,1.3);
+      put(BOX(1.8,.12,.6),trim,0,1.3,-1.85);
+      put(BOX(.12,.55,.6),0x111111,-.8,1.0,-1.85);
+      put(BOX(.12,.55,.6),0x111111,.8,1.0,-1.85);
+      put(BOX(.4,.12,.1),0xfff3a0,-.6,.7,1.97);
+      put(BOX(.4,.12,.1),0xfff3a0,.6,.7,1.97);
+      put(BOX(1.6,.1,.15),0xff2d2d,0,.7,-1.97);
+      addWheel(-.92,1.3,.44,.5,0xc8ccd0);addWheel(.92,1.3,.44,.5,0xc8ccd0);
+      addWheel(-.92,-1.35,.47,.55,0xc8ccd0);addWheel(.92,-1.35,.47,.55,0xc8ccd0);
+      break;
+    case 'gt3':
+      put(BOX(2.0,.45,4.4),body,0,.6,0);
+      put(BOX(1.6,.5,1.6),body,0,1.1,-.5);
+      put(BOX(1.5,.3,1.2),0x1a1a1a,0,1.45,-.5);
+      put(BOX(1.6,.1,.9),0x223344,0,1.3,-.5);
+      put(BOX(1.9,.2,.8),body,0,.55,-1.8);
+      put(BOX(.5,.1,.3),0x111111,-.6,.9,1.5);
+      put(BOX(.5,.1,.3),0x111111,.6,.9,1.5);
+      put(BOX(1.9,.08,.5),trim,0,1.4,-2.1);
+      put(BOX(.08,.5,.5),0x111111,-.7,.9,-2.1);
+      put(BOX(.08,.5,.5),0x111111,.7,.9,-2.1);
+      put(BOX(2.0,.1,.5),0x111111,0,.5,-2.15);
+      put(BOX(.4,.15,.1),0xfff3a0,-.65,.7,2.22);
+      put(BOX(.4,.15,.1),0xfff3a0,.65,.7,2.22);
+      put(BOX(1.4,.1,.15),0xff2d2d,0,.7,-2.22);
+      addWheel(-1.0,1.4,.45,.5,0xd0d4d8);addWheel(1.0,1.4,.45,.5,0xd0d4d8);
+      addWheel(-1.0,-1.45,.48,.55,0xd0d4d8);addWheel(1.0,-1.45,.48,.55,0xd0d4d8);
+      break;
+    case 'senna':
+      put(BOX(2.0,.4,4.3),body,0,.55,0);
+      put(BOX(1.5,.45,1.4),body,0,1.0,-.4);
+      put(BOX(1.4,.3,1.1),0x1a1a1a,0,1.3,-.4);
+      put(BOX(1.5,.08,.8),0x223344,0,1.18,-.4);
+      put(BOX(.9,.1,.4),0x111111,0,.8,1.4);
+      put(BOX(1.9,.08,.6),trim,0,1.35,-2.05);
+      put(BOX(.08,.55,.6),0x111111,-.75,.9,-2.05);
+      put(BOX(.08,.55,.6),0x111111,.75,.9,-2.05);
+      put(BOX(2.0,.12,.5),0x111111,0,.45,-2.2);
+      put(BOX(.3,.4,.5),0x111111,-.95,.7,-1.0);
+      put(BOX(.3,.4,.5),0x111111,.95,.7,-1.0);
+      put(BOX(.4,.15,.1),0xfff3a0,-.7,.65,2.17);
+      put(BOX(.4,.15,.1),0xfff3a0,.7,.65,2.17);
+      put(BOX(1.4,.1,.15),0xff2d2d,0,.65,-2.17);
+      addWheel(-1.02,1.4,.45,.5,0xc8ccd0);addWheel(1.02,1.4,.45,.5,0xc8ccd0);
+      addWheel(-1.02,-1.45,.48,.55,0xc8ccd0);addWheel(1.02,-1.45,.48,.55,0xc8ccd0);
+      break;
+    case 'radical':
+      put(BOX(1.4,.35,4.2),body,0,.5,0);
+      put(BOX(1.1,.3,1.4),body,0,.85,-.3);
+      put(BOX(1.0,.2,1.0),0x111111,0,1.0,-.3);
+      put(BOX(.5,.45,.4),body,0,1.1,-.8);
+      put(BOX(2.0,.06,.5),trim,0,.3,2.15);
+      put(BOX(.1,.45,.5),0x111111,-1.0,.45,2.15);
+      put(BOX(.1,.45,.5),0x111111,1.0,.45,2.15);
+      put(BOX(1.6,.06,.5),trim,0,.9,-2.1);
+      put(BOX(.08,.5,.5),0x111111,-.8,.7,-2.1);
+      put(BOX(.08,.5,.5),0x111111,.8,.7,-2.1);
+      put(BOX(.5,.15,.4),0x111111,0,1.4,-.8);
+      addWheel(-.85,1.4,.42,.45,0xd8d8d8);addWheel(.85,1.4,.42,.45,0xd8d8d8);
+      addWheel(-.9,-1.4,.46,.5,0xd8d8d8);addWheel(.9,-1.4,.46,.5,0xd8d8d8);
+      break;
+    case 'fxxk':
+      put(BOX(1.9,.4,4.5),body,0,.55,0);
+      put(BOX(1.4,.4,1.3),body,0,1.0,-.5);
+      put(BOX(1.3,.25,1.0),0x1a1a1a,0,1.3,-.5);
+      put(BOX(1.4,.08,.75),0x223344,0,1.18,-.5);
+      put(BOX(.8,.1,.4),0x111111,0,.8,1.5);
+      put(BOX(2.2,.06,.5),trim,0,.3,2.3);
+      put(BOX(.12,.5,.5),0x111111,-1.1,.5,2.3);
+      put(BOX(.12,.5,.5),0x111111,1.1,.5,2.3);
+      put(BOX(1.9,.08,.6),trim,0,1.5,-2.1);
+      put(BOX(.1,.7,.6),0x111111,-.8,.95,-2.1);
+      put(BOX(.1,.7,.6),0x111111,.8,.95,-2.1);
+      put(BOX(1.6,.1,.5),0x111111,0,.7,-2.2);
+      put(BOX(.3,.4,.4),0x111111,-1.0,.6,-1.0);
+      put(BOX(.3,.4,.4),0x111111,1.0,.6,-1.0);
+      put(BOX(.4,.15,.1),0xfff3a0,-.65,.65,2.27);
+      put(BOX(.4,.15,.1),0xfff3a0,.65,.65,2.27);
+      put(BOX(1.4,.12,.15),0xff2d2d,0,.65,-2.27);
+      addWheel(-1.02,1.4,.45,.5,0xd0d4d8);addWheel(1.02,1.4,.45,.5,0xd0d4d8);
+      addWheel(-1.02,-1.5,.48,.55,0xd0d4d8);addWheel(1.02,-1.5,.48,.55,0xd0d4d8);
+      break;
+    default:
+      put(BOX(2.0,.45,4.4),body,0,.6,0);
+      put(BOX(1.6,.5,1.6),body,0,1.1,-.4);
+      put(BOX(1.5,.3,1.2),0x1a1a1a,0,1.4,-.4);
+      put(BOX(.8,.1,.4),0x111111,0,.9,1.4);
+      put(BOX(.4,.15,.1),0xfff3a0,-.6,.7,2.22);
+      put(BOX(.4,.15,.1),0xfff3a0,.6,.7,2.22);
+      addWheel(-.95,1.4,.45,.5,0xc8ccd0);addWheel(.95,1.4,.45,.5,0xc8ccd0);
+      addWheel(-.95,-1.45,.48,.55,0xc8ccd0);addWheel(.95,-1.45,.48,.55,0xc8ccd0);
   }
   const bm=new THREE.Mesh(mergeParts(P),new THREE.MeshPhongMaterial({vertexColors:true,flatShading:true,shininess:70}));
   if(R.shadowMap.enabled){bm.castShadow=true;bm.receiveShadow=true}
